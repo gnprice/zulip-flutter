@@ -84,6 +84,17 @@ class MessageItem extends StatelessWidget {
       final subscription = store.subscriptions[msg.stream_id];
       highlightBorderColor = colorForStream(subscription);
       restBorderColor = _kStreamMessageBorderColor;
+
+      final streamName = msg.display_recipient;
+      final topic = message.subject;
+      if (streamName == 'feedback' && topic == 'Quotes feature feedback') {
+        return SliverPersistentHeader(
+            pinned: true,
+            delegate: StreamTopicRecipientHeaderSliverDelegate(
+                streamName: streamName, topic: topic, streamColor: highlightBorderColor));
+      }
+
+
       recipientHeader = StreamTopicRecipientHeader(
           message: msg, streamColor: highlightBorderColor);
     } else if (message is PmMessage) {
