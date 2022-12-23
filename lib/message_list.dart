@@ -150,6 +150,14 @@ class StreamTopicRecipientHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final streamName = message.display_recipient; // TODO get from stream data
     final topic = message.subject;
+
+    if (streamName == 'feedback' && topic == 'Quotes feature feedback') {
+      return SliverPersistentHeader(
+          pinned: true,
+          delegate: StreamTopicRecipientHeaderSliverDelegate(
+              streamName: streamName, topic: topic, streamColor: streamColor));
+    }
+
     final contrastingColor =
         ThemeData.estimateBrightnessForColor(streamColor) == Brightness.dark
             ? Colors.white
@@ -175,6 +183,55 @@ class StreamTopicRecipientHeader extends StatelessWidget {
 
 final _kStreamMessageBorderColor =
     const HSLColor.fromAHSL(1, 0, 0, 0.88).toColor();
+
+class StreamTopicRecipientHeaderSliverDelegate
+    extends SliverPersistentHeaderDelegate {
+  StreamTopicRecipientHeaderSliverDelegate(
+      {required this.streamName,
+      required this.topic,
+      required this.streamColor});
+
+  final String streamName;
+  final String topic;
+  final Color streamColor;
+
+  @override
+  double get minExtent => 24; // TODO refactor
+  @override
+  double get maxExtent => 24;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      (oldDelegate is! StreamTopicRecipientHeaderSliverDelegate ||
+          streamName != oldDelegate.streamName ||
+          topic != oldDelegate.topic ||
+          streamColor != oldDelegate.streamColor);
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final contrastingColor =
+        ThemeData.estimateBrightnessForColor(streamColor) == Brightness.dark
+            ? Colors.white
+            : Colors.black;
+    return ColoredBox(
+        color: _kStreamMessageBorderColor,
+        child: Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+          RecipientHeaderChevronContainer(
+              color: streamColor,
+              // TODO globe/lock icons for web-public and private streams
+              child:
+                  Text(streamName, style: TextStyle(color: contrastingColor))),
+          Padding(
+              // Web has padding 9, 3, 3, 2 here; but 5px is the chevron.
+              padding: const EdgeInsets.fromLTRB(4, 3, 3, 2),
+              child: Text(topic,
+                  style: const TextStyle(fontWeight: FontWeight.w600))),
+          // TODO topic links?
+          // Then web also has edit/resolve/mute buttons. Skip those for mobile.
+        ]));
+  }
+}
 
 class PmRecipientHeader extends StatelessWidget {
   const PmRecipientHeader({super.key, required this.message});
