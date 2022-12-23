@@ -157,6 +157,7 @@ class StreamTopicRecipientHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final streamName = message.display_recipient; // TODO get from stream data
     final topic = message.subject;
+    debugPrint("build header: $streamName > $topic");
     final contrastingColor =
         ThemeData.estimateBrightnessForColor(streamColor) == Brightness.dark
             ? Colors.white
@@ -233,6 +234,10 @@ class MessageWithSender extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final streamName = (message as StreamMessage).display_recipient; // TODO get from stream data
+    final topic = message.subject;
+    debugPrint("build message: $streamName > $topic");
+
     final store = PerAccountStoreWidget.of(context);
     final avatarUrl = message.avatar_url == null // TODO get from user data
         ? null // TODO handle computing gravatars
