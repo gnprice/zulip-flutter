@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sticky_headers/sticky_headers.dart';
 
 import 'api/model/model.dart';
 import 'api/route/messages.dart';
@@ -105,6 +106,12 @@ class MessageItem extends StatelessWidget {
         // vs. 88% lightness.  Assume that's an accident.
         shape: Border(
             left: recipientBorder, bottom: restBorder, right: restBorder));
+
+    return StickyHeader(
+        header: recipientHeader,
+        content: DecoratedBox(
+            decoration: borderDecoration,
+            child: MessageWithSender(message: message)));
 
     return Column(children: [
       recipientHeader,
