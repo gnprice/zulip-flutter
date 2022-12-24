@@ -29,11 +29,23 @@ class MainPage extends StatelessWidget {
     return Scaffold(
         appBar: AppBar(title: const Text('Sticky Headers example')),
         body: ListView(children: [
-          _buildItem(context, 'Standard list orientation', const ExampleDown()),
-          _buildItem(context, 'Reversed list', const ExampleUp()),
-          _buildItem(context, 'Horizontal list', const ExampleHorizontal()),
-          _buildItem(context, 'Horizontal reverse list',
-              const ExampleHorizontalReverse()),
+          _buildItem(context, 'Standard list orientation',
+              ExampleVertical(title: 'Standard list orientation')),
+          _buildItem(context, 'Reversed list',
+              ExampleVertical(title: 'Reversed list', reverse: true)),
+          _buildItem(
+              context,
+              'Horizontal list',
+              ExampleHorizontalBase(
+                  title: 'Horizontal list',
+                  headerDirection: AxisDirection.right)),
+          _buildItem(
+              context,
+              'Horizontal reverse list',
+              ExampleHorizontalBase(
+                  title: 'Horizontal reverse list',
+                  reverse: true,
+                  headerDirection: AxisDirection.right)),
         ]));
   }
 
@@ -45,38 +57,6 @@ class MainPage extends StatelessWidget {
             onPressed: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => page)),
             child: Text(title)));
-  }
-}
-
-class ExampleDown extends StatelessWidget {
-  const ExampleDown({super.key});
-
-  static const title = 'Standard list orientation';
-
-  static navigate(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (context) => const ExampleDown()));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ExampleVertical(title: title);
-  }
-}
-
-class ExampleUp extends StatelessWidget {
-  const ExampleUp({super.key});
-
-  static const title = 'Reversed list';
-
-  static navigate(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ExampleUp()));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ExampleVertical(title: title, reverse: true);
   }
 }
 
@@ -136,40 +116,6 @@ class WideItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(title: Text("Item ${i + 1}.${j + 1}"));
-  }
-}
-
-class ExampleHorizontal extends StatelessWidget {
-  const ExampleHorizontal({super.key});
-
-  static const title = 'Horizontal list';
-
-  static navigate(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ExampleHorizontal()));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ExampleHorizontalBase(
-        title: title, headerDirection: AxisDirection.right);
-  }
-}
-
-class ExampleHorizontalReverse extends StatelessWidget {
-  const ExampleHorizontalReverse({super.key});
-
-  static const title = 'Horizontal reverse list';
-
-  static navigate(BuildContext context) {
-    Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ExampleHorizontalReverse()));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ExampleHorizontalBase(
-        title: title, reverse: true, headerDirection: AxisDirection.right);
   }
 }
 
