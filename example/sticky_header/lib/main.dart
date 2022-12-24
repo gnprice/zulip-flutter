@@ -29,31 +29,22 @@ class MainPage extends StatelessWidget {
     return Scaffold(
         appBar: AppBar(title: const Text('Sticky Headers example')),
         body: ListView(children: [
-          Container(
-              padding: const EdgeInsets.all(8),
-              alignment: Alignment.center,
-              child: ElevatedButton(
-                  onPressed: () => ExampleDown.navigate(context),
-                  child: const Text(ExampleDown.title))),
-          Container(
-              padding: const EdgeInsets.all(8),
-              alignment: Alignment.center,
-              child: ElevatedButton(
-                  onPressed: () => ExampleUp.navigate(context),
-                  child: const Text(ExampleUp.title))),
-          Container(
-              padding: const EdgeInsets.all(8),
-              alignment: Alignment.center,
-              child: ElevatedButton(
-                  onPressed: () => ExampleHorizontal.navigate(context),
-                  child: const Text(ExampleHorizontal.title))),
-          Container(
-              padding: const EdgeInsets.all(8),
-              alignment: Alignment.center,
-              child: ElevatedButton(
-                  onPressed: () => ExampleHorizontalReverse.navigate(context),
-                  child: const Text(ExampleHorizontalReverse.title))),
+          _buildItem(context, 'Standard list orientation', const ExampleDown()),
+          _buildItem(context, 'Reversed list', const ExampleUp()),
+          _buildItem(context, 'Horizontal list', const ExampleHorizontal()),
+          _buildItem(context, 'Horizontal reverse list',
+              const ExampleHorizontalReverse()),
         ]));
+  }
+
+  Widget _buildItem(BuildContext context, String title, Widget page) {
+    return Container(
+        padding: const EdgeInsets.all(8),
+        alignment: Alignment.center,
+        child: ElevatedButton(
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => page)),
+            child: Text(title)));
   }
 }
 
