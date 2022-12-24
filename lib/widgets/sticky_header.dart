@@ -307,7 +307,9 @@ class RenderStickyHeader extends RenderBox
     final contentSize = content?.size.onAxis(axis) ?? 0;
 
     if (!axisDirectionIsReversed(direction)) {
-      if (header != null) _parentData(header).offset = Offset.zero;
+      if (header != null) {
+        _parentData(header).offset = Offset.zero;
+      }
       if (content != null) {
         _parentData(content).offset = offsetInDirection(direction, headerSize);
       }
@@ -315,7 +317,9 @@ class RenderStickyHeader extends RenderBox
       if (header != null) {
         _parentData(header).offset = offsetInDirection(direction, -contentSize);
       }
-      if (content != null) _parentData(content).offset = Offset.zero;
+      if (content != null) {
+        _parentData(content).offset = Offset.zero;
+      }
     }
 
     final totalSize = headerSize + contentSize;
