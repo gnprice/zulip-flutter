@@ -77,19 +77,10 @@ class ExampleDown extends StatelessWidget {
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
             itemBuilder: (context, i) => StickyHeader(
-                header: Material(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    child: ListTile(
-                        title: Text("Section ${i + 1}",
-                            style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer)))),
+                header: WideHeader(i: i),
                 content: Column(
                     children: List.generate(
-                        numPerSection,
-                        (j) => ListTile(
-                            title: Text("Item ${i + 1}.${j + 1}")))))));
+                        numPerSection, (j) => WideItem(i: i, j: j))))));
   }
 }
 
@@ -114,19 +105,38 @@ class ExampleUp extends StatelessWidget {
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
             itemBuilder: (context, i) => StickyHeader(
-                header: Material(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    child: ListTile(
-                        title: Text("Section ${i + 1}",
-                            style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer)))),
+                header: WideHeader(i: i),
                 content: Column(
                     children: List.generate(
-                        numPerSection,
-                        (j) => ListTile(
-                            title: Text("Item ${i + 1}.${j + 1}")))))));
+                        numPerSection, (j) => WideItem(i: i, j: j))))));
+  }
+}
+
+class WideHeader extends StatelessWidget {
+  const WideHeader({super.key, required this.i});
+
+  final int i;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        child: ListTile(
+            title: Text("Section ${i + 1}",
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer))));
+  }
+}
+
+class WideItem extends StatelessWidget {
+  const WideItem({super.key, required this.i, required this.j});
+
+  final int i;
+  final int j;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(title: Text("Item ${i + 1}.${j + 1}"));
   }
 }
 
@@ -151,27 +161,8 @@ class ExampleHorizontal extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
-            itemBuilder: (context, i) => Container(
-                alignment: Alignment.center,
-                child: Card(
-                    child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: _buildItemContents(context, i))))));
-  }
-
-  Widget _buildItemContents(BuildContext context, int i) {
-    return Column(children: [
-      Text("Item ${i + 1}"),
-      const SizedBox(height: 8),
-      Expanded(
-          child: FractionallySizedBox(
-              heightFactor: (1 + (i % lengthPeriod) / (lengthPeriod - 1)) / 2.0,
-              child: ColoredBox(
-                  color: Theme.of(context).colorScheme.secondary,
-                  child: const SizedBox(width: 4)))),
-      const SizedBox(height: 8),
-      const Text("end"),
-    ]);
+            itemBuilder: (context, i) =>
+                TallItem(index: i, lengthPeriod: lengthPeriod)));
   }
 }
 
@@ -181,8 +172,8 @@ class ExampleHorizontalReverse extends StatelessWidget {
   static const title = 'Horizontal reverse list';
 
   static navigate(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ExampleHorizontalReverse()));
+    Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const ExampleHorizontalReverse()));
   }
 
   static const numSections = 100;
@@ -197,26 +188,38 @@ class ExampleHorizontalReverse extends StatelessWidget {
             reverse: true,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
-            itemBuilder: (context, i) => Container(
-                alignment: Alignment.center,
-                child: Card(
-                    child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: _buildItemContents(context, i))))));
+            itemBuilder: (context, i) =>
+                TallItem(index: i, lengthPeriod: lengthPeriod)));
   }
+}
 
-  Widget _buildItemContents(BuildContext context, int i) {
-    return Column(children: [
-      Text("Item ${i + 1}"),
+class TallItem extends StatelessWidget {
+  const TallItem({super.key, required this.index, required this.lengthPeriod});
+
+  final int index;
+  final int lengthPeriod;
+
+  @override
+  Widget build(BuildContext context) {
+    final heightFactor =
+        (1 + (index % lengthPeriod) / (lengthPeriod - 1)) / 2.0;
+
+    final contents = Column(children: [
+      Text("Item ${index + 1}"),
       const SizedBox(height: 8),
       Expanded(
           child: FractionallySizedBox(
-              heightFactor: (1 + (i % lengthPeriod) / (lengthPeriod - 1)) / 2.0,
+              heightFactor: heightFactor,
               child: ColoredBox(
                   color: Theme.of(context).colorScheme.secondary,
                   child: const SizedBox(width: 4)))),
       const SizedBox(height: 8),
       const Text("end"),
     ]);
+
+    return Container(
+        alignment: Alignment.center,
+        child: Card(
+            child: Padding(padding: const EdgeInsets.all(8), child: contents)));
   }
 }
