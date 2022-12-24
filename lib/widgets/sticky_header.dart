@@ -264,24 +264,24 @@ class RenderStickyHeader extends RenderBox
   Iterable<RenderBox> get children =>
       [if (_header != null) _header!, if (_content != null) _content!];
 
-  double? _slackSize;
+  double? _contentSize;
 
   void provideScrollPosition(double scrollPosition) {
     assert(hasSize);
     final header = _header;
     if (header == null) return;
     assert(header.hasSize);
-    assert(_slackSize != null);
+    assert(_contentSize != null);
 
     assert(0.0 <= scrollPosition);
 
     Offset offset;
     if (!axisDirectionIsReversed(direction)) {
       offset =
-          offsetInDirection(direction, math.min(scrollPosition, _slackSize!));
+          offsetInDirection(direction, math.min(scrollPosition, _contentSize!));
     } else {
       offset = offsetInDirection(
-          direction, math.min(0, scrollPosition - _slackSize!));
+          direction, math.min(0, scrollPosition - _contentSize!));
     }
     if (offset == _parentData(header).offset) {
       return;
@@ -304,7 +304,7 @@ class RenderStickyHeader extends RenderBox
 
     final content = _content;
     if (content != null) content.layout(constraints, parentUsesSize: true);
-    final contentSize = content?.size.onAxis(axis) ?? 0;
+    _contentSize = content?.size.onAxis(axis) ?? 0;
 
     if (!axisDirectionIsReversed(direction)) {
       if (header != null) {
@@ -315,16 +315,15 @@ class RenderStickyHeader extends RenderBox
       }
     } else {
       if (header != null) {
-        _parentData(header).offset = offsetInDirection(direction, -contentSize);
+        _parentData(header).offset = offsetInDirection(direction, -_contentSize!);
       }
       if (content != null) {
         _parentData(content).offset = Offset.zero;
       }
     }
 
-    final totalSize = headerSize + contentSize;
+    final totalSize = headerSize + _contentSize!;
     size = constraints.constrain(sizeOn(axis, main: totalSize));
-    _slackSize = contentSize;
   }
 
   @override
