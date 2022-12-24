@@ -171,12 +171,10 @@ class RenderSliverStickyHeaderList extends RenderSliverList {
   void performLayout() {
     super.performLayout();
 
-    assert(constraints.growthDirection == GrowthDirection.forward); // TODO dir
+    // TODO dir: We assume GrowthDirection.forward.  Handle reverse too.
+    assert(constraints.growthDirection == GrowthDirection.forward);
 
-    // debugPrint("our constraints: $constraints");
-    // debugPrint("our geometry: $geometry");
     final scrollOffset = constraints.scrollOffset;
-    // debugPrint("our scroll offset: $scrollOffset");
 
     RenderBox? child;
     for (child = firstChild; child != null; child = childAfter(child)) {
