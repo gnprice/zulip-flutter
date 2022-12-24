@@ -150,19 +150,21 @@ class ExampleHorizontal extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const ExampleHorizontal()));
   }
 
-  static const numSections = 100;
-  static const lengthPeriod = 10;
-
   @override
   Widget build(BuildContext context) {
+    const numSections = 100;
+    const numPerSection = 10;
     return Scaffold(
         appBar: AppBar(title: const Text(title)),
         body: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
-            itemBuilder: (context, i) =>
-                TallItem(index: i, lengthPeriod: lengthPeriod)));
+            itemBuilder: (context, i) => Row(
+                children: List.generate(
+                    numPerSection,
+                    (j) =>
+                        TallItem(i: i, j: j, numPerSection: numPerSection)))));
   }
 }
 
@@ -176,11 +178,10 @@ class ExampleHorizontalReverse extends StatelessWidget {
         MaterialPageRoute(builder: (_) => const ExampleHorizontalReverse()));
   }
 
-  static const numSections = 100;
-  static const lengthPeriod = 10;
-
   @override
   Widget build(BuildContext context) {
+    const numSections = 100;
+    const numPerSection = 10;
     return Scaffold(
         appBar: AppBar(title: const Text(title)),
         body: ListView.separated(
@@ -188,24 +189,31 @@ class ExampleHorizontalReverse extends StatelessWidget {
             reverse: true,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
-            itemBuilder: (context, i) =>
-                TallItem(index: i, lengthPeriod: lengthPeriod)));
+            itemBuilder: (context, i) => Row(
+                children: List.generate(
+                    numPerSection,
+                    (j) =>
+                        TallItem(i: i, j: j, numPerSection: numPerSection)))));
   }
 }
 
 class TallItem extends StatelessWidget {
-  const TallItem({super.key, required this.index, required this.lengthPeriod});
+  const TallItem(
+      {super.key,
+      required this.i,
+      required this.j,
+      required this.numPerSection});
 
-  final int index;
-  final int lengthPeriod;
+  final int i;
+  final int j;
+  final int numPerSection;
 
   @override
   Widget build(BuildContext context) {
-    final heightFactor =
-        (1 + (index % lengthPeriod) / (lengthPeriod - 1)) / 2.0;
+    final heightFactor = (1 + j) / numPerSection;
 
     final contents = Column(children: [
-      Text("Item ${index + 1}"),
+      Text("Item ${i + 1}.${j + 1}"),
       const SizedBox(height: 8),
       Expanded(
           child: FractionallySizedBox(
