@@ -27,8 +27,11 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final verticalItems = [
-      _buildItem(context,
-          ExampleVertical(title: 'Scroll down, headers at top (standard)')),
+      _buildItem(
+          context,
+          ExampleVertical(
+              title: 'Scroll down, headers at top (a standard list)'),
+          primary: true),
       _buildItem(context,
           ExampleVertical(title: 'Scroll up, headers at top', reverse: true)),
       _buildItem(
@@ -47,7 +50,8 @@ class MainPage extends StatelessWidget {
       _buildItem(
           context,
           ExampleHorizontal(
-              title: 'Scroll right, headers at left', headerDirection: AxisDirection.right)),
+              title: 'Scroll right, headers at left',
+              headerDirection: AxisDirection.right)),
       _buildItem(
           context,
           ExampleHorizontal(
@@ -57,7 +61,8 @@ class MainPage extends StatelessWidget {
       _buildItem(
           context,
           ExampleHorizontal(
-              title: 'Scroll right, headers at right', headerDirection: AxisDirection.left)),
+              title: 'Scroll right, headers at right',
+              headerDirection: AxisDirection.left)),
       _buildItem(
           context,
           ExampleHorizontal(
@@ -95,15 +100,21 @@ class MainPage extends StatelessWidget {
         ]));
   }
 
-  Widget _buildItem(BuildContext context, ExamplePage page) {
+  Widget _buildItem(BuildContext context, ExamplePage page,
+      {bool primary = false}) {
     var label = Text(page.title,
         textAlign: TextAlign.center,
         style: TextStyle(
             inherit: true,
-            fontSize: Theme.of(context).textTheme.headlineSmall?.fontSize));
+            fontSize: Theme.of(context).textTheme.titleLarge?.fontSize));
+    var buttonStyle = primary
+        ? null
+        : ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.secondary);
     return Container(
         padding: const EdgeInsets.all(16),
         child: ElevatedButton(
+            style: buttonStyle,
             onPressed: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => page)),
             child: label));
@@ -173,7 +184,7 @@ class WideItem extends StatelessWidget {
   }
 }
 
-class ExampleHorizontal extends StatelessWidget implements ExamplePage{
+class ExampleHorizontal extends StatelessWidget implements ExamplePage {
   ExampleHorizontal(
       {super.key,
       required this.title,
