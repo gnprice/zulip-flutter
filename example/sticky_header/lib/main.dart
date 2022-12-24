@@ -27,19 +27,17 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final verticalItems = [
-      _buildItem(context, 'Scroll down, headers at top (standard)',
+      _buildItem(context,
           ExampleVertical(title: 'Scroll down, headers at top (standard)')),
-      _buildItem(context, 'Scroll up, headers at top',
+      _buildItem(context,
           ExampleVertical(title: 'Scroll up, headers at top', reverse: true)),
       _buildItem(
           context,
-          'Scroll down, headers at bottom',
           ExampleVertical(
               title: 'Scroll down, headers at bottom',
               headerDirection: AxisDirection.up)),
       _buildItem(
           context,
-          'Scroll up, headers at bottom',
           ExampleVertical(
               title: 'Scroll up, headers at bottom',
               reverse: true,
@@ -48,16 +46,24 @@ class MainPage extends StatelessWidget {
     final horizontalItems = [
       _buildItem(
           context,
-          'Horizontal list',
           ExampleHorizontal(
-              title: 'Horizontal list', headerDirection: AxisDirection.right)),
+              title: 'Scroll right, headers at left', headerDirection: AxisDirection.right)),
       _buildItem(
           context,
-          'Horizontal reverse list',
           ExampleHorizontal(
-              title: 'Horizontal reverse list',
+              title: 'Scroll left, headers at left',
               reverse: true,
               headerDirection: AxisDirection.right)),
+      _buildItem(
+          context,
+          ExampleHorizontal(
+              title: 'Scroll right, headers at right', headerDirection: AxisDirection.left)),
+      _buildItem(
+          context,
+          ExampleHorizontal(
+              title: 'Scroll left, headers at right',
+              reverse: true,
+              headerDirection: AxisDirection.left)),
     ];
     return Scaffold(
         appBar: AppBar(title: const Text('Sticky Headers example')),
@@ -89,8 +95,8 @@ class MainPage extends StatelessWidget {
         ]));
   }
 
-  Widget _buildItem(BuildContext context, String title, Widget page) {
-    var label = Text(title,
+  Widget _buildItem(BuildContext context, ExamplePage page) {
+    var label = Text(page.title,
         textAlign: TextAlign.center,
         style: TextStyle(
             inherit: true,
@@ -104,7 +110,11 @@ class MainPage extends StatelessWidget {
   }
 }
 
-class ExampleVertical extends StatelessWidget {
+abstract class ExamplePage extends Widget {
+  String get title;
+}
+
+class ExampleVertical extends StatelessWidget implements ExamplePage {
   ExampleVertical(
       {super.key,
       required this.title,
@@ -163,7 +173,7 @@ class WideItem extends StatelessWidget {
   }
 }
 
-class ExampleHorizontal extends StatelessWidget {
+class ExampleHorizontal extends StatelessWidget implements ExamplePage{
   ExampleHorizontal(
       {super.key,
       required this.title,
