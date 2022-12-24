@@ -26,27 +26,27 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var items = [
+      _buildItem(context, 'Standard list orientation',
+          ExampleVertical(title: 'Standard list orientation')),
+      _buildItem(context, 'Reversed list',
+          ExampleVertical(title: 'Reversed list', reverse: true)),
+      _buildItem(
+          context,
+          'Horizontal list',
+          ExampleHorizontal(
+              title: 'Horizontal list', headerDirection: AxisDirection.right)),
+      _buildItem(
+          context,
+          'Horizontal reverse list',
+          ExampleHorizontal(
+              title: 'Horizontal reverse list',
+              reverse: true,
+              headerDirection: AxisDirection.right)),
+    ];
     return Scaffold(
         appBar: AppBar(title: const Text('Sticky Headers example')),
-        body: ListView(children: [
-          _buildItem(context, 'Standard list orientation',
-              ExampleVertical(title: 'Standard list orientation')),
-          _buildItem(context, 'Reversed list',
-              ExampleVertical(title: 'Reversed list', reverse: true)),
-          _buildItem(
-              context,
-              'Horizontal list',
-              ExampleHorizontalBase(
-                  title: 'Horizontal list',
-                  headerDirection: AxisDirection.right)),
-          _buildItem(
-              context,
-              'Horizontal reverse list',
-              ExampleHorizontalBase(
-                  title: 'Horizontal reverse list',
-                  reverse: true,
-                  headerDirection: AxisDirection.right)),
-        ]));
+        body: ListView(children: items));
   }
 
   Widget _buildItem(BuildContext context, String title, Widget page) {
@@ -119,8 +119,8 @@ class WideItem extends StatelessWidget {
   }
 }
 
-class ExampleHorizontalBase extends StatelessWidget {
-  ExampleHorizontalBase(
+class ExampleHorizontal extends StatelessWidget {
+  ExampleHorizontal(
       {super.key,
       required this.title,
       this.reverse = false,
