@@ -26,11 +26,13 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var items = [
+    final verticalItems = [
       _buildItem(context, 'Standard list orientation',
           ExampleVertical(title: 'Standard list orientation')),
       _buildItem(context, 'Reversed list',
           ExampleVertical(title: 'Reversed list', reverse: true)),
+    ];
+    final horizontalItems = [
       _buildItem(
           context,
           'Horizontal list',
@@ -47,10 +49,30 @@ class MainPage extends StatelessWidget {
     return Scaffold(
         appBar: AppBar(title: const Text('Sticky Headers example')),
         body: CustomScrollView(slivers: [
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: Center(
+                      child: Text("Vertical lists",
+                          style: Theme.of(context).textTheme.headlineMedium)))),
           SliverPadding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               sliver: SliverGrid.count(
-                  childAspectRatio: 2, crossAxisCount: 2, children: items)),
+                  childAspectRatio: 2,
+                  crossAxisCount: 2,
+                  children: verticalItems)),
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: Center(
+                      child: Text("Horizontal lists",
+                          style: Theme.of(context).textTheme.headlineMedium)))),
+          SliverPadding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              sliver: SliverGrid.count(
+                  childAspectRatio: 2,
+                  crossAxisCount: 2,
+                  children: horizontalItems)),
         ]));
   }
 
