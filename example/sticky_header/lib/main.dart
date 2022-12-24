@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:zulip/widgets/sticky_header.dart';
 
+/// Example page using [StickyHeaderListView] and [StickyHeader] in a
+/// vertically-scrolling list.
 class ExampleVertical extends StatelessWidget {
   ExampleVertical(
       {super.key,
@@ -32,6 +34,8 @@ class ExampleVertical extends StatelessWidget {
   }
 }
 
+/// Example page using [StickyHeaderListView] and [StickyHeader] in a
+/// horizontally-scrolling list.
 class ExampleHorizontal extends StatelessWidget {
   ExampleHorizontal(
       {super.key,
