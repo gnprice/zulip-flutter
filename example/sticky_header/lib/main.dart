@@ -122,6 +122,8 @@ class MainPage extends StatelessWidget {
 }
 
 abstract class ExamplePage extends Widget {
+  const ExamplePage({super.key});
+
   String get title;
 }
 
@@ -133,6 +135,7 @@ class ExampleVertical extends StatelessWidget implements ExamplePage {
       this.headerDirection = AxisDirection.down})
       : assert(axisDirectionToAxis(headerDirection) == Axis.vertical);
 
+  @override
   final String title;
   final bool reverse;
   final AxisDirection headerDirection;
@@ -192,6 +195,7 @@ class ExampleHorizontal extends StatelessWidget implements ExamplePage {
       required this.headerDirection})
       : assert(axisDirectionToAxis(headerDirection) == Axis.horizontal);
 
+  @override
   final String title;
   final bool reverse;
   final AxisDirection headerDirection;
