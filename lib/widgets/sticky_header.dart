@@ -274,14 +274,14 @@ class RenderStickyHeader extends RenderBox
     assert(_slackSize != null);
 
     assert(0.0 <= scrollPosition);
-    final position = math.min(scrollPosition, _slackSize!);
 
     Offset offset;
     if (!axisDirectionIsReversed(direction)) {
-      offset = offsetInDirection(direction, position);
+      offset =
+          offsetInDirection(direction, math.min(scrollPosition, _slackSize!));
     } else {
-      // TODO simplify this one
-      offset = offsetInDirection(direction, position - _slackSize!);
+      offset = offsetInDirection(
+          direction, math.min(0, scrollPosition - _slackSize!));
     }
     if (offset == _parentData(header).offset) {
       return;
