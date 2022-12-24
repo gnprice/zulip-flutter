@@ -41,6 +41,12 @@ class MainPage extends StatelessWidget {
               child: ElevatedButton(
                   onPressed: () => ExampleUp.navigate(context),
                   child: const Text(ExampleUp.title))),
+          Container(
+              padding: const EdgeInsets.all(8),
+              alignment: Alignment.center,
+              child: ElevatedButton(
+                  onPressed: () => ExampleHorizontal.navigate(context),
+                  child: const Text(ExampleHorizontal.title))),
         ]));
   }
 }
@@ -115,5 +121,50 @@ class ExampleUp extends StatelessWidget {
                         numPerSection,
                         (j) => ListTile(
                             title: Text("Item ${i + 1}.${j + 1}")))))));
+  }
+}
+
+class ExampleHorizontal extends StatelessWidget {
+  const ExampleHorizontal({super.key});
+
+  static const title = 'Horizontal list';
+
+  static navigate(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ExampleHorizontal()));
+  }
+
+  static const numSections = 100;
+  static const lengthPeriod = 10;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(title: const Text(title)),
+        body: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: numSections,
+            separatorBuilder: (context, i) => const SizedBox.shrink(),
+            itemBuilder: (context, i) => Container(
+                alignment: Alignment.center,
+                child: Card(
+                    child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: _buildItemContents(context, i))))));
+  }
+
+  Widget _buildItemContents(BuildContext context, int i) {
+    return Column(children: [
+      Text("Item ${i + 1}"),
+      const SizedBox(height: 8),
+      Expanded(
+          child: FractionallySizedBox(
+              heightFactor: (1 + (i % lengthPeriod) / (lengthPeriod - 1)) / 2.0,
+              child: ColoredBox(
+                  color: Theme.of(context).colorScheme.secondary,
+                  child: const SizedBox(width: 4)))),
+      const SizedBox(height: 8),
+      const Text("end"),
+    ]);
   }
 }
