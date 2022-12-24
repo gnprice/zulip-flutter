@@ -27,48 +27,37 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final verticalItems = [
-      _buildItem(
-          context,
-          ExampleVertical(
-              title: 'Scroll down, headers at top (a standard list)'),
-          primary: true),
-      _buildItem(context,
-          ExampleVertical(title: 'Scroll up, headers at top', reverse: true)),
-      _buildItem(
-          context,
-          ExampleVertical(
-              title: 'Scroll down, headers at bottom',
-              headerDirection: AxisDirection.up)),
-      _buildItem(
-          context,
-          ExampleVertical(
-              title: 'Scroll up, headers at bottom',
-              reverse: true,
-              headerDirection: AxisDirection.up)),
+      _buildItem(context, _ExampleType.vertical,
+          primary: true,
+          title: 'Scroll down, headers at top (a standard list)',
+          headerDirection: AxisDirection.down),
+      _buildItem(context, _ExampleType.vertical,
+          title: 'Scroll up, headers at top',
+          reverse: true,
+          headerDirection: AxisDirection.down),
+      _buildItem(context, _ExampleType.vertical,
+          title: 'Scroll down, headers at bottom',
+          headerDirection: AxisDirection.up),
+      _buildItem(context, _ExampleType.vertical,
+          title: 'Scroll up, headers at bottom',
+          reverse: true,
+          headerDirection: AxisDirection.up),
     ];
     final horizontalItems = [
-      _buildItem(
-          context,
-          ExampleHorizontal(
-              title: 'Scroll right, headers at left',
-              headerDirection: AxisDirection.right)),
-      _buildItem(
-          context,
-          ExampleHorizontal(
-              title: 'Scroll left, headers at left',
-              reverse: true,
-              headerDirection: AxisDirection.right)),
-      _buildItem(
-          context,
-          ExampleHorizontal(
-              title: 'Scroll right, headers at right',
-              headerDirection: AxisDirection.left)),
-      _buildItem(
-          context,
-          ExampleHorizontal(
-              title: 'Scroll left, headers at right',
-              reverse: true,
-              headerDirection: AxisDirection.left)),
+      _buildItem(context, _ExampleType.horizontal,
+          title: 'Scroll right, headers at left',
+          headerDirection: AxisDirection.right),
+      _buildItem(context, _ExampleType.horizontal,
+          title: 'Scroll left, headers at left',
+          reverse: true,
+          headerDirection: AxisDirection.right),
+      _buildItem(context, _ExampleType.horizontal,
+          title: 'Scroll right, headers at right',
+          headerDirection: AxisDirection.left),
+      _buildItem(context, _ExampleType.horizontal,
+          title: 'Scroll left, headers at right',
+          reverse: true,
+          headerDirection: AxisDirection.left),
     ];
     return Scaffold(
         appBar: AppBar(title: const Text('Sticky Headers example')),
@@ -100,9 +89,24 @@ class MainPage extends StatelessWidget {
         ]));
   }
 
-  Widget _buildItem(BuildContext context, ExamplePage page,
-      {bool primary = false}) {
-    var label = Text(page.title,
+  Widget _buildItem(BuildContext context, _ExampleType exampleType,
+      {required String title,
+      bool reverse = false,
+      required AxisDirection headerDirection,
+      bool primary = false}) {
+    Widget page;
+    switch (exampleType) {
+      case _ExampleType.vertical:
+        page = ExampleVertical(
+            title: title, reverse: reverse, headerDirection: headerDirection);
+        break;
+      case _ExampleType.horizontal:
+        page = ExampleHorizontal(
+            title: title, reverse: reverse, headerDirection: headerDirection);
+        break;
+    }
+
+    var label = Text(title,
         textAlign: TextAlign.center,
         style: TextStyle(
             inherit: true,
@@ -121,13 +125,9 @@ class MainPage extends StatelessWidget {
   }
 }
 
-abstract class ExamplePage extends Widget {
-  const ExamplePage({super.key});
+enum _ExampleType { vertical, horizontal }
 
-  String get title;
-}
-
-class ExampleVertical extends StatelessWidget implements ExamplePage {
+class ExampleVertical extends StatelessWidget {
   ExampleVertical(
       {super.key,
       required this.title,
@@ -135,7 +135,6 @@ class ExampleVertical extends StatelessWidget implements ExamplePage {
       this.headerDirection = AxisDirection.down})
       : assert(axisDirectionToAxis(headerDirection) == Axis.vertical);
 
-  @override
   final String title;
   final bool reverse;
   final AxisDirection headerDirection;
@@ -187,7 +186,7 @@ class WideItem extends StatelessWidget {
   }
 }
 
-class ExampleHorizontal extends StatelessWidget implements ExamplePage {
+class ExampleHorizontal extends StatelessWidget {
   ExampleHorizontal(
       {super.key,
       required this.title,
@@ -195,7 +194,6 @@ class ExampleHorizontal extends StatelessWidget implements ExamplePage {
       required this.headerDirection})
       : assert(axisDirectionToAxis(headerDirection) == Axis.horizontal);
 
-  @override
   final String title;
   final bool reverse;
   final AxisDirection headerDirection;
