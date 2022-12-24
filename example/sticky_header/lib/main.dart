@@ -27,10 +27,23 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final verticalItems = [
-      _buildItem(context, 'Standard list orientation',
-          ExampleVertical(title: 'Standard list orientation')),
-      _buildItem(context, 'Reversed list',
-          ExampleVertical(title: 'Reversed list', reverse: true)),
+      _buildItem(context, 'Scroll down, headers at top (standard)',
+          ExampleVertical(title: 'Scroll down, headers at top (standard)')),
+      _buildItem(context, 'Scroll up, headers at top',
+          ExampleVertical(title: 'Scroll up, headers at top', reverse: true)),
+      _buildItem(
+          context,
+          'Scroll down, headers at bottom',
+          ExampleVertical(
+              title: 'Scroll down, headers at bottom',
+              headerDirection: AxisDirection.up)),
+      _buildItem(
+          context,
+          'Scroll up, headers at bottom',
+          ExampleVertical(
+              title: 'Scroll up, headers at bottom',
+              reverse: true,
+              headerDirection: AxisDirection.up)),
     ];
     final horizontalItems = [
       _buildItem(
