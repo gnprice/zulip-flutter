@@ -156,15 +156,18 @@ class ExampleHorizontal extends StatelessWidget {
     const numPerSection = 10;
     return Scaffold(
         appBar: AppBar(title: const Text(title)),
-        body: ListView.separated(
+        body: StickyHeaderListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
-            itemBuilder: (context, i) => Row(
-                children: List.generate(
-                    numPerSection,
-                    (j) =>
-                        TallItem(i: i, j: j, numPerSection: numPerSection)))));
+            itemBuilder: (context, i) => StickyHeader(
+                direction: AxisDirection.right,
+                header: TallHeader(i: i),
+                content: Row(
+                    children: List.generate(
+                        numPerSection,
+                            (j) => TallItem(
+                            i: i, j: j, numPerSection: numPerSection))))));
   }
 }
 
