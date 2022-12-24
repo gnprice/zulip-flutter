@@ -268,26 +268,31 @@ class RenderStickyHeader extends RenderBox
 
   void provideScrollPosition(double scrollPosition) {
     assert(hasSize);
+    assert(_header == null || _header!.hasSize);
+
     final header = _header;
     if (header == null) return;
-    assert(header.hasSize);
-    assert(_contentSize != null);
 
-    assert(0.0 <= scrollPosition);
-
-    Offset offset;
-    if (!axisDirectionIsReversed(direction)) {
-      offset =
-          offsetInDirection(direction, math.min(scrollPosition, _contentSize!));
-    } else {
-      offset = offsetInDirection(
-          direction, math.min(0, scrollPosition - _contentSize!));
-    }
+    Offset offset = _computeHeaderOffset(scrollPosition);
     if (offset == _parentData(header).offset) {
       return;
     }
     _parentData(header).offset = offset;
     markNeedsPaint();
+  }
+
+  Offset _computeHeaderOffset(double scrollPosition) {
+    assert(_contentSize != null);
+    assert(0.0 <= scrollPosition);
+    double offset;
+    if (!axisDirectionIsReversed(direction)) {
+      offset = math.min(scrollPosition, _contentSize!);
+      assert(0.0 <= offset && offset <= _contentSize!);
+    } else {
+      offset = math.min(0, scrollPosition - _contentSize!);
+      assert(-_contentSize! <= offset && offset <= 0.0);
+    }
+    return offsetInDirection(direction, offset);
   }
 
   @override
@@ -306,18 +311,13 @@ class RenderStickyHeader extends RenderBox
     if (content != null) content.layout(constraints, parentUsesSize: true);
     _contentSize = content?.size.onAxis(axis) ?? 0;
 
-    if (!axisDirectionIsReversed(direction)) {
-      if (header != null) {
-        _parentData(header).offset = Offset.zero;
-      }
-      if (content != null) {
+    if (header != null) {
+      _parentData(header).offset = _computeHeaderOffset(0);
+    }
+    if (content != null) {
+      if (!axisDirectionIsReversed(direction)) {
         _parentData(content).offset = offsetInDirection(direction, headerSize);
-      }
-    } else {
-      if (header != null) {
-        _parentData(header).offset = offsetInDirection(direction, -_contentSize!);
-      }
-      if (content != null) {
+      } else {
         _parentData(content).offset = Offset.zero;
       }
     }
