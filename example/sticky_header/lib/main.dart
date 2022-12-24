@@ -46,17 +46,25 @@ class MainPage extends StatelessWidget {
     ];
     return Scaffold(
         appBar: AppBar(title: const Text('Sticky Headers example')),
-        body: ListView(children: items));
+        body: GridView.count(
+            padding: const EdgeInsets.all(16),
+            childAspectRatio: 2,
+            crossAxisCount: 2,
+            children: items));
   }
 
   Widget _buildItem(BuildContext context, String title, Widget page) {
+    var label = Text(title,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+            inherit: true,
+            fontSize: Theme.of(context).textTheme.headlineSmall?.fontSize));
     return Container(
-        padding: const EdgeInsets.all(8),
-        alignment: Alignment.center,
+        padding: const EdgeInsets.all(16),
         child: ElevatedButton(
             onPressed: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => page)),
-            child: Text(title)));
+            child: label));
   }
 }
 
