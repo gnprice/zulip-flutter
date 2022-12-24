@@ -21,11 +21,31 @@ class ExampleVertical extends StatelessWidget {
     const numPerSection = 10;
     return Scaffold(
         appBar: AppBar(title: Text(title)),
+
+        // Invoke StickyHeaderListView the same way you'd invoke ListView.
+        // The constructor takes the same arguments.
         body: StickyHeaderListView.separated(
             reverse: reverse,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
+
+            // Use StickyHeader as an item widget in the ListView.
+            // The header will float within the item as needed in order to
+            // "stick" at the edge of the viewport.
+            //
+            // You can also include non-StickyHeader items in the list.
+            // They'll behave just like in a plain ListView.
+            //
+            // Each StickyHeader needs to be an item directly in the list, not
+            // wrapped inside other widgets that affect layout, in order to get
+            // the sticky-header behavior.
             itemBuilder: (context, i) => StickyHeader(
+
+                // By default, StickyHeader puts the header at its top and lets
+                // the header slide down in order to be sticky.
+                //
+                // To have the header slide up from the bottom instead, pass
+                // `direction: AxisDirection.up`.
                 direction: headerDirection,
                 header: WideHeader(i: i),
                 content: Column(
@@ -55,11 +75,19 @@ class ExampleHorizontal extends StatelessWidget {
     return Scaffold(
         appBar: AppBar(title: Text(title)),
         body: StickyHeaderListView.separated(
+
+            // StickyHeaderListView and StickyHeader also work for horizontal
+            // scrolling.  Pass `scrollDirection: Axis.horizontal` to the
+            // StickyHeaderListView constructor, just like for ListView.
             scrollDirection: Axis.horizontal,
             reverse: reverse,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
             itemBuilder: (context, i) => StickyHeader(
+
+                // For horizontal scrolling, pass the StickyHeader constructor
+                // an explicit direction: either `AxisDirection.up` or
+                // `AxisDirection.down`.
                 direction: headerDirection,
                 header: TallHeader(i: i),
                 content: Row(
@@ -69,6 +97,15 @@ class ExampleHorizontal extends StatelessWidget {
                             i: i, j: j, numPerSection: numPerSection))))));
   }
 }
+
+////////////////////////////////////////////////////////////////////////////
+//
+// That's it!
+//
+// The rest of this file is boring infrastructure for navigating to the
+// different examples, and for having some content to put inside them.
+//
+////////////////////////////////////////////////////////////////////////////
 
 class WideHeader extends StatelessWidget {
   const WideHeader({super.key, required this.i});
