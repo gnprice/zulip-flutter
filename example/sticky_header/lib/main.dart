@@ -46,11 +46,12 @@ class MainPage extends StatelessWidget {
     ];
     return Scaffold(
         appBar: AppBar(title: const Text('Sticky Headers example')),
-        body: GridView.count(
-            padding: const EdgeInsets.all(16),
-            childAspectRatio: 2,
-            crossAxisCount: 2,
-            children: items));
+        body: CustomScrollView(slivers: [
+          SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverGrid.count(
+                  childAspectRatio: 2, crossAxisCount: 2, children: items)),
+        ]));
   }
 
   Widget _buildItem(BuildContext context, String title, Widget page) {
