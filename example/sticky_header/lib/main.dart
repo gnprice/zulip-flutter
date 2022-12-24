@@ -69,18 +69,7 @@ class ExampleDown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const numSections = 100;
-    const numPerSection = 10;
-    return Scaffold(
-        appBar: AppBar(title: const Text(title)),
-        body: StickyHeaderListView.separated(
-            itemCount: numSections,
-            separatorBuilder: (context, i) => const SizedBox.shrink(),
-            itemBuilder: (context, i) => StickyHeader(
-                header: WideHeader(i: i),
-                content: Column(
-                    children: List.generate(
-                        numPerSection, (j) => WideItem(i: i, j: j))))));
+    return ExampleVertical(title: title);
   }
 }
 
@@ -96,15 +85,34 @@ class ExampleUp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ExampleVertical(title: title, reverse: true);
+  }
+}
+
+class ExampleVertical extends StatelessWidget {
+  ExampleVertical(
+      {super.key,
+      required this.title,
+      this.reverse = false,
+      this.headerDirection = AxisDirection.down})
+      : assert(axisDirectionToAxis(headerDirection) == Axis.vertical);
+
+  final String title;
+  final bool reverse;
+  final AxisDirection headerDirection;
+
+  @override
+  Widget build(BuildContext context) {
     const numSections = 100;
     const numPerSection = 10;
     return Scaffold(
-        appBar: AppBar(title: const Text(title)),
+        appBar: AppBar(title: Text(title)),
         body: StickyHeaderListView.separated(
-            reverse: true,
+            reverse: reverse,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
             itemBuilder: (context, i) => StickyHeader(
+                direction: headerDirection,
                 header: WideHeader(i: i),
                 content: Column(
                     children: List.generate(
@@ -152,22 +160,8 @@ class ExampleHorizontal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const numSections = 100;
-    const numPerSection = 10;
-    return Scaffold(
-        appBar: AppBar(title: const Text(title)),
-        body: StickyHeaderListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: numSections,
-            separatorBuilder: (context, i) => const SizedBox.shrink(),
-            itemBuilder: (context, i) => StickyHeader(
-                direction: AxisDirection.right,
-                header: TallHeader(i: i),
-                content: Row(
-                    children: List.generate(
-                        numPerSection,
-                            (j) => TallItem(
-                            i: i, j: j, numPerSection: numPerSection))))));
+    return ExampleHorizontalBase(
+        title: title, headerDirection: AxisDirection.right);
   }
 }
 
@@ -183,17 +177,36 @@ class ExampleHorizontalReverse extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ExampleHorizontalBase(
+        title: title, reverse: true, headerDirection: AxisDirection.right);
+  }
+}
+
+class ExampleHorizontalBase extends StatelessWidget {
+  ExampleHorizontalBase(
+      {super.key,
+      required this.title,
+      this.reverse = false,
+      required this.headerDirection})
+      : assert(axisDirectionToAxis(headerDirection) == Axis.horizontal);
+
+  final String title;
+  final bool reverse;
+  final AxisDirection headerDirection;
+
+  @override
+  Widget build(BuildContext context) {
     const numSections = 100;
     const numPerSection = 10;
     return Scaffold(
-        appBar: AppBar(title: const Text(title)),
+        appBar: AppBar(title: Text(title)),
         body: StickyHeaderListView.separated(
             scrollDirection: Axis.horizontal,
-            reverse: true,
+            reverse: reverse,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
             itemBuilder: (context, i) => StickyHeader(
-                direction: AxisDirection.right,
+                direction: headerDirection,
                 header: TallHeader(i: i),
                 content: Row(
                     children: List.generate(
@@ -210,11 +223,10 @@ class TallHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final contents = Column(children: [
       Text("Section ${i + 1}",
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onPrimaryContainer)),
       const SizedBox(height: 8),
       const Expanded(child: SizedBox.shrink()),
