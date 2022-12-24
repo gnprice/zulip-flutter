@@ -184,16 +184,46 @@ class ExampleHorizontalReverse extends StatelessWidget {
     const numPerSection = 10;
     return Scaffold(
         appBar: AppBar(title: const Text(title)),
-        body: ListView.separated(
+        body: StickyHeaderListView.separated(
             scrollDirection: Axis.horizontal,
             reverse: true,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
-            itemBuilder: (context, i) => Row(
-                children: List.generate(
-                    numPerSection,
-                    (j) =>
-                        TallItem(i: i, j: j, numPerSection: numPerSection)))));
+            itemBuilder: (context, i) => StickyHeader(
+                direction: AxisDirection.right,
+                header: TallHeader(i: i),
+                content: Row(
+                    children: List.generate(
+                        numPerSection,
+                        (j) => TallItem(
+                            i: i, j: j, numPerSection: numPerSection))))));
+  }
+}
+
+class TallHeader extends StatelessWidget {
+  const TallHeader({super.key, required this.i});
+
+  final int i;
+
+  @override
+  Widget build(BuildContext context) {
+
+    final contents = Column(children: [
+      Text("Section ${i + 1}",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onPrimaryContainer)),
+      const SizedBox(height: 8),
+      const Expanded(child: SizedBox.shrink()),
+      const SizedBox(height: 8),
+      const Text("end"),
+    ]);
+
+    return Container(
+        alignment: Alignment.center,
+        child: Card(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Padding(padding: const EdgeInsets.all(8), child: contents)));
   }
 }
 
