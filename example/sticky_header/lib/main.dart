@@ -47,6 +47,12 @@ class MainPage extends StatelessWidget {
               child: ElevatedButton(
                   onPressed: () => ExampleHorizontal.navigate(context),
                   child: const Text(ExampleHorizontal.title))),
+          Container(
+              padding: const EdgeInsets.all(8),
+              alignment: Alignment.center,
+              child: ElevatedButton(
+                  onPressed: () => ExampleHorizontalReverse.navigate(context),
+                  child: const Text(ExampleHorizontalReverse.title))),
         ]));
   }
 }
@@ -143,6 +149,52 @@ class ExampleHorizontal extends StatelessWidget {
         appBar: AppBar(title: const Text(title)),
         body: ListView.separated(
             scrollDirection: Axis.horizontal,
+            itemCount: numSections,
+            separatorBuilder: (context, i) => const SizedBox.shrink(),
+            itemBuilder: (context, i) => Container(
+                alignment: Alignment.center,
+                child: Card(
+                    child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: _buildItemContents(context, i))))));
+  }
+
+  Widget _buildItemContents(BuildContext context, int i) {
+    return Column(children: [
+      Text("Item ${i + 1}"),
+      const SizedBox(height: 8),
+      Expanded(
+          child: FractionallySizedBox(
+              heightFactor: (1 + (i % lengthPeriod) / (lengthPeriod - 1)) / 2.0,
+              child: ColoredBox(
+                  color: Theme.of(context).colorScheme.secondary,
+                  child: const SizedBox(width: 4)))),
+      const SizedBox(height: 8),
+      const Text("end"),
+    ]);
+  }
+}
+
+class ExampleHorizontalReverse extends StatelessWidget {
+  const ExampleHorizontalReverse({super.key});
+
+  static const title = 'Horizontal reverse list';
+
+  static navigate(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ExampleHorizontalReverse()));
+  }
+
+  static const numSections = 100;
+  static const lengthPeriod = 10;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(title: const Text(title)),
+        body: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            reverse: true,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
             itemBuilder: (context, i) => Container(
