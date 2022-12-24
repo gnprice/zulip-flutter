@@ -33,20 +33,26 @@ class MainPage extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               alignment: Alignment.center,
               child: ElevatedButton(
-                  onPressed: () => ExampleDownForward.navigate(context),
-                  child: const Text(ExampleDownForward.title)))
+                  onPressed: () => ExampleDown.navigate(context),
+                  child: const Text(ExampleDown.title))),
+          Container(
+              padding: const EdgeInsets.all(8),
+              alignment: Alignment.center,
+              child: ElevatedButton(
+                  onPressed: () => ExampleUp.navigate(context),
+                  child: const Text(ExampleUp.title))),
         ]));
   }
 }
 
-class ExampleDownForward extends StatelessWidget {
-  const ExampleDownForward({super.key});
+class ExampleDown extends StatelessWidget {
+  const ExampleDown({super.key});
 
   static const title = 'Standard list orientation';
 
   static navigate(BuildContext context) {
-    Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const ExampleDownForward()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (context) => const ExampleDown()));
   }
 
   @override
@@ -56,6 +62,43 @@ class ExampleDownForward extends StatelessWidget {
     return Scaffold(
         appBar: AppBar(title: const Text(title)),
         body: StickyHeaderListView.separated(
+            itemCount: numSections,
+            separatorBuilder: (context, i) => const SizedBox.shrink(),
+            itemBuilder: (context, i) => StickyHeader(
+                header: Material(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: ListTile(
+                        title: Text("Section ${i + 1}",
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer)))),
+                content: Column(
+                    children: List.generate(
+                        numPerSection,
+                        (j) => ListTile(
+                            title: Text("Item ${i + 1}.${j + 1}")))))));
+  }
+}
+
+class ExampleUp extends StatelessWidget {
+  const ExampleUp({super.key});
+
+  static const title = 'Reversed list';
+
+  static navigate(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ExampleUp()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const numSections = 100;
+    const numPerSection = 10;
+    return Scaffold(
+        appBar: AppBar(title: const Text(title)),
+        body: StickyHeaderListView.separated(
+            reverse: true,
             itemCount: numSections,
             separatorBuilder: (context, i) => const SizedBox.shrink(),
             itemBuilder: (context, i) => StickyHeader(
