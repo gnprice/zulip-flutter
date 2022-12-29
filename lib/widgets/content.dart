@@ -276,9 +276,7 @@ InlineSpan _buildInlineNode(InlineContentNode node) {
   } else if (node is InlineCodeNode) {
     return inlineCode(node);
   } else if (node is LinkNode) {
-    // TODO make link touchable
-    return styled(node.nodes,
-        TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()));
+    return inlineLink(node);
   } else if (node is UserMentionNode) {
     return WidgetSpan(
         alignment: PlaceholderAlignment.middle, child: UserMention(node: node));
@@ -371,6 +369,14 @@ const _kCodeStyle = TextStyle(
 // const _kInlineCodeRightBracket = '❳';
 // const _kInlineCodeLeftBracket = '⟨'; // probably too visually similar to paren
 // const _kInlineCodeRightBracket = '⟩';
+
+InlineSpan inlineLink(LinkNode node) {
+  // TODO make link touchable
+  return TextSpan(
+      children: _buildInlineList(node.nodes),
+      style:
+          TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()));
+}
 
 class UserMention extends StatelessWidget {
   const UserMention({super.key, required this.node});
