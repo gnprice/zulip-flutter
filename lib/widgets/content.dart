@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as dom;
 
@@ -372,11 +373,40 @@ const _kCodeStyle = TextStyle(
 
 InlineSpan inlineLink(LinkNode node) {
   // TODO make link touchable
-  return TextSpan(
-      children: _buildInlineList(node.nodes),
+  // debugPrint('inlineLink');
+  return WidgetSpan(child: _Link(
+    children: _buildInlineList(node.nodes),
       style:
-          TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()));
+      TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()),
+  ));
 }
+
+class _Link extends StatefulWidget {
+  const _Link({super.key, required this.children, required this.style});
+
+  final List<InlineSpan> children;
+  final TextStyle style;
+
+  @override
+  State<_Link> createState() => _LinkState();
+}
+
+class _LinkState extends State<_Link> {
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      // WORK HERE
+
+    )
+
+
+    return TextSpan(
+        recognizer: TapGestureRecognizer()..onTap = () { debugPrint("tapped"); },
+
+        return const Placeholder();
+  }
+}
+
 
 class UserMention extends StatelessWidget {
   const UserMention({super.key, required this.node});
