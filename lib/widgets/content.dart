@@ -406,7 +406,10 @@ class _LinkState extends State<_Link> {
   Widget build(BuildContext context) {
     // debugPrint(widget.children.toString());
     return Text.rich(TextSpan(
-      // text: 'a link',
+      // We have to pass the recognizer down recursively and put it on each
+      // individual span, because the events don't bubble within a paragraph:
+      //   https://github.com/flutter/flutter/issues/10623
+      //   https://github.com/flutter/flutter/issues/10623#issuecomment-308030170
       children: _buildInlineList(widget.nodes, _tapGestureRecognizer),
       style: widget.style,
       recognizer: _tapGestureRecognizer,
