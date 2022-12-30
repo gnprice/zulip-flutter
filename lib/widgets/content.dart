@@ -284,6 +284,20 @@ InlineSpan _buildInlineNode(InlineContentNode node, GestureRecognizer? recognize
     return inlineCode(node, recognizer);
   } else if (node is LinkNode) {
     // TODO this shouldn't be a widget -- should participate in paragraph layout
+    //   Likely this means: enclosing BlockContentNodeWidget becomes stateful;
+    //   on initState, it walks the inline nodes to find links, and then creates
+    //   appropriate recognizers; a data structure of those gets passed down
+    //   through _buildInlineNode; when reaching a link here at this spot,
+    //   we look up the appropriate recognizer.
+    //
+    //   We'd still have _buildInlineNode argument for the individual
+    //   actually-applicable recognizer, in addition to the registry of them for
+    //   the paragraph.
+    //
+    //   Perhaps instead of BlockContentNodeWidget being the home of the
+    //   recognizers, it's its appropriate children/descendants which contain
+    //   lists of inline nodes directly: so Paragraph, ListItem, Heading, etc.
+    //   Then put the relevant logic in a mixin so those can all reuse it.
     return WidgetSpan(child: Link(node: node));
   } else if (node is UserMentionNode) {
     return WidgetSpan(
