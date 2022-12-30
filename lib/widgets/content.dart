@@ -374,8 +374,7 @@ const _kCodeStyle = TextStyle(
 // const _kInlineCodeRightBracket = '⟩';
 
 InlineSpan inlineLink(LinkNode node) {
-  // TODO make link touchable
-  // debugPrint('inlineLink');
+  // TODO refactor this up into caller
   return WidgetSpan(child: _Link(
     nodes: node.nodes,
       url: node.url,
@@ -410,7 +409,6 @@ class _LinkState extends State<_Link> {
 
   @override
   Widget build(BuildContext context) {
-    // debugPrint(widget.children.toString());
     return Text.rich(TextSpan(
       // We have to pass the recognizer down recursively and put it on each
       // individual span, because the events don't bubble within a paragraph:
@@ -418,7 +416,6 @@ class _LinkState extends State<_Link> {
       //   https://github.com/flutter/flutter/issues/10623#issuecomment-308030170
       children: _buildInlineList(widget.nodes, _tapGestureRecognizer),
       style: widget.style,
-      recognizer: _tapGestureRecognizer,
     ));
   }
 }
