@@ -283,6 +283,7 @@ InlineSpan _buildInlineNode(InlineContentNode node, GestureRecognizer? recognize
   } else if (node is InlineCodeNode) {
     return inlineCode(node, recognizer);
   } else if (node is LinkNode) {
+    // TODO this shouldn't be a widget -- should participate in paragraph layout
     return WidgetSpan(child: Link(node: node));
   } else if (node is UserMentionNode) {
     return WidgetSpan(
