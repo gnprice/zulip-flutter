@@ -283,7 +283,7 @@ InlineSpan _buildInlineNode(InlineContentNode node, GestureRecognizer? recognize
   } else if (node is InlineCodeNode) {
     return inlineCode(node, recognizer);
   } else if (node is LinkNode) {
-    return inlineLink(node);
+    return WidgetSpan(child: Link(node: node));
   } else if (node is UserMentionNode) {
     return WidgetSpan(
         alignment: PlaceholderAlignment.middle, child: UserMention(node: node));
@@ -378,28 +378,16 @@ const _kCodeStyle = TextStyle(
 // const _kInlineCodeRightBracket = '⟩';
 
 // Doesn't take recognizer from parent, because it will supply its own
-InlineSpan inlineLink(LinkNode node) {
-  // TODO refactor this up into caller
-  return WidgetSpan(child: _Link(
-    nodes: node.nodes,
-      url: node.url,
-      style:
-      TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()),
-  ));
-}
+class Link extends StatefulWidget {
+  const Link({super.key, required this.node});
 
-class _Link extends StatefulWidget {
-  const _Link({required this.nodes, required this.url, required this.style});
-
-  final List<InlineContentNode> nodes;
-  final String url;
-  final TextStyle style;
+  final LinkNode node;
 
   @override
-  State<_Link> createState() => _LinkState();
+  State<Link> createState() => _LinkState();
 }
 
-class _LinkState extends State<_Link> {
+class _LinkState extends State<Link> {
   late TapGestureRecognizer _tapGestureRecognizer;
 
   @override
@@ -408,7 +396,7 @@ class _LinkState extends State<_Link> {
     _tapGestureRecognizer = TapGestureRecognizer()
       ..onTap = () {
         // TODO handle when fails to parse; possibly AlertDialog
-        launchUrl(Uri.parse(widget.url));
+        launchUrl(Uri.parse(widget.node.url));
       };
   }
 
@@ -419,8 +407,8 @@ class _LinkState extends State<_Link> {
       // individual span, because the events don't bubble within a paragraph:
       //   https://github.com/flutter/flutter/issues/10623
       //   https://github.com/flutter/flutter/issues/10623#issuecomment-308030170
-      children: _buildInlineList(widget.nodes, _tapGestureRecognizer),
-      style: widget.style,
+      children: _buildInlineList(widget.node.nodes, _tapGestureRecognizer),
+      style: TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()),
     ));
   }
 }
