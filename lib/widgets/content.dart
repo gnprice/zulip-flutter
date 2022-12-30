@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as dom;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../model/content.dart';
 import '../model/store.dart';
@@ -377,15 +378,17 @@ InlineSpan inlineLink(LinkNode node) {
   // debugPrint('inlineLink');
   return WidgetSpan(child: _Link(
     nodes: node.nodes,
+      url: node.url,
       style:
       TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()),
   ));
 }
 
 class _Link extends StatefulWidget {
-  const _Link({required this.nodes, required this.style});
+  const _Link({required this.nodes, required this.url, required this.style});
 
   final List<InlineContentNode> nodes;
+  final String url;
   final TextStyle style;
 
   @override
@@ -399,7 +402,10 @@ class _LinkState extends State<_Link> {
   void initState() {
     super.initState();
     _tapGestureRecognizer = TapGestureRecognizer()
-      ..onTap = () { debugPrint("tapped"); };
+      ..onTap = () {
+        // TODO handle when fails to parse
+        launchUrl(Uri.parse(widget.url));
+      };
   }
 
   @override
