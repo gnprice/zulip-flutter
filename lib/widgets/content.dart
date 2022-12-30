@@ -403,8 +403,10 @@ class _LinkState extends State<_Link> {
 
   @override
   Widget build(BuildContext context) {
+    // debugPrint(widget.children.toString());
     return Text.rich(TextSpan(
-      children: widget.children,
+      text: 'a link',
+      // children: widget.children,
       style: widget.style,
       recognizer: _tapGestureRecognizer,
     ));
