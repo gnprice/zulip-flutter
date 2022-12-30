@@ -68,7 +68,10 @@ class BlockContentNodeWidget extends StatelessWidget {
           padding: const EdgeInsets.only(top: 15, bottom: 5),
           child: Text.rich(TextSpan(
               style: const TextStyle(fontWeight: FontWeight.w600, height: 1.4),
-              children: _buildInlineList(node.nodes, null)))); // TODO recognizer
+              children: _buildInlineList(node.nodes,
+                  // no recognizer; assume headings don't appear inside links or
+                  // other gesture-capturing containers
+                  null))));
     } else if (node is QuotationNode) {
       return Padding(
           padding: const EdgeInsets.only(left: 10),
@@ -105,7 +108,9 @@ class Paragraph extends StatelessWidget {
     // The paragraph has vertical CSS margins, but those have no effect.
     if (node.nodes.isEmpty) return const SizedBox();
 
-    final text = Text.rich(TextSpan(children: _buildInlineList(node.nodes, null /* TODO recognizer */)));
+    // no recognizer; assume paragraphs don't appear inside links or
+    // other gesture-capturing containers
+    final text = Text.rich(TextSpan(children: _buildInlineList(node.nodes, null)));
 
     // If the paragraph didn't actually have a `p` element in the HTML,
     // then apply no margins.  (For example, these are seen in list items.)
@@ -278,9 +283,8 @@ InlineSpan _buildInlineNode(InlineContentNode node, GestureRecognizer? recognize
   } else if (node is InlineCodeNode) {
     return inlineCode(node, recognizer);
   } else if (node is LinkNode) {
-    return inlineLink(node); // ignore recognizer
+    return inlineLink(node);
   } else if (node is UserMentionNode) {
-    // ignore recognizer
     return WidgetSpan(
         alignment: PlaceholderAlignment.middle, child: UserMention(node: node));
   } else if (node is UnicodeEmojiNode) {
@@ -373,6 +377,7 @@ const _kCodeStyle = TextStyle(
 // const _kInlineCodeLeftBracket = '⟨'; // probably too visually similar to paren
 // const _kInlineCodeRightBracket = '⟩';
 
+// Doesn't take recognizer from parent, because it will supply its own
 InlineSpan inlineLink(LinkNode node) {
   // TODO refactor this up into caller
   return WidgetSpan(child: _Link(
@@ -402,7 +407,7 @@ class _LinkState extends State<_Link> {
     super.initState();
     _tapGestureRecognizer = TapGestureRecognizer()
       ..onTap = () {
-        // TODO handle when fails to parse
+        // TODO handle when fails to parse; possibly AlertDialog
         launchUrl(Uri.parse(widget.url));
       };
   }
@@ -421,6 +426,8 @@ class _LinkState extends State<_Link> {
 }
 
 
+// Doesn't take a recognizer; captures any taps/gestures, rather than
+// effectively bubble them to parent
 class UserMention extends StatelessWidget {
   const UserMention({super.key, required this.node});
 
