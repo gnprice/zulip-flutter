@@ -392,13 +392,21 @@ class _Link extends StatefulWidget {
 }
 
 class _LinkState extends State<_Link> {
+  late TapGestureRecognizer _tapGestureRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _tapGestureRecognizer = TapGestureRecognizer()
+      ..onTap = () { debugPrint("tapped"); };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Text.rich(TextSpan(
       children: widget.children,
       style: widget.style,
-      recognizer: TapGestureRecognizer()
-        ..onTap = () { debugPrint("tapped"); },
+      recognizer: _tapGestureRecognizer,
     ));
   }
 }
