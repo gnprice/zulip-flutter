@@ -67,7 +67,7 @@ class BlockContentNodeWidget extends StatelessWidget {
           padding: const EdgeInsets.only(top: 15, bottom: 5),
           child: Text.rich(TextSpan(
               style: const TextStyle(fontWeight: FontWeight.w600, height: 1.4),
-              children: _buildInlineList(node.nodes))));
+              children: _buildInlineList(node.nodes, null)))); // TODO recognizer
     } else if (node is QuotationNode) {
       return Padding(
           padding: const EdgeInsets.only(left: 10),
@@ -104,7 +104,7 @@ class Paragraph extends StatelessWidget {
     // The paragraph has vertical CSS margins, but those have no effect.
     if (node.nodes.isEmpty) return const SizedBox();
 
-    final text = Text.rich(TextSpan(children: _buildInlineList(node.nodes)));
+    final text = Text.rich(TextSpan(children: _buildInlineList(node.nodes, null /* TODO recognizer */)));
 
     // If the paragraph didn't actually have a `p` element in the HTML,
     // then apply no margins.  (For example, these are seen in list items.)
@@ -257,15 +257,15 @@ class _SingleChildScrollViewWithScrollbarState
 // Inline layout.
 //
 
-List<InlineSpan> _buildInlineList(List<InlineContentNode> nodes) =>
-    List.of(nodes.map(_buildInlineNode));
+List<InlineSpan> _buildInlineList(List<InlineContentNode> nodes, GestureRecognizer? recognizer) =>
+    List.of(nodes.map((node) => _buildInlineNode(node, recognizer)));
 
-InlineSpan _buildInlineNode(InlineContentNode node) {
+InlineSpan _buildInlineNode(InlineContentNode node, GestureRecognizer? recognizer) {
   InlineSpan styled(List<InlineContentNode> nodes, TextStyle style) =>
-      TextSpan(children: _buildInlineList(nodes), style: style);
+      TextSpan(children: _buildInlineList(nodes, recognizer), style: style);
 
   if (node is TextNode) {
-    return TextSpan(text: node.text);
+    return TextSpan(text: node.text, recognizer: recognizer);
   } else if (node is LineBreakInlineNode) {
     // Each `<br/>` is followed by a newline, which browsers apparently ignore
     // and our parser doesn't.  So don't do anything here.
@@ -275,20 +275,21 @@ InlineSpan _buildInlineNode(InlineContentNode node) {
   } else if (node is EmphasisNode) {
     return styled(node.nodes, const TextStyle(fontStyle: FontStyle.italic));
   } else if (node is InlineCodeNode) {
-    return inlineCode(node);
+    return inlineCode(node, recognizer);
   } else if (node is LinkNode) {
-    return inlineLink(node);
+    return inlineLink(node); // ignore recognizer
   } else if (node is UserMentionNode) {
+    // ignore recognizer
     return WidgetSpan(
         alignment: PlaceholderAlignment.middle, child: UserMention(node: node));
   } else if (node is UnicodeEmojiNode) {
     return WidgetSpan(
         alignment: PlaceholderAlignment.middle,
-        child: MessageUnicodeEmoji(node: node));
+        child: MessageUnicodeEmoji(node: node, recognizer: recognizer));
   } else if (node is RealmEmojiNode) {
     return WidgetSpan(
         alignment: PlaceholderAlignment.middle,
-        child: MessageRealmEmoji(node: node));
+        child: MessageRealmEmoji(node: node, recognizer: recognizer));
   } else if (node is UnimplementedInlineContentNode) {
     return _errorUnimplemented(node);
   } else {
@@ -297,7 +298,7 @@ InlineSpan _buildInlineNode(InlineContentNode node) {
   }
 }
 
-InlineSpan inlineCode(InlineCodeNode node) {
+InlineSpan inlineCode(InlineCodeNode node, GestureRecognizer? recognizer) {
   // TODO `code` elements: border, padding -- seems hard
   //
   // Hard because this is an inline span, which we want to be able to break
@@ -329,7 +330,7 @@ InlineSpan inlineCode(InlineCodeNode node) {
         fontFamily: "Source Code Pro", // TODO supply font
         fontFamilyFallback: ["monospace"],
       ),
-      children: _buildInlineList(node.nodes));
+      children: _buildInlineList(node.nodes, recognizer));
 
   // Another fun solution -- we can in fact have a border!  Like so:
   //   TextStyle(
@@ -382,7 +383,7 @@ InlineSpan inlineLink(LinkNode node) {
 }
 
 class _Link extends StatefulWidget {
-  const _Link({super.key, required this.nodes, required this.style});
+  const _Link({required this.nodes, required this.style});
 
   final List<InlineContentNode> nodes;
   final TextStyle style;
@@ -405,8 +406,8 @@ class _LinkState extends State<_Link> {
   Widget build(BuildContext context) {
     // debugPrint(widget.children.toString());
     return Text.rich(TextSpan(
-      text: 'a link',
-      // children: _buildInlineList(widget.nodes),
+      // text: 'a link',
+      children: _buildInlineList(widget.nodes, _tapGestureRecognizer),
       style: widget.style,
       recognizer: _tapGestureRecognizer,
     ));
@@ -424,7 +425,7 @@ class UserMention extends StatelessWidget {
     return Container(
         decoration: _kDecoration,
         padding: const EdgeInsets.symmetric(horizontal: 0.2 * kBaseFontSize),
-        child: Text.rich(TextSpan(children: _buildInlineList(node.nodes))));
+        child: Text.rich(TextSpan(children: _buildInlineList(node.nodes, null))));
   }
 
   static get _kDecoration => BoxDecoration(
@@ -458,9 +459,10 @@ class UserMention extends StatelessWidget {
 }
 
 class MessageUnicodeEmoji extends StatelessWidget {
-  const MessageUnicodeEmoji({super.key, required this.node});
+  const MessageUnicodeEmoji({super.key, required this.node, required this.recognizer});
 
   final UnicodeEmojiNode node;
+  final GestureRecognizer? recognizer;
 
   @override
   Widget build(BuildContext context) {
@@ -475,9 +477,10 @@ class MessageUnicodeEmoji extends StatelessWidget {
 }
 
 class MessageRealmEmoji extends StatelessWidget {
-  const MessageRealmEmoji({super.key, required this.node});
+  const MessageRealmEmoji({super.key, required this.node, required this.recognizer});
 
   final RealmEmojiNode node;
+  final GestureRecognizer? recognizer;
 
   @override
   Widget build(BuildContext context) {
