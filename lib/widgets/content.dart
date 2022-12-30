@@ -394,16 +394,12 @@ class _Link extends StatefulWidget {
 class _LinkState extends State<_Link> {
   @override
   Widget build(BuildContext context) {
-    return Text.rich(
-      // WORK HERE
-
-    )
-
-
-    return TextSpan(
-        recognizer: TapGestureRecognizer()..onTap = () { debugPrint("tapped"); },
-
-        return const Placeholder();
+    return Text.rich(TextSpan(
+      children: widget.children,
+      style: widget.style,
+      recognizer: TapGestureRecognizer()
+        ..onTap = () { debugPrint("tapped"); },
+    ));
   }
 }
 
