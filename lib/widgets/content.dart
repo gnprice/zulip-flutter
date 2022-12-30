@@ -375,16 +375,16 @@ InlineSpan inlineLink(LinkNode node) {
   // TODO make link touchable
   // debugPrint('inlineLink');
   return WidgetSpan(child: _Link(
-    children: _buildInlineList(node.nodes),
+    nodes: node.nodes,
       style:
       TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()),
   ));
 }
 
 class _Link extends StatefulWidget {
-  const _Link({super.key, required this.children, required this.style});
+  const _Link({super.key, required this.nodes, required this.style});
 
-  final List<InlineSpan> children;
+  final List<InlineContentNode> nodes;
   final TextStyle style;
 
   @override
@@ -406,7 +406,7 @@ class _LinkState extends State<_Link> {
     // debugPrint(widget.children.toString());
     return Text.rich(TextSpan(
       text: 'a link',
-      // children: widget.children,
+      // children: _buildInlineList(widget.nodes),
       style: widget.style,
       recognizer: _tapGestureRecognizer,
     ));
