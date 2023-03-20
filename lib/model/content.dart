@@ -528,7 +528,7 @@ class _ZulipContentParser {
     final classes = element.classes;
     List<InlineContentNode> nodes() => parseInlineContentList(element.nodes);
 
-    switch ((localName, classes.toList())) {
+    switch ((localName, classes.toList()..sort())) {
       case ('br', []):
         return LineBreakInlineNode(debugHtmlNode: debugHtmlNode);
 
@@ -550,7 +550,6 @@ class _ZulipContentParser {
 
       case ('span', ['user-mention' || 'user-group-mention']
                     || ['silent', 'user-mention' || 'user-group-mention']):
-        // TODO needs classes sorted
         // TODO assert UserMentionNode can't contain LinkNode;
         //   either a debug-mode check, or perhaps we can make expectations much
         //   tighter on a UserMentionNode's contents overall.
@@ -558,7 +557,6 @@ class _ZulipContentParser {
 
       case ('span', ['emoji', var otherClass])
           when _emojiClassRegexp.hasMatch(otherClass):
-        // TODO needs classes sorted
         return UnicodeEmojiNode(text: element.text, debugHtmlNode: debugHtmlNode);
 
       case ('img', ['emoji']):
