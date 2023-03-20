@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart';
@@ -481,6 +483,28 @@ class ImageEmojiNode extends EmojiNode {
 
 ////////////////////////////////////////////////////////////////
 
+// TODO(dart-3): make an inline class
+class SetMapView<T> with MapMixin<T, bool> implements Map<T, bool> {
+  const SetMapView(Set<T> set) : _set = set;
+
+  final Set<T> _set;
+
+  @override
+  Iterable<T> get keys => _set;
+
+  @override
+  bool? operator [](Object? key) => _set.contains(key) ? true : null;
+
+  @override
+  operator []=(Object? key, bool value) => throw UnimplementedError();
+
+  @override
+  void clear() => throw UnimplementedError();
+
+  @override
+  bool? remove(Object? key) => throw UnimplementedError();
+}
+
 /// What sort of nodes a [_ZulipContentParser] is currently expecting to find.
 enum _ParserContext {
   /// The parser is currently looking for block nodes.
@@ -492,6 +516,7 @@ enum _ParserContext {
 
 extension DomElementExtension on dom.Element {
   List<String> get classList => classes.toList(growable: false)..sort();
+  Map<String, bool> get classMap => SetMapView(classes);
 }
 
 class _ZulipContentParser {
@@ -513,7 +538,7 @@ class _ZulipContentParser {
     return result;
   }
 
-  static final _emojiClassRegexp = RegExp(r"^emoji-[0-9a-f]+$");
+  static final _emojiClassRegexp = RegExp(r"^emoji(-[0-9a-f]+)?$");
 
   InlineContentNode parseInlineContent(dom.Node node) {
     assert(_debugParserContext == _ParserContext.inline);
@@ -530,38 +555,42 @@ class _ZulipContentParser {
     final element = node;
     List<InlineContentNode> nodes() => parseInlineContentList(element.nodes);
 
-    switch ((element.localName, element.classList)) {
-      case ('br', []):
+    switch ((element.localName, element.classMap)) {
+      case ('br', {}):
         return LineBreakInlineNode(debugHtmlNode: debugHtmlNode);
 
-      case ('strong', []):
+      case ('strong', {}):
         return StrongNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('em', []):
+      case ('em', {}):
         return EmphasisNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('code', []):
+      case ('code', {}):
         return InlineCodeNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('a', [] || ['stream-topic' || 'stream']):
+      case ('a', {} || {'stream-topic': _} || {'stream': _}):
         final href = element.attributes['href'];
         if (href == null) return unimplemented();
         final link = LinkNode(nodes: nodes(), url: href, debugHtmlNode: debugHtmlNode);
         (_linkNodes ??= []).add(link);
         return link;
 
-      case ('span', ['user-mention' || 'user-group-mention']
-                    || ['silent', 'user-mention' || 'user-group-mention']):
+      // TODO(dart): https://github.com/dart-lang/language/issues/2496
+      case ('span',
+          {'user-mention': _} || {'user-group-mention': _}
+          || {'silent': _, 'user-mention': _}
+          || {'silent': _, 'user-group-mention': _}):
         // TODO assert UserMentionNode can't contain LinkNode;
         //   either a debug-mode check, or perhaps we can make expectations much
         //   tighter on a UserMentionNode's contents overall.
         return UserMentionNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('span', ['emoji', var otherClass])
-          when _emojiClassRegexp.hasMatch(otherClass):
+      case ('span', {'emoji': _, ...})
+          when element.classes.length == 2
+            && element.classes.every(_emojiClassRegexp.hasMatch):
         return UnicodeEmojiNode(text: element.text, debugHtmlNode: debugHtmlNode);
 
-      case ('img', ['emoji']):
+      case ('img', {'emoji': _}):
         switch (element.attributes) {
           case {'alt': var alt, 'src': var src}:
             return ImageEmojiNode(src: src, alt: alt, debugHtmlNode: debugHtmlNode);
