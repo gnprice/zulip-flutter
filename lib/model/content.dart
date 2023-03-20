@@ -602,11 +602,14 @@ class _ZulipContentParser {
     final debugHtmlNode = kDebugMode ? element : null;
     final List<List<BlockContentNode>> items = [];
     for (final item in element.nodes) {
-      if (item is dom.Text && item.text == '\n') continue;
-      if (item is! dom.Element || item.localName != 'li' || item.classes.isNotEmpty) {
-        items.add([UnimplementedBlockContentNode(htmlNode: item)]);
+      switch (item) {
+        case dom.Text(text: '\n'):
+          continue;
+        case dom.Element(localName: 'li') when item.classes.isEmpty:
+          items.add(parseImplicitParagraphBlockContentList(item.nodes));
+        default:
+          items.add([UnimplementedBlockContentNode(htmlNode: item)]);
       }
-      items.add(parseImplicitParagraphBlockContentList(item.nodes));
     }
 
     return ListNode(listStyle, items, debugHtmlNode: debugHtmlNode);
