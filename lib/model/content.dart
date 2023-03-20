@@ -524,11 +524,9 @@ class _ZulipContentParser {
     }
 
     final element = node;
-    final localName = element.localName;
-    final classes = element.classes;
     List<InlineContentNode> nodes() => parseInlineContentList(element.nodes);
 
-    switch ((localName, classes.toList()..sort())) {
+    switch ((element.localName, element.classes.toList()..sort())) {
       case ('br', []):
         return LineBreakInlineNode(debugHtmlNode: debugHtmlNode);
 
