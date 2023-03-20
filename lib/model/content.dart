@@ -621,111 +621,17 @@ class _ZulipContentParser {
 
   BlockContentNode parseCodeBlock(dom.Element divElement) {
     assert(_debugParserContext == _ParserContext.block);
-    dom.Element? mainElement4;
+    dom.Element? mainElement;
     if (divElement case dom.Element(localName: 'div', classList: ['codehilite'],
           nodes: [var child])) {
       if (child case dom.Element(localName: 'pre',
             nodes: [var grandchild] ||
               [dom.Element(localName: 'span', nodes: []), var grandchild])) {
         if (grandchild case dom.Element(localName: 'code')) {
-          mainElement4 = grandchild;
+          mainElement = grandchild;
         }
       }
     }
-
-    final mainElement3 = () {
-      if (divElement case dom.Element(localName: 'div', classList: ['codehilite'],
-            nodes: [var child])) {
-        if (child case dom.Element(localName: 'pre',
-              nodes: [var grandchild] ||
-                [dom.Element(localName: 'span', nodes: []), var grandchild])) {
-          if (grandchild case dom.Element(localName: 'code')) {
-            return grandchild;
-          }
-        }
-      }
-      return null;
-    }();
-
-    final mainElement2 = () {
-      switch (divElement) {
-        case dom.Element(localName: 'div', classList: ['codehilite'],
-            nodes: [var child]):
-          switch (child) {
-            case dom.Element(localName: 'pre',
-                nodes: [var grandchild] ||
-                   [dom.Element(localName: 'span', nodes: []), var grandchild]):
-              switch (grandchild) {
-                case dom.Element(localName: 'code'):
-                  return grandchild;
-              }
-          }
-      }
-      return null;
-    }();
-
-    // final mainElement = switch (divElement) {
-    //   case dom.Element(localName: 'div', classList: ['codehilite'],
-    //     nodes: [dom.Element(localName: 'pre',
-    //       nodes: [var grandchild] ||
-    //         [dom.Element(localName: 'span', nodes: []), var grandchild])]) =>
-    //     switch (grandchild) {
-    //       case dom.Element(localName: 'code') =>
-    //         grandchild
-    //     }
-    // }
-
-    final mainElement = () {
-      assert(divElement.localName == 'div'
-          && divElement.classes.length == 1
-          && divElement.classes.contains("codehilite"));
-
-      dom.Node? child;
-      switch (divElement) {
-        case dom.Element(localName: 'div', classList: ['codehilite'],
-            nodes: [var child1]):
-          child = child1;
-      }
-
-      dom.Node? grandchild;
-      switch (child) {
-        case dom.Element(localName: 'pre',
-            nodes: [var grandchild1] ||
-              [dom.Element(localName: 'span', nodes: []), var grandchild1]):
-          grandchild = grandchild1;
-      }
-
-      switch (grandchild) {
-        case dom.Element(localName: 'code'):
-          return grandchild;
-      }
-
-      return null;
-    }();
-
-    final mainElement1 = () {
-      assert(divElement.localName == 'div'
-          && divElement.classes.length == 1
-          && divElement.classes.contains("codehilite"));
-
-      if (divElement.nodes.length != 1) return null;
-      final child = divElement.nodes[0];
-      if (child is! dom.Element) return null;
-      if (child.localName != 'pre') return null;
-
-      if (child.nodes.length > 2) return null;
-      if (child.nodes.length == 2) {
-        final first = child.nodes[0];
-        if (first is! dom.Element
-            || first.localName != 'span'
-            || first.nodes.isNotEmpty) return null;
-      }
-      final grandchild = child.nodes[child.nodes.length - 1];
-      if (grandchild is! dom.Element) return null;
-      if (grandchild.localName != 'code') return null;
-
-      return grandchild;
-    }();
 
     final debugHtmlNode = kDebugMode ? divElement : null;
     if (mainElement == null) {
