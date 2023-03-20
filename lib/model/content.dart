@@ -509,7 +509,7 @@ class _ZulipContentParser {
     return result;
   }
 
-  static final _emojiClassRegexp = RegExp(r"^emoji(-[0-9a-f]+)?$");
+  static final _emojiClassRegexp = RegExp(r"^emoji-[0-9a-f]+$");
 
   InlineContentNode parseInlineContent(dom.Node node) {
     assert(_debugParserContext == _ParserContext.inline);
@@ -556,8 +556,8 @@ class _ZulipContentParser {
         //   tighter on a UserMentionNode's contents overall.
         return UserMentionNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('span', ['emoji', _])
-          when classes.every(_emojiClassRegexp.hasMatch):
+      case ('span', ['emoji', var otherClass])
+          when _emojiClassRegexp.hasMatch(otherClass):
         // TODO needs classes sorted
         return UnicodeEmojiNode(text: element.text, debugHtmlNode: debugHtmlNode);
 
