@@ -528,61 +528,51 @@ class _ZulipContentParser {
     final classes = element.classes;
     List<InlineContentNode> nodes() => parseInlineContentList(element.nodes);
 
-    if (localName == 'br' && classes.isEmpty) {
-      return LineBreakInlineNode(debugHtmlNode: debugHtmlNode);
-    }
-    if (localName == 'strong' && classes.isEmpty) {
-      return StrongNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
-    }
-    if (localName == 'em' && classes.isEmpty) {
-      return EmphasisNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
-    }
-    if (localName == 'code' && classes.isEmpty) {
-      return InlineCodeNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
-    }
+    switch ((localName, classes.toList())) {
+      case ('br', []):
+        return LineBreakInlineNode(debugHtmlNode: debugHtmlNode);
 
-    if (localName == 'a'
-        && (classes.isEmpty
-            || (classes.length == 1
-                && (classes.contains('stream-topic')
-                    || classes.contains('stream'))))) {
-      final href = element.attributes['href'];
-      if (href == null) return unimplemented();
-      final link = LinkNode(nodes: nodes(), url: href, debugHtmlNode: debugHtmlNode);
-      (_linkNodes ??= []).add(link);
-      return link;
-    }
+      case ('strong', []):
+        return StrongNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-    if (localName == 'span'
-        && (classes.contains('user-mention')
-            || classes.contains('user-group-mention'))
-        && (classes.length == 1
-            || (classes.length == 2 && classes.contains('silent')))) {
-      // TODO assert UserMentionNode can't contain LinkNode;
-      //   either a debug-mode check, or perhaps we can make expectations much
-      //   tighter on a UserMentionNode's contents overall.
-      return UserMentionNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
-    }
+      case ('em', []):
+        return EmphasisNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-    if (localName == 'span'
-        && classes.length == 2
-        && classes.contains('emoji')
-        && classes.every(_emojiClassRegexp.hasMatch)) {
-      return UnicodeEmojiNode(text: element.text, debugHtmlNode: debugHtmlNode);
-    }
+      case ('code', []):
+        return InlineCodeNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-    if (localName == 'img'
-        && classes.contains('emoji')
-        && classes.length == 1) {
-      final alt = element.attributes['alt'];
-      if (alt == null) return unimplemented();
-      final src = element.attributes['src'];
-      if (src == null) return unimplemented();
-      return ImageEmojiNode(src: src, alt: alt, debugHtmlNode: debugHtmlNode);
-    }
+      case ('a', [] || ['stream-topic' || 'stream']):
+        final href = element.attributes['href'];
+        if (href == null) return unimplemented();
+        final link = LinkNode(nodes: nodes(), url: href, debugHtmlNode: debugHtmlNode);
+        (_linkNodes ??= []).add(link);
+        return link;
 
-    // TODO more types of node
-    return unimplemented();
+      case ('span', ['user-mention' || 'user-group-mention']
+                    || ['silent', 'user-mention' || 'user-group-mention']):
+        // TODO needs classes sorted
+        // TODO assert UserMentionNode can't contain LinkNode;
+        //   either a debug-mode check, or perhaps we can make expectations much
+        //   tighter on a UserMentionNode's contents overall.
+        return UserMentionNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
+
+      case ('span', ['emoji', _])
+          when classes.every(_emojiClassRegexp.hasMatch):
+        // TODO needs classes sorted
+        return UnicodeEmojiNode(text: element.text, debugHtmlNode: debugHtmlNode);
+
+      case ('img', ['emoji']):
+        switch (element.attributes) {
+          case {'alt': var alt, 'src': var src}:
+            return ImageEmojiNode(src: src, alt: alt, debugHtmlNode: debugHtmlNode);
+          default:
+            return unimplemented();
+        }
+
+      default:
+        // TODO more types of node
+        return unimplemented();
+    }
   }
 
   List<InlineContentNode> parseInlineContentList(List<dom.Node> nodes) {
