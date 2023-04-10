@@ -2,11 +2,20 @@
 import 'dart:io';
 
 Future<void> main() async {
+  final checks = {AnalyzeCheck()};
+  final futures = {
+    for (final check in checks)
+      check: check.check().then((result) => (check: check, result: result)),
+  };
+
   bool hadFailure = false;
-  final result = await AnalyzeCheck().check();
-  if (result.failure != null) {
-    print(result.failure!.msg);
-    hadFailure = true;
+  while (futures.isNotEmpty) {
+    final (:check, :result) = await Future.any(futures.values);
+    futures.remove(check);
+    if (result.failure != null) {
+      print(result.failure!.msg);
+      hadFailure = true;
+    }
   }
   exit(hadFailure ? 1 : 0);
 }
