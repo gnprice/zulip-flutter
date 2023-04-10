@@ -8,17 +8,23 @@ Future<void> main() async {
       check: check.check().then((result) => (check: check, result: result)),
   };
 
-  bool hadFailure = false;
+  List<String> failures = [];
   while (futures.isNotEmpty) {
     final r = await Future.any(futures.values);
     final (:check, :result) = r; // https://github.com/dart-lang/sdk/issues/52004
     futures.remove(check);
     if (result.failure != null) {
       print(result.failure!.msg);
-      hadFailure = true;
+      failures.add(check.name);
     }
   }
-  exit(hadFailure ? 1 : 0);
+
+  if (failures.isNotEmpty) {
+    print('FAILED: ${failures.join(' ')}');
+    exit(1);
+  } else {
+    exit(0);
+  }
 }
 
 typedef CheckResult = ({CheckFailure? failure});
