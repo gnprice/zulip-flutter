@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+this_dir=${BASH_SOURCE[0]%/*}
+exec dart --enable-asserts "${this_dir}"/lib/check.dart "$@"
