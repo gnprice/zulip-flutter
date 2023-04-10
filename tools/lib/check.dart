@@ -3,7 +3,7 @@ import 'dart:io';
 
 Future<void> main() async {
   bool hadFailure = false;
-  final result = await checkAnalyze();
+  final result = await AnalyzeCheck().check();
   if (result.failure != null) {
     print(result.failure!.msg);
     hadFailure = true;
@@ -15,15 +15,27 @@ typedef CheckResult = ({CheckFailure? failure});
 
 typedef CheckFailure = ({String msg});
 
-Future<CheckResult> checkAnalyze() async {
-  final result = await Process.run('flutter', ['analyze']);
-  if (result.exitCode != 0) {
-    return (failure: (msg:
+abstract class Check {
+  String get name;
+
+  Future<CheckResult> check();
+}
+
+class AnalyzeCheck extends Check {
+  @override
+  String get name => 'analyze';
+
+  @override
+  Future<CheckResult> check() async {
+    final result = await Process.run('flutter', ['analyze']);
+    if (result.exitCode != 0) {
+      return (failure: (msg:
       // ignore: prefer_interpolation_to_compose_strings
       'error: flutter analyze failed\n'
-      + result.stdout
-      + result.stderr
-    ));
+          + result.stdout
+          + result.stderr
+      ));
+    }
+    return (failure: null);
   }
-  return (failure: null);
 }
