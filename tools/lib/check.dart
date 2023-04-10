@@ -10,7 +10,8 @@ Future<void> main() async {
 
   bool hadFailure = false;
   while (futures.isNotEmpty) {
-    final (:check, :result) = await Future.any(futures.values);
+    final r = await Future.any(futures.values);
+    final (:check, :result) = r; // https://github.com/dart-lang/sdk/issues/52004
     futures.remove(check);
     if (result.failure != null) {
       print(result.failure!.msg);
