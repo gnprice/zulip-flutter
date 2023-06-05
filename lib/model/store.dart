@@ -366,7 +366,7 @@ class CorePerAccountStore {
        assert(connection.realmUrl == globalStore.getAccount(accountId)!.realmUrl);
 
   final GlobalStore _globalStore;
-  final ApiConnection connection; // TODO(#135): update zulipFeatureLevel with events
+  final ApiConnection connection;
   final String queueId;
   final int accountId;
 
@@ -871,6 +871,12 @@ class PerAccountStore extends PerAccountStoreBase with
         // Update _users last, so other handlers can compare to the old value.
         _users.handleMutedUsersEvent(event);
         notifyListeners();
+
+      case RestartEvent():
+        assert(debugLog("server event: restart"));
+        // TODO(#135): update connection.zulipFeatureLevel
+        // TODO(#135): update account with zulipVersion and zulipFeatureLevel
+        // TODO(#135): replace event queue, if needed
 
       case UnexpectedEvent():
         assert(debugLog("server event: ${jsonEncode(event.toJson())}")); // TODO log better
