@@ -62,6 +62,7 @@ sealed class Event {
           default: return UnexpectedEvent.fromJson(json);
         }
       case 'reaction': return ReactionEvent.fromJson(json);
+      case 'restart': return RestartEvent.fromJson(json);
       case 'heartbeat': return HeartbeatEvent.fromJson(json);
       // TODO add many more event types
       default: return UnexpectedEvent.fromJson(json);
@@ -862,6 +863,33 @@ class ReactionEvent extends Event {
 enum ReactionOp {
   add,
   remove,
+}
+
+// A Zulip event of type `restart`: https://zulip.com/api/get-events#restart
+@JsonSerializable(fieldRename: FieldRename.snake)
+class RestartEvent extends Event {
+  @override
+  @JsonKey(includeToJson: true)
+  String get type => 'restart';
+
+  final String zulipVersion;
+  final String? zulipMergeBase; // TODO(server-5)
+  final int zulipFeatureLevel;
+  final int serverGeneration;
+
+  RestartEvent({
+    required super.id,
+    required this.zulipVersion,
+    required this.zulipMergeBase,
+    required this.zulipFeatureLevel,
+    required this.serverGeneration,
+  });
+
+  factory RestartEvent.fromJson(Map<String, dynamic> json) =>
+    _$RestartEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$RestartEventToJson(this);
 }
 
 /// A Zulip event of type `heartbeat`: https://zulip.com/api/get-events#heartbeat

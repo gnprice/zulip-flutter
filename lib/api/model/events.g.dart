@@ -535,6 +535,24 @@ const _$ReactionTypeEnumMap = {
   ReactionType.zulipExtraEmoji: 'zulip_extra_emoji',
 };
 
+RestartEvent _$RestartEventFromJson(Map<String, dynamic> json) => RestartEvent(
+      id: json['id'] as int,
+      zulipVersion: json['zulip_version'] as String,
+      zulipMergeBase: json['zulip_merge_base'] as String?,
+      zulipFeatureLevel: json['zulip_feature_level'] as int,
+      serverGeneration: json['server_generation'] as int,
+    );
+
+Map<String, dynamic> _$RestartEventToJson(RestartEvent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'zulip_version': instance.zulipVersion,
+      'zulip_merge_base': instance.zulipMergeBase,
+      'zulip_feature_level': instance.zulipFeatureLevel,
+      'server_generation': instance.serverGeneration,
+    };
+
 HeartbeatEvent _$HeartbeatEventFromJson(Map<String, dynamic> json) =>
     HeartbeatEvent(
       id: json['id'] as int,
