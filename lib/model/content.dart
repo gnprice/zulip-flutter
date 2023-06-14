@@ -96,7 +96,7 @@ class ZulipContent extends ContentNode {
 ///   <https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flow_layout/Block_and_inline_layout_in_normal_flow>
 ///
 /// Almost all nodes are either a [BlockContentNode] or an [InlineContentNode].
-abstract class BlockContentNode extends ContentNode {
+sealed class BlockContentNode extends ContentNode {
   const BlockContentNode({super.debugHtmlNode});
 }
 
@@ -117,7 +117,7 @@ class UnimplementedBlockContentNode extends BlockContentNode
 /// but provides an inline layout context for its children.
 ///
 /// See also [InlineContainerNode].
-class BlockInlineContainerNode extends BlockContentNode {
+sealed class BlockInlineContainerNode extends BlockContentNode {
   const BlockInlineContainerNode({
     super.debugHtmlNode,
     required this.links,
