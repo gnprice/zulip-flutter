@@ -8,6 +8,7 @@ import '../api/model/model.dart';
 import '../model/binding.dart';
 import '../model/content.dart';
 import '../model/store.dart';
+import 'clipboard.dart';
 import 'dialog.dart';
 import 'store.dart';
 import 'lightbox.dart';
@@ -330,7 +331,7 @@ class _BlockInlineContainerState extends State<_BlockInlineContainer> {
 
   void _prepareRecognizers() {
     _recognizers.addEntries(widget.links.map((node) => MapEntry(node,
-      TapGestureRecognizer()..onTap = () => _launchUrl(context, node.url))));
+      _LinkGestureRecognizer(context, node.url))));
   }
 
   void _disposeRecognizers() {
@@ -657,54 +658,107 @@ class MessageImageEmoji extends StatelessWidget {
   }
 }
 
-void _launchUrl(BuildContext context, String urlString) async {
-  Future<void> showError(BuildContext context, String? message) {
-    return showErrorDialog(context: context,
-      title: 'Unable to open link',
-      message: [
-        'Link could not be opened: $urlString',
-        if (message != null) message,
-      ].join("\n\n"));
+// TODO: Find or start upstream discussion about how to handle multiple recognizers on a [TextSpan].
+class _LinkGestureRecognizer extends TapGestureRecognizer {
+  _LinkGestureRecognizer(this.context, this.url);
+
+  final BuildContext context;
+  final String url;
+
+  TapGestureRecognizer get tapRecognizer => (_tapRecognizer ??=
+    TapGestureRecognizer()..onTap = _launchUrl);
+  TapGestureRecognizer? _tapRecognizer;
+
+  LongPressGestureRecognizer get longPressRecognizer => (_longPressRecognizer ??=
+    LongPressGestureRecognizer()..onLongPressStart = _copyUrl);
+  LongPressGestureRecognizer? _longPressRecognizer;
+
+  // Crucially, this is the only method [TextSpan] ever calls on its [recognizer].
+  //
+  // The other use [TextSpan] makes of it is to check the type, in
+  // `describeSemantics` and via `computeSemanticsInformation` in places like
+  // [RenderParagraph.assembleSemanticsNode], and in the latter to look at e.g.
+  // `onTap` if it's a [TapGestureRecognizer].  For this recognizer the primary
+  // action we'd want semantics to know about is the plain tap, so we inherit
+  // from [TapGestureRecognizer] and forward [onTap] below.
+  @override
+  void addPointer(PointerDownEvent event) {
+    tapRecognizer.addPointer(event);
+    longPressRecognizer.addPointer(event);
   }
 
-  final store = PerAccountStoreWidget.of(context);
-  final Uri url;
-  try {
-    url = store.account.realmUrl.resolve(urlString);
-  } on FormatException { // TODO(log)
-    await showError(context, null);
-    if (!context.mounted) return; // TODO(dart): redundant for sake of lint
-    return;
+  @override
+  GestureTapCallback? get onTap => tapRecognizer.onTap;
+
+  @override
+  void dispose() {
+    _tapRecognizer?.dispose();
+    _longPressRecognizer?.dispose();
+    super.dispose();
   }
 
-  bool launched = false;
-  String? errorMessage;
-  try {
-    launched = await ZulipBinding.instance.launchUrl(url,
-      mode: switch (Theme.of(context).platform) {
-        // TODO(upstream) The url_launcher default on Android is a weird UX:
-        //   opens a webview in-app, but on a blank black background.
-        //   The status bar is hidden:
-        //     https://github.com/flutter/flutter/issues/120883
-        //   but also there's no app bar, no location bar, no share button;
-        //   no browser chrome at all.
-        //   Probably what we really want is a "Chrome custom tab":
-        //     https://github.com/flutter/flutter/issues/18589
-        // TODO(upstream) With url_launcher's LaunchMode.externalApplication
-        //   on Android, we still don't get the normal Android UX for
-        //   opening a URL in a browser, where the system gives the user
-        //   a bit of UI to choose which browser to use:
-        //     https://github.com/zulip/zulip-flutter/issues/74#issuecomment-1514040730
-        TargetPlatform.android => LaunchMode.externalApplication,
-        _ => LaunchMode.platformDefault,
-      },
-    );
-  } on PlatformException catch (e) {
-    errorMessage = e.message;
+  void _launchUrl() async {
+    Future<void> showError(BuildContext context, String? message) {
+      return showErrorDialog(context: context,
+        title: 'Unable to open link',
+        message: [
+          'Link could not be opened: $url',
+          if (message != null) message,
+        ].join("\n\n"));
+    }
+
+    final resolved = _resolveUrl();
+    if (resolved == null) { // TODO(log)
+      await showError(context, null);
+      return;
+    }
+
+    bool launched = false;
+    String? errorMessage;
+    try {
+      launched = await ZulipBinding.instance.launchUrl(resolved,
+        mode: switch (Theme.of(context).platform) {
+          // TODO(upstream) The url_launcher default on Android is a weird UX:
+          //   opens a webview in-app, but on a blank black background.
+          //   The status bar is hidden:
+          //     https://github.com/flutter/flutter/issues/120883
+          //   but also there's no app bar, no location bar, no share button;
+          //   no browser chrome at all.
+          //   Probably what we really want is a "Chrome custom tab":
+          //     https://github.com/flutter/flutter/issues/18589
+          // TODO(upstream) With url_launcher's LaunchMode.externalApplication
+          //   on Android, we still don't get the normal Android UX for
+          //   opening a URL in a browser, where the system gives the user
+          //   a bit of UI to choose which browser to use:
+          //     https://github.com/zulip/zulip-flutter/issues/74#issuecomment-1514040730
+          TargetPlatform.android => LaunchMode.externalApplication,
+          _ => LaunchMode.platformDefault,
+        },
+      );
+    } on PlatformException catch (e) {
+      errorMessage = e.message;
+    }
+    if (!launched) { // TODO(log)
+      if (!context.mounted) return;
+      await showError(context, errorMessage);
+    }
   }
-  if (!launched) { // TODO(log)
-    if (!context.mounted) return;
-    await showError(context, errorMessage);
+
+  void _copyUrl(LongPressStartDetails details) async {
+    final resolved = _resolveUrl();
+    if (resolved == null) return;
+    copyWithPopup(context: context,
+      data: ClipboardData(text: resolved.toString()),
+      successContent: const Text('Link copied'));
+  }
+
+  Uri? _resolveUrl() {
+    final store = PerAccountStoreWidget.of(context);
+    try {
+      return store.account.realmUrl.resolve(url);
+    } on FormatException {
+      return null;
+    }
   }
 }
 
