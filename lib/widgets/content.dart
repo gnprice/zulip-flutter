@@ -63,15 +63,29 @@ class BlockContentList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      ...nodes.map((node) => switch (node) {
-        LineBreakNode()                 => const Text(''),
-        ParagraphNode()                 => Paragraph(node: node),
-        HeadingNode()                   => Heading(node: node),
-        QuotationNode()                 => Quotation(node: node),
-        ListNode()                      => ListNodeWidget(node: node),
-        CodeBlockNode()                 => CodeBlock(node: node),
-        ImageNode()                     => MessageImage(node: node),
-        UnimplementedBlockContentNode() => Text.rich(_errorUnimplemented(node)),
+      ...nodes.map((node) {
+        if (node is LineBreakNode) {
+          // This goes in a Column.  So to get the effect of a newline,
+          // just use an empty Text.
+          return const Text('');
+        } else if (node is ParagraphNode) {
+          return Paragraph(node: node);
+        } else if (node is HeadingNode) {
+          return Heading(node: node);
+        } else if (node is QuotationNode) {
+          return Quotation(node: node);
+        } else if (node is ListNode) {
+          return ListNodeWidget(node: node);
+        } else if (node is CodeBlockNode) {
+          return CodeBlock(node: node);
+        } else if (node is ImageNode) {
+          return MessageImage(node: node);
+        } else if (node is UnimplementedBlockContentNode) {
+          return Text.rich(_errorUnimplemented(node));
+        } else {
+          // TODO(dart-3): Use a sealed class / pattern-matching to exclude this.
+          throw Exception("impossible BlockContentNode: ${node.debugHtmlText}");
+        }
       }),
     ]);
   }
