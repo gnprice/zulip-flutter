@@ -41,6 +41,8 @@ abstract class FcmMessageWithIdentity extends FcmMessage {
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
+@_IntConverter()
+@_IntListConverter()
 class MessageFcmMessage extends FcmMessageWithIdentity {
   @JsonKey(includeToJson: true, name: 'event')
   String get type => 'message';
@@ -50,7 +52,6 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
   final Uri senderAvatarUrl;
   final String senderFullName;
 
-  @JsonKey(readValue: _parseCommaSeparatedInts)
   final List<int>? pmUsers; // TODO split stream/private
 
   // final int? streamId; // TODO
@@ -86,6 +87,8 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
+@_IntConverter()
+@_IntListConverter()
 class RemoveFcmMessage extends FcmMessageWithIdentity {
   @JsonKey(includeToJson: true, name: 'event')
   String get type => 'remove';
@@ -94,7 +97,6 @@ class RemoveFcmMessage extends FcmMessageWithIdentity {
   // and just sending the first ID there redundantly, since 2019.
   // See zulip-mobile@4acd07376.
 
-  @JsonKey(readValue: _parseCommaSeparatedInts)
   final List<int> zulipMessageIds;
   // final String? zulipMessageId; // obsolete; ignore
 
@@ -115,6 +117,22 @@ class RemoveFcmMessage extends FcmMessageWithIdentity {
   Map<String, dynamic> toJson() => _$RemoveFcmMessageToJson(this);
 }
 
-List<int> _parseCommaSeparatedInts(Map json, String key) {
-  return (json[key] as String).split(',').map(int.parse).toList();
+class _IntConverter extends JsonConverter<int, String> {
+  const _IntConverter();
+
+  @override
+  int fromJson(String json) => int.parse(json);
+
+  @override
+  String toJson(int value) => value.toString();
+}
+
+class _IntListConverter extends JsonConverter<List<int>, String> {
+  const _IntListConverter();
+
+  @override
+  List<int> fromJson(String json) => json.split(',').map(int.parse).toList();
+
+  @override
+  String toJson(List<int> value) => value.join(',');
 }
