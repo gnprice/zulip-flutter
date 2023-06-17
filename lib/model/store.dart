@@ -12,7 +12,9 @@ import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
 import '../api/route/events.dart';
 import '../api/route/messages.dart';
+import '../api/route/notifications.dart';
 import '../log.dart';
+import '../notif.dart';
 import 'autocomplete.dart';
 import 'database.dart';
 import 'message_list.dart';
@@ -451,6 +453,7 @@ class LivePerAccountStore extends PerAccountStore {
       initialSnapshot: initialSnapshot,
     );
     store.poll();
+    store.registerNotificationToken();
     return store;
   }
 
@@ -471,5 +474,16 @@ class LivePerAccountStore extends PerAccountStore {
         lastEventId = events.last.id;
       }
     }
+  }
+
+  void registerNotificationToken() { // TODO retry; TODO save acked to dedupe
+    _registerNotificationToken();
+    NotificationService.instance.token.addListener(_registerNotificationToken);
+  }
+
+  Future<void> _registerNotificationToken() async {
+    final token = NotificationService.instance.token.value;
+    if (token == null) return;
+    await registerFcmToken(connection, token: token);  // TODO iOS/APNs
   }
 }
