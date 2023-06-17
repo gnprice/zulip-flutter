@@ -1,5 +1,7 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+import 'api/notifications.dart';
 import 'log.dart';
 import 'model/binding.dart';
 
@@ -37,6 +39,8 @@ class NotificationService {
     // TODO(#324) defer notif setup if user not logged into any accounts
     //   (in order to avoid calling for permissions)
 
+    FirebaseMessaging.onMessage.listen(_onRemoteMessage);
+
     // Get the FCM registration token, now and upon changes.  See FCM API docs:
     //   https://firebase.google.com/docs/cloud-messaging/android/client#sample-register
     ZulipBinding.instance.firebaseMessaging.onTokenRefresh.listen(_onTokenRefresh);
@@ -61,5 +65,13 @@ class NotificationService {
     // some reason the FCM system decides to replace the token.  So both paths
     // need to save the value.
     token.value = value;
+  }
+
+  void _onRemoteMessage(RemoteMessage message) {
+    print(message.data);
+    final data = FcmMessage.fromJson(message.data);
+    if (data is MessageFcmMessage) {
+      print('content: ${data.content}');
+    }
   }
 }
