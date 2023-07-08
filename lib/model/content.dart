@@ -556,19 +556,21 @@ class _ZulipContentParser {
     List<InlineContentNode> nodes() => parseInlineContentList(element.nodes);
 
     switch ((element.localName, element.classMap)) {
-      case ('br', {}):
+      case ('br', Map(isEmpty: true)):
         return LineBreakInlineNode(debugHtmlNode: debugHtmlNode);
 
-      case ('strong', {}):
+      case ('strong', Map(isEmpty: true)):
         return StrongNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('em', {}):
+      case ('em', Map(isEmpty: true)):
         return EmphasisNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('code', {}):
+      case ('code', Map(isEmpty: true)):
         return InlineCodeNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('a', {} || {'stream-topic': _} || {'stream': _}):
+      case ('a',
+          Map(isEmpty: true)
+          || (Map(length: <=1) && ({'stream-topic': _} || {'stream': _}))):
         final href = element.attributes['href'];
         if (href == null) return unimplemented();
         final link = LinkNode(nodes: nodes(), url: href, debugHtmlNode: debugHtmlNode);
@@ -577,22 +579,21 @@ class _ZulipContentParser {
 
       // TODO(dart): https://github.com/dart-lang/language/issues/2496
       case ('span',
-          {'user-mention': _} || {'user-group-mention': _}
-          || {'silent': _, 'user-mention': _}
-          || {'silent': _, 'user-group-mention': _}):
+          ({'user-mention': _} || {'user-group-mention': _})
+          && (Map(length: 1) || (Map(length: 2) && {'silent': _}))):
         // TODO assert UserMentionNode can't contain LinkNode;
         //   either a debug-mode check, or perhaps we can make expectations much
         //   tighter on a UserMentionNode's contents overall.
         return UserMentionNode(nodes: nodes(), debugHtmlNode: debugHtmlNode);
 
-      case ('span', {'emoji': _, ...})
+      case ('span', {'emoji': _})
           when element.classes.length == 2
             && element.classes.every(_emojiClassRegexp.hasMatch):
         return UnicodeEmojiNode(text: element.text, debugHtmlNode: debugHtmlNode);
 
-      case ('img', {'emoji': _}):
+      case ('img', {'emoji': _}) when element.classMap.length == 1:
         switch (element.attributes) {
-          case {'alt': var alt, 'src': var src}:
+          case {'alt': var alt, 'src': var src} && Map(length: 2):
             return ImageEmojiNode(src: src, alt: alt, debugHtmlNode: debugHtmlNode);
           default:
             return unimplemented();
