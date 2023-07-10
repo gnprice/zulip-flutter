@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'api/notifications.dart';
 import 'log.dart';
 import 'model/binding.dart';
+import 'widgets/app.dart';
 
 class NotificationService {
   static NotificationService get instance => (_instance ??= NotificationService._());
@@ -69,9 +71,81 @@ class NotificationService {
   void _onRemoteMessage(FirebaseRemoteMessage message) {
     assert(debugLog("notif message: ${message.data}"));
     final data = FcmMessage.fromJson(message.data);
-    if (data is MessageFcmMessage) {
-      assert(debugLog('notif message content: ${data.content}'));
-      // TODO(#122): show notification UI
+    switch (data) {
+      case MessageFcmMessage(): NotificationDisplayManager._onMessageFcmMessage(data, message.data);
+      case RemoveFcmMessage(): break; // TODO handle
+      case UnexpectedFcmMessage(): break; // TODO(log)
     }
+  }
+}
+
+/// Service for configuring our Android "notification channel".
+class NotificationChannelManager {
+  static const _kChannelId = 'messages-1';
+
+  /// The vibration pattern we set for notifications.
+  // We try to set a vibration pattern that, with the phone in one's pocket,
+  // is both distinctly present and distinctly different from the default.
+  // Discussion: https://chat.zulip.org/#narrow/stream/48-mobile/topic/notification.20vibration.20pattern/near/1284530
+  static final _kVibrationPattern = Int64List.fromList([0, 125, 100, 450]);
+
+  static void _ensureChannel() async { // TODO "ensure"
+    final plugin = ZulipBinding.instance.notifications;
+    await plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(AndroidNotificationChannel(
+        _kChannelId,
+        'Messages', // TODO(i18n)
+        importance: Importance.high,
+        enableLights: true,
+        vibrationPattern: _kVibrationPattern,
+        // TODO sound
+      ));
+  }
+}
+
+/// Service for managing the notifications shown to the user.
+class NotificationDisplayManager {
+  // We rely on the tag instead.
+  static const _kNotificationId = 0;
+
+  static void _onMessageFcmMessage(MessageFcmMessage data, Map<String, dynamic> dataJson) {
+    NotificationChannelManager._ensureChannel();
+    assert(debugLog('notif message content: ${data.content}'));
+    final title = switch (data.recipient) {
+      FcmMessageStreamRecipient(:var stream?, :var topic) =>
+        '$stream > $topic',
+      FcmMessageStreamRecipient(:var topic) =>
+        '(unknown stream) > $topic', // TODO get stream name from data
+      FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>
+        '${data.senderFullName} to you and ${allRecipientIds.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
+      FcmMessageDmRecipient() =>
+        data.senderFullName,
+    };
+    ZulipBinding.instance.notifications.show(
+      _kNotificationId,
+      title,
+      data.content, // TODO
+      NotificationDetails(android: AndroidNotificationDetails(
+        NotificationChannelManager._kChannelId, 'channel name',
+        tag: _conversationKey(data),
+        color: kZulipBrandColor,
+        icon: 'zulip_notification', // TODO vary for debug
+        // TODO inbox-style
+      )));
+  }
+
+  static String _conversationKey(MessageFcmMessage data) {
+    final groupKey = _groupKey(data);
+    final conversation = switch (data.recipient) {
+      FcmMessageStreamRecipient(:var streamId, :var topic) => 'stream:$streamId:$topic',
+      FcmMessageDmRecipient(:var allRecipientIds) => 'dm:${allRecipientIds.join(',')}',
+    };
+    return '$groupKey|$conversation';
+  }
+
+  static String _groupKey(FcmMessageWithIdentity data) {
+    // The realm URL can't contain a `|`, because `|` is not a URL code point:
+    //   https://url.spec.whatwg.org/#url-code-points
+    return "${data.realmUri}|${data.userId}";
   }
 }
