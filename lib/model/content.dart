@@ -692,26 +692,19 @@ class _ZulipContentParser {
 
   BlockContentNode parseImageNode(dom.Element divElement) {
     assert(_debugParserContext == _ParserContext.block);
-    final imgElement = () {
-      assert(divElement.localName == 'div'
-          && divElement.classes.length == 1
-          && divElement.classes.contains('message_inline_image'));
-
-      if (divElement.nodes.length != 1) return null;
-      final child = divElement.nodes[0];
-      if (child is! dom.Element) return null;
-      if (child.localName != 'a') return null;
-      if (child.classes.isNotEmpty) return null;
-
-      if (child.nodes.length != 1) return null;
-      final grandchild = child.nodes[0];
-      if (grandchild is! dom.Element) return null;
-      if (grandchild.localName != 'img') return null;
-      if (grandchild.classes.isNotEmpty) return null;
-      return grandchild;
-    }();
-
     final debugHtmlNode = kDebugMode ? divElement : null;
+
+    dom.Element? imgElement;
+    if (divElement case dom.Element(localName: 'div',
+          classes: Set(single: 'message_inline_image'),
+          nodes: [var child])) {
+      if (child case dom.Element(localName: 'a', classes: Set(isEmpty: true),
+            nodes: [var grandchild])) {
+        if (grandchild case dom.Element(localName: 'img', classes: Set(isEmpty: true))) {
+          imgElement = grandchild;
+        }
+      }
+    }
     if (imgElement == null) {
       return UnimplementedBlockContentNode(htmlNode: divElement);
     }
