@@ -694,19 +694,15 @@ class _ZulipContentParser {
     assert(_debugParserContext == _ParserContext.block);
     final debugHtmlNode = kDebugMode ? divElement : null;
 
-    dom.Element? imgElement;
-    if (divElement case dom.Element(localName: 'div',
-          classes: Set(single: 'message_inline_image'),
-          nodes: [var child])) {
-      if (child case dom.Element(localName: 'a', classes: Set(isEmpty: true),
-            nodes: [var grandchild])) {
-        if (grandchild case dom.Element(localName: 'img', classes: Set(isEmpty: true))) {
-          imgElement = grandchild;
-        }
-      }
-    }
-    if (imgElement == null) {
-      return UnimplementedBlockContentNode(htmlNode: divElement);
+    final dom.Element imgElement;
+    switch (divElement) {
+      case dom.Element(localName: 'div', classes: Set(single: 'message_inline_image'),
+          nodes: [dom.Element(localName: 'a', classes: Set(isEmpty: true),
+            nodes: [dom.Element(localName: 'img', classes: Set(isEmpty: true))
+                    && var grandchild])]):
+        imgElement = grandchild;
+      default:
+        return UnimplementedBlockContentNode(htmlNode: divElement);
     }
 
     final src = imgElement.attributes['src'];
