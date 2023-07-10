@@ -592,12 +592,11 @@ class _ZulipContentParser {
 
   BlockContentNode parseListNode(dom.Element element) {
     assert(_debugParserContext == _ParserContext.block);
-    ListStyle? listStyle;
-    switch (element.localName) {
-      case 'ol': listStyle = ListStyle.ordered; break;
-      case 'ul': listStyle = ListStyle.unordered; break;
-    }
-    assert(listStyle != null);
+    ListStyle listStyle = switch (element.localName) {
+      'ol' => ListStyle.ordered,
+      'ul' => ListStyle.unordered,
+      _    => throw Exception("parseListNode called with non-list element"),
+    };
     assert(element.classes.isEmpty);
 
     final debugHtmlNode = kDebugMode ? element : null;
@@ -610,7 +609,7 @@ class _ZulipContentParser {
       items.add(parseImplicitParagraphBlockContentList(item.nodes));
     }
 
-    return ListNode(listStyle!, items, debugHtmlNode: debugHtmlNode);
+    return ListNode(listStyle, items, debugHtmlNode: debugHtmlNode);
   }
 
   BlockContentNode parseCodeBlock(dom.Element divElement) {
