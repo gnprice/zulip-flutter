@@ -181,16 +181,17 @@ Future<SendMessageResult> sendMessage(
 }) {
   final supportsTypeDirect = connection.zulipFeatureLevel! >= 174; // TODO(server-7)
   return connection.post('sendMessage', SendMessageResult.fromJson, 'messages', {
-    if (destination is StreamDestination) ...{
-      'type': RawParameter('stream'),
-      'to': destination.streamId,
-      'topic': RawParameter(destination.topic),
-    } else if (destination is DmDestination) ...{
-      'type': supportsTypeDirect ? RawParameter('direct') : RawParameter('private'),
-      'to': destination.userIds,
-    } else ...(
-      throw Exception('impossible destination') // TODO(dart-3) show this statically
-    ),
+    ...switch (destination) {
+      StreamDestination(:var streamId, :var topic) => {
+        'type': RawParameter('stream'),
+        'to': streamId,
+        'topic': RawParameter(topic),
+      },
+      DmDestination(:var userIds) => {
+        'type': supportsTypeDirect ? RawParameter('direct') : RawParameter('private'),
+        'to': userIds,
+      },
+    },
     'content': RawParameter(content),
     if (queueId != null) 'queue_id': queueId,
     if (localId != null) 'local_id': localId,
