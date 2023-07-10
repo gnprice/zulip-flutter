@@ -84,14 +84,11 @@ class ApiConnection {
     try {
       response = await _client.send(request);
     } catch (e) {
-      final String message;
-      if (e is http.ClientException) {
-        message = e.message;
-      } else if (e is TlsException) {
-        message = e.message;
-      } else {
-        message = 'Network request failed';
-      }
+      final message = switch (e) {
+        http.ClientException(:var message) => message,
+        TlsException(:var message) => message,
+        _ => 'Network request failed',
+      };
       throw NetworkException(routeName: routeName, cause: e, message: message);
     }
 
