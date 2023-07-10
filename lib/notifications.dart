@@ -1,10 +1,17 @@
+import 'dart:convert';
+
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'api/notifications.dart';
 import 'log.dart';
 import 'model/binding.dart';
+import 'model/narrow.dart';
 import 'widgets/app.dart';
+import 'widgets/message_list.dart';
+import 'widgets/store.dart';
 
 class NotificationService {
   static NotificationService get instance => (_instance ??= NotificationService._());
@@ -41,6 +48,12 @@ class NotificationService {
     //   (in order to avoid calling for permissions)
 
     ZulipBinding.instance.firebaseMessagingOnMessage.listen(_onRemoteMessage);
+    ZulipBinding.instance.notifications.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('zulip_notification'),
+      ),
+      onDidReceiveNotificationResponse: _onNotificationOpened,
+    );
 
     // Get the FCM registration token, now and upon changes.  See FCM API docs:
     //   https://firebase.google.com/docs/cloud-messaging/android/client#sample-register
@@ -76,6 +89,31 @@ class NotificationService {
       case RemoveFcmMessage(): break; // TODO handle
       case UnexpectedFcmMessage(): break; // TODO(log)
     }
+  }
+
+  void _onNotificationOpened(NotificationResponse response) async {
+    final data = MessageFcmMessage.fromJson(jsonDecode(response.payload!));
+    assert(debugLog('opened notif: message ${data.zulipMessageId}, content ${data.content}'));
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return; // TODO(log) handle
+
+    final globalStore = GlobalStoreWidget.of(navigator.context);
+    final account = globalStore.accounts.firstWhereOrNull((account) =>
+      account.realmUrl == data.realmUri && account.userId == data.userId);
+    if (account == null) return; // TODO(log)
+
+    final narrow = switch (data.recipient) {
+      FcmMessageStreamRecipient(:var streamId, :var topic) =>
+        TopicNarrow(streamId, topic),
+      FcmMessageDmRecipient(:var allRecipientIds) =>
+        DmNarrow(allRecipientIds: allRecipientIds, selfUserId: account.userId),
+    };
+
+    assert(debugLog('  account: $account, narrow: $narrow'));
+    // TODO(nav): Better interact with existing nav stack on notif open
+    navigator.push(MaterialPageRoute(builder: (context) =>
+      PerAccountStoreWidget(accountId: account.id,
+        child: MessageListPage(narrow: narrow))));
   }
 }
 
@@ -125,12 +163,17 @@ class NotificationDisplayManager {
       _kNotificationId,
       title,
       data.content, // TODO
+      payload: jsonEncode(dataJson),
       NotificationDetails(android: AndroidNotificationDetails(
         NotificationChannelManager._kChannelId, 'channel name',
         tag: _conversationKey(data),
         color: kZulipBrandColor,
         icon: 'zulip_notification', // TODO vary for debug
         // TODO inbox-style
+
+        // TODO plugin sets PendingIntent.FLAG_UPDATE_CURRENT; is that OK?
+        // TODO plugin's setContentIntent doesn't set our Intent flags; is that OK?
+        // TODO all notifs lead to convo of latest notif, because plugin's setContentIntent doesn't avoid dupe URLs
       )));
   }
 
