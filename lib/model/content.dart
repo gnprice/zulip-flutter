@@ -780,14 +780,8 @@ class _ZulipContentParser {
     if (node is! dom.Element) return false;
     switch (node.localName) {
       case 'p':
-      case 'ol':
-      case 'ul':
-      case 'h1':
-      case 'h2':
-      case 'h3':
-      case 'h4':
-      case 'h5':
-      case 'h6':
+      case 'h1' || 'h2' || 'h3' || 'h4' || 'h5' || 'h6':
+      case 'ol' || 'ul':
       case 'blockquote':
       case 'div':
         return false;
