@@ -107,7 +107,8 @@ class NotificationService {
           // TODO inbox-style
 
           // TODO plugin sets PendingIntent.FLAG_UPDATE_CURRENT; is that OK?
-          // TODO plugin's setContentIntent doesn't avoid dupe URLs, or set our Intent flags; is that OK?
+          // TODO plugin's setContentIntent doesn't set our Intent flags; is that OK?
+          // TODO all notifs lead to convo of latest notif, because plugin's setContentIntent doesn't avoid dupe URLs
         )));
     }
   }
