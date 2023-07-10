@@ -416,22 +416,20 @@ class _InlineContentBuilder {
       children: nodes.map(_buildNode).toList(growable: false));
   }
 
-  InlineSpan _buildNode(InlineContentNode node) {
-    return switch (node) {
-      TextNode()            => TextSpan(text: node.text, recognizer: _recognizer),
-      // Each `<br/>` is followed by a newline, which browsers apparently ignore
-      // and our parser doesn't.  So don't do anything on a LineBreakInlineNode.
-      LineBreakInlineNode() => const TextSpan(text: ""),
-      StrongNode()          => _buildStrong(node),
-      EmphasisNode()        => _buildEmphasis(node),
-      LinkNode()            => _buildLink(node),
-      InlineCodeNode()      => _buildInlineCode(node),
-      UserMentionNode()     => _widgetSpan(UserMention(node: node)),
-      UnicodeEmojiNode()    => _widgetSpan(MessageUnicodeEmoji(node: node)),
-      ImageEmojiNode()      => _widgetSpan(MessageImageEmoji(node: node)),
-      UnimplementedInlineContentNode() => _errorUnimplemented(node),
-    };
-  }
+  InlineSpan _buildNode(InlineContentNode node) => switch (node) {
+    TextNode()            => TextSpan(text: node.text, recognizer: _recognizer),
+    // Each `<br/>` is followed by a newline, which browsers apparently ignore
+    // and our parser doesn't.  So don't do anything on a LineBreakInlineNode.
+    LineBreakInlineNode() => const TextSpan(text: ""),
+    StrongNode()          => _buildStrong(node),
+    EmphasisNode()        => _buildEmphasis(node),
+    LinkNode()            => _buildLink(node),
+    InlineCodeNode()      => _buildInlineCode(node),
+    UserMentionNode()     => _widgetSpan(UserMention(node: node)),
+    UnicodeEmojiNode()    => _widgetSpan(MessageUnicodeEmoji(node: node)),
+    ImageEmojiNode()      => _widgetSpan(MessageImageEmoji(node: node)),
+    UnimplementedInlineContentNode() => _errorUnimplemented(node),
+  };
 
   static InlineSpan _widgetSpan(Widget child) => WidgetSpan(
     alignment: PlaceholderAlignment.middle, child: child);
