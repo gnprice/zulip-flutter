@@ -1,11 +1,18 @@
+import 'dart:convert';
+
+import 'package:collection/collection.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'api/notifications.dart';
 import 'log.dart';
 import 'model/binding.dart';
+import 'model/narrow.dart';
 import 'widgets/app.dart';
+import 'widgets/message_list.dart';
+import 'widgets/store.dart';
 
 class NotificationService {
   static NotificationService get instance => (_instance ??= NotificationService._());
@@ -42,6 +49,12 @@ class NotificationService {
     //   (in order to avoid calling for permissions)
 
     FirebaseMessaging.onMessage.listen(_onRemoteMessage);
+    FlutterLocalNotificationsPlugin().initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('zulip_notification'),
+      ),
+      onDidReceiveNotificationResponse: _onNotificationOpened,
+    );
 
     // Get the FCM registration token, now and upon changes.  See FCM API docs:
     //   https://firebase.google.com/docs/cloud-messaging/android/client#sample-register
@@ -85,12 +98,16 @@ class NotificationService {
             senderFullName,
         },
         data.content, // TODO
+        payload: jsonEncode(message.data),
         NotificationDetails(android: AndroidNotificationDetails(
           _kChannelId, 'channel name',
           tag: _conversationKey(data),
           color: kZulipBrandColor,
           icon: 'zulip_notification', // TODO vary for debug
           // TODO inbox-style
+
+          // TODO plugin sets PendingIntent.FLAG_UPDATE_CURRENT; is that OK?
+          // TODO plugin's setContentIntent doesn't avoid dupe URLs, or set our Intent flags; is that OK?
         )));
     }
   }
@@ -111,6 +128,32 @@ class NotificationService {
     return "${data.realmUri}|${data.userId}";
   }
 
+  void _onNotificationOpened(NotificationResponse response) async {
+    final data = MessageFcmMessage.fromJson(jsonDecode(response.payload!));
+    print('opened notif: message ${data.zulipMessageId}, content ${data.content}');
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return; // TODO(log) handle
+
+    final globalStore = GlobalStoreWidget.of(navigator.context);
+    final account = globalStore.accounts.firstWhereOrNull((account) =>
+      account.realmUrl == data.realmUri && account.userId == data.userId);
+    if (account == null) return; // TODO(log)
+
+    final narrow = switch (data) {
+      // TODO stream messages
+      MessageFcmMessage(:var pmUsers?) =>
+        DmNarrow(allRecipientIds: pmUsers, selfUserId: account.userId),
+      MessageFcmMessage(:var senderId) =>
+        DmNarrow(allRecipientIds: [senderId, account.userId]..sort(), selfUserId: account.userId),
+    };
+
+    print('  account: $account, narrow: $narrow');
+    // TODO(nav): Better interact with existing nav stack on notif open
+    navigator.push(MaterialPageRoute(builder: (context) =>
+      PerAccountStoreWidget(accountId: account.id,
+        child: MessageListPage(narrow: narrow))));
+  }
+
   void _ensureChannel() async { // TODO "ensure"
     final plugin = FlutterLocalNotificationsPlugin();
     await plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
@@ -125,7 +168,8 @@ class NotificationService {
   }
 }
 
-const _kNotificationId = 435;
+// We rely on the tag instead.
+const _kNotificationId = 0;
 
 const _kChannelId = 'messages-1';
 
