@@ -417,9 +417,6 @@ class _InlineContentBuilder {
   }
 
   InlineSpan _buildNode(InlineContentNode node) {
-    InlineSpan widgetSpan(Widget child) => WidgetSpan(
-      alignment: PlaceholderAlignment.middle, child: child);
-
     return switch (node) {
       TextNode()            => TextSpan(text: node.text, recognizer: _recognizer),
       // Each `<br/>` is followed by a newline, which browsers apparently ignore
@@ -429,12 +426,15 @@ class _InlineContentBuilder {
       EmphasisNode()        => _buildEmphasis(node),
       LinkNode()            => _buildLink(node),
       InlineCodeNode()      => _buildInlineCode(node),
-      UserMentionNode()     => widgetSpan(UserMention(node: node)),
-      UnicodeEmojiNode()    => widgetSpan(MessageUnicodeEmoji(node: node)),
-      ImageEmojiNode()      => widgetSpan(MessageImageEmoji(node: node)),
+      UserMentionNode()     => _widgetSpan(UserMention(node: node)),
+      UnicodeEmojiNode()    => _widgetSpan(MessageUnicodeEmoji(node: node)),
+      ImageEmojiNode()      => _widgetSpan(MessageImageEmoji(node: node)),
       UnimplementedInlineContentNode() => _errorUnimplemented(node),
     };
   }
+
+  static InlineSpan _widgetSpan(Widget child) => WidgetSpan(
+    alignment: PlaceholderAlignment.middle, child: child);
 
   InlineSpan _buildStrong(StrongNode node) => _buildNodes(node.nodes,
     style: const TextStyle(fontWeight: FontWeight.w600));
