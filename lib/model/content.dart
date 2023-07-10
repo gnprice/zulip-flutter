@@ -312,7 +312,7 @@ class ImageNode extends BlockContentNode {
 ///   https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flow_layout/Block_and_inline_layout_in_normal_flow#elements_participating_in_an_inline_formatting_context
 ///
 /// Almost all nodes are either an [InlineContentNode] or a [BlockContentNode].
-abstract class InlineContentNode extends ContentNode {
+sealed class InlineContentNode extends ContentNode {
   const InlineContentNode({super.debugHtmlNode});
 }
 
@@ -373,7 +373,7 @@ class LineBreakInlineNode extends InlineContentNode {
 /// itself does.
 ///
 /// See also [BlockInlineContainerNode].
-abstract class InlineContainerNode extends InlineContentNode {
+sealed class InlineContainerNode extends InlineContentNode {
   const InlineContainerNode({super.debugHtmlNode, required this.nodes});
 
   final List<InlineContentNode> nodes;
@@ -435,7 +435,7 @@ class UserMentionNode extends InlineContainerNode {
   //   final bool isSilent;
 }
 
-abstract class EmojiNode extends InlineContentNode {
+sealed class EmojiNode extends InlineContentNode {
   const EmojiNode({super.debugHtmlNode});
 }
 

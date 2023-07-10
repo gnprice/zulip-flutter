@@ -417,35 +417,23 @@ class _InlineContentBuilder {
   }
 
   InlineSpan _buildNode(InlineContentNode node) {
-    if (node is TextNode) {
-      return TextSpan(text: node.text, recognizer: _recognizer);
-    } else if (node is LineBreakInlineNode) {
+    return switch (node) {
+      TextNode() => TextSpan(text: node.text, recognizer: _recognizer),
       // Each `<br/>` is followed by a newline, which browsers apparently ignore
       // and our parser doesn't.  So don't do anything here.
-      return const TextSpan(text: "");
-    } else if (node is StrongNode) {
-      return _buildStrong(node);
-    } else if (node is EmphasisNode) {
-      return _buildEmphasis(node);
-    } else if (node is LinkNode) {
-      return _buildLink(node);
-    } else if (node is InlineCodeNode) {
-      return _buildInlineCode(node);
-    } else if (node is UserMentionNode) {
-      return WidgetSpan(alignment: PlaceholderAlignment.middle,
-        child: UserMention(node: node));
-    } else if (node is UnicodeEmojiNode) {
-      return WidgetSpan(alignment: PlaceholderAlignment.middle,
-        child: MessageUnicodeEmoji(node: node));
-    } else if (node is ImageEmojiNode) {
-      return WidgetSpan(alignment: PlaceholderAlignment.middle,
-        child: MessageImageEmoji(node: node));
-    } else if (node is UnimplementedInlineContentNode) {
-      return _errorUnimplemented(node);
-    } else {
-      // TODO(dart-3): Use a sealed class / pattern matching to eliminate this case.
-      throw Exception("impossible InlineContentNode: ${node.debugHtmlText}");
-    }
+      LineBreakInlineNode() => const TextSpan(text: ""),
+      StrongNode() => _buildStrong(node),
+      EmphasisNode() => _buildEmphasis(node),
+      LinkNode() => _buildLink(node),
+      InlineCodeNode() => _buildInlineCode(node),
+      UserMentionNode() => WidgetSpan(alignment: PlaceholderAlignment.middle,
+        child: UserMention(node: node)),
+      UnicodeEmojiNode() => WidgetSpan(alignment: PlaceholderAlignment.middle,
+        child: MessageUnicodeEmoji(node: node)),
+      ImageEmojiNode() => WidgetSpan(alignment: PlaceholderAlignment.middle,
+        child: MessageImageEmoji(node: node)),
+      UnimplementedInlineContentNode() => _errorUnimplemented(node),
+    };
   }
 
   InlineSpan _buildStrong(StrongNode node) => _buildNodes(node.nodes,
