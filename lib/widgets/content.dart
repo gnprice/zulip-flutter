@@ -421,17 +421,17 @@ class _InlineContentBuilder {
       alignment: PlaceholderAlignment.middle, child: child);
 
     return switch (node) {
-      TextNode() => TextSpan(text: node.text, recognizer: _recognizer),
+      TextNode()            => TextSpan(text: node.text, recognizer: _recognizer),
       // Each `<br/>` is followed by a newline, which browsers apparently ignore
-      // and our parser doesn't.  So don't do anything here.
+      // and our parser doesn't.  So don't do anything on a LineBreakInlineNode.
       LineBreakInlineNode() => const TextSpan(text: ""),
-      StrongNode() => _buildStrong(node),
-      EmphasisNode() => _buildEmphasis(node),
-      LinkNode() => _buildLink(node),
-      InlineCodeNode() => _buildInlineCode(node),
-      UserMentionNode() => widgetSpan(UserMention(node: node)),
-      UnicodeEmojiNode() => widgetSpan(MessageUnicodeEmoji(node: node)),
-      ImageEmojiNode() => widgetSpan(MessageImageEmoji(node: node)),
+      StrongNode()          => _buildStrong(node),
+      EmphasisNode()        => _buildEmphasis(node),
+      LinkNode()            => _buildLink(node),
+      InlineCodeNode()      => _buildInlineCode(node),
+      UserMentionNode()     => widgetSpan(UserMention(node: node)),
+      UnicodeEmojiNode()    => widgetSpan(MessageUnicodeEmoji(node: node)),
+      ImageEmojiNode()      => widgetSpan(MessageImageEmoji(node: node)),
       UnimplementedInlineContentNode() => _errorUnimplemented(node),
     };
   }
