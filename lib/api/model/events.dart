@@ -74,7 +74,7 @@ class AlertWordsEvent extends Event {
 }
 
 /// A Zulip event of type `realm_user`.
-abstract class RealmUserEvent extends Event {
+sealed class RealmUserEvent extends Event {
   @override
   @JsonKey(includeToJson: true)
   String get type => 'realm_user';
@@ -184,7 +184,7 @@ class RealmUserUpdateEvent extends RealmUserEvent {
 }
 
 /// A Zulip event of type `stream`.
-abstract class StreamEvent extends Event {
+sealed class StreamEvent extends Event {
   @override
   @JsonKey(includeToJson: true)
   String get type => 'stream';
