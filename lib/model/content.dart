@@ -515,7 +515,6 @@ enum _ParserContext {
 }
 
 extension DomElementExtension on dom.Element {
-  List<String> get classList => classes.toList(growable: false)..sort();
   Map<String, bool> get classMap => SetMapView(classes);
 }
 
@@ -652,7 +651,7 @@ class _ZulipContentParser {
   BlockContentNode parseCodeBlock(dom.Element divElement) {
     assert(_debugParserContext == _ParserContext.block);
     dom.Element? mainElement;
-    if (divElement case dom.Element(localName: 'div', classList: ['codehilite'],
+    if (divElement case dom.Element(localName: 'div', classes: Set(single: 'codehilite'),
           nodes: [var child])) {
       if (child case dom.Element(localName: 'pre',
             nodes: [var grandchild] ||
