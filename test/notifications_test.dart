@@ -102,6 +102,7 @@ void main() {
         ..id.equals(NotificationDisplayManager.kNotificationId)
         ..title.equals(expectedTitle)
         ..body.equals(data.content)
+        ..payload.equals(jsonEncode(data.toJson()))
         ..notificationDetails.isNotNull().android.isNotNull().which(it()
           ..channelId.equals(NotificationChannelManager.kChannelId)
           ..tag.equals('${data.realmUri}|${data.userId}|$expectedTagComponent')

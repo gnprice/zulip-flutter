@@ -10,6 +10,8 @@ import 'page.dart';
 import 'recent_dm_conversations.dart';
 import 'store.dart';
 
+final navigatorKey = GlobalKey<NavigatorState>();
+
 class ZulipApp extends StatelessWidget {
   const ZulipApp({super.key});
 
@@ -50,6 +52,7 @@ class ZulipApp extends StatelessWidget {
         localizationsDelegates: ZulipLocalizations.localizationsDelegates,
         supportedLocales: ZulipLocalizations.supportedLocales,
         theme: theme,
+        navigatorKey: navigatorKey,
         builder: (BuildContext context, Widget? child) {
           GlobalLocalizations.zulipLocalizations = ZulipLocalizations.of(context);
           return child!;
