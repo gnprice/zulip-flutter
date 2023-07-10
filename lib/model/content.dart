@@ -650,19 +650,18 @@ class _ZulipContentParser {
 
   BlockContentNode parseCodeBlock(dom.Element divElement) {
     assert(_debugParserContext == _ParserContext.block);
+    final debugHtmlNode = kDebugMode ? divElement : null;
+
     dom.Element? mainElement;
-    if (divElement case dom.Element(localName: 'div', classes: Set(single: 'codehilite'),
-          nodes: [var child])) {
-      if (child case dom.Element(localName: 'pre',
+    switch (divElement) {
+      case dom.Element(localName: 'div', classes: Set(single: 'codehilite'),
+          nodes: [dom.Element(localName: 'pre',
             nodes: [var grandchild] ||
-              [dom.Element(localName: 'span', nodes: []), var grandchild])) {
+              [dom.Element(localName: 'span', nodes: []), var grandchild])]):
         if (grandchild case dom.Element(localName: 'code')) {
           mainElement = grandchild;
         }
-      }
     }
-
-    final debugHtmlNode = kDebugMode ? divElement : null;
     if (mainElement == null) {
       return UnimplementedBlockContentNode(htmlNode: divElement);
     }
