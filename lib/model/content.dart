@@ -593,7 +593,7 @@ class _ZulipContentParser {
 
       case ('img', {'emoji': _}) when element.classMap.length == 1:
         switch (element.attributes) {
-          case {'alt': var alt, 'src': var src} && Map(length: 2):
+          case {'alt': var alt, 'src': var src}: // can have title too
             return ImageEmojiNode(src: src, alt: alt, debugHtmlNode: debugHtmlNode);
           default:
             return unimplemented();
