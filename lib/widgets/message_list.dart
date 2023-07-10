@@ -215,20 +215,18 @@ class MessageItem extends StatelessWidget {
     Color highlightBorderColor;
     Color restBorderColor;
     Widget recipientHeader;
-    if (message is StreamMessage) {
-      final msg = (message as StreamMessage);
-      final subscription = store.subscriptions[msg.streamId];
-      highlightBorderColor = colorForStream(subscription);
-      restBorderColor = _kStreamMessageBorderColor;
-      recipientHeader = StreamTopicRecipientHeader(
-        message: msg, streamColor: highlightBorderColor);
-    } else if (message is DmMessage) {
-      final msg = (message as DmMessage);
-      highlightBorderColor = _kDmRecipientHeaderColor;
-      restBorderColor = _kDmRecipientHeaderColor;
-      recipientHeader = DmRecipientHeader(message: msg);
-    } else {
-      throw Exception("impossible message type: ${message.runtimeType}");
+    final message = this.message;
+    switch (message) {
+      case StreamMessage():
+        final subscription = store.subscriptions[message.streamId];
+        highlightBorderColor = colorForStream(subscription);
+        restBorderColor = _kStreamMessageBorderColor;
+        recipientHeader = StreamTopicRecipientHeader(
+          message: message, streamColor: highlightBorderColor);
+      case DmMessage():
+        highlightBorderColor = _kDmRecipientHeaderColor;
+        restBorderColor = _kDmRecipientHeaderColor;
+        recipientHeader = DmRecipientHeader(message: message);
     }
 
     // This 3px border seems to accurately reproduce something much more
