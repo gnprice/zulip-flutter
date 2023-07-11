@@ -86,52 +86,10 @@ class NotificationService {
     print(message.data);
     final data = FcmMessage.fromJson(message.data);
     switch (data) {
-      case MessageFcmMessage(): _onMessageFcmMessage(data, message.data);
+      case MessageFcmMessage(): NotificationDisplayManager._onMessageFcmMessage(data, message.data);
       case RemoveFcmMessage(): break; // TODO handle
       case UnexpectedFcmMessage(): break; // TODO(log)
     }
-  }
-
-  void _onMessageFcmMessage(MessageFcmMessage data, Map<String, dynamic> dataJson) {
-    NotificationChannelManager._ensureChannel();
-    print('content: ${data.content}');
-    final title = switch (data.recipient) {
-      FcmMessageStreamRecipient(:var stream?, :var topic) =>
-        '$stream > $topic',
-      FcmMessageStreamRecipient(:var topic) =>
-        '(unknown stream) > $topic', // TODO get stream name from data
-      FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>
-        '${data.senderFullName} to you and ${allRecipientIds.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
-      FcmMessageDmRecipient() =>
-        data.senderFullName,
-    };
-    FlutterLocalNotificationsPlugin().show(
-      _kNotificationId,
-      title,
-      data.content, // TODO
-      payload: jsonEncode(dataJson),
-      NotificationDetails(android: AndroidNotificationDetails(
-        NotificationChannelManager._kChannelId, 'channel name',
-        tag: _conversationKey(data),
-        color: kZulipBrandColor,
-        icon: 'zulip_notification', // TODO vary for debug
-        // TODO inbox-style
-      )));
-  }
-
-  String _conversationKey(MessageFcmMessage data) {
-    final groupKey = _groupKey(data);
-    final conversation = switch (data.recipient) {
-      FcmMessageStreamRecipient(:var streamId, :var topic) => 'stream:$streamId:$topic',
-      FcmMessageDmRecipient(:var allRecipientIds) => 'dm:${allRecipientIds.join(',')}',
-    };
-    return '$groupKey|$conversation';
-  }
-
-  String _groupKey(FcmMessageWithIdentity data) {
-    // The realm URL can't contain a `|`, because `|` is not a URL code point:
-    //   https://url.spec.whatwg.org/#url-code-points
-    return "${data.realmUri}|${data.userId}";
   }
 
   void _onNotificationOpened(NotificationResponse response) async {
@@ -184,6 +142,50 @@ class NotificationChannelManager {
   }
 }
 
-// We rely on the tag instead.
-const _kNotificationId = 0;
+/// Service for managing the notifications shown to the user.
+class NotificationDisplayManager {
+  // We rely on the tag instead.
+  static const _kNotificationId = 0;
 
+  static void _onMessageFcmMessage(MessageFcmMessage data, Map<String, dynamic> dataJson) {
+    NotificationChannelManager._ensureChannel();
+    print('content: ${data.content}');
+    final title = switch (data.recipient) {
+      FcmMessageStreamRecipient(:var stream?, :var topic) =>
+        '$stream > $topic',
+      FcmMessageStreamRecipient(:var topic) =>
+        '(unknown stream) > $topic', // TODO get stream name from data
+      FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>
+        '${data.senderFullName} to you and ${allRecipientIds.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
+      FcmMessageDmRecipient() =>
+        data.senderFullName,
+    };
+    FlutterLocalNotificationsPlugin().show(
+      _kNotificationId,
+      title,
+      data.content, // TODO
+      payload: jsonEncode(dataJson),
+      NotificationDetails(android: AndroidNotificationDetails(
+        NotificationChannelManager._kChannelId, 'channel name',
+        tag: _conversationKey(data),
+        color: kZulipBrandColor,
+        icon: 'zulip_notification', // TODO vary for debug
+        // TODO inbox-style
+      )));
+  }
+
+  static String _conversationKey(MessageFcmMessage data) {
+    final groupKey = _groupKey(data);
+    final conversation = switch (data.recipient) {
+      FcmMessageStreamRecipient(:var streamId, :var topic) => 'stream:$streamId:$topic',
+      FcmMessageDmRecipient(:var allRecipientIds) => 'dm:${allRecipientIds.join(',')}',
+    };
+    return '$groupKey|$conversation';
+  }
+
+  static String _groupKey(FcmMessageWithIdentity data) {
+    // The realm URL can't contain a `|`, because `|` is not a URL code point:
+    //   https://url.spec.whatwg.org/#url-code-points
+    return "${data.realmUri}|${data.userId}";
+  }
+}
