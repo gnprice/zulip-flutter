@@ -86,13 +86,13 @@ class NotificationService {
     print(message.data);
     final data = FcmMessage.fromJson(message.data);
     switch (data) {
-      case MessageFcmMessage(): _onMessageFcmMessage(data, message);
+      case MessageFcmMessage(): _onMessageFcmMessage(data, message.data);
       case RemoveFcmMessage(): break; // TODO handle
       case UnexpectedFcmMessage(): break; // TODO(log)
     }
   }
 
-  void _onMessageFcmMessage(MessageFcmMessage data, RemoteMessage message) {
+  void _onMessageFcmMessage(MessageFcmMessage data, Map<String, dynamic> dataJson) {
     _ensureChannel();
     print('content: ${data.content}');
     FlutterLocalNotificationsPlugin().show(
@@ -108,7 +108,7 @@ class NotificationService {
           data.senderFullName,
       },
       data.content, // TODO
-      payload: jsonEncode(message.data),
+      payload: jsonEncode(dataJson),
       NotificationDetails(android: AndroidNotificationDetails(
         _kChannelId, 'channel name',
         tag: _conversationKey(data),

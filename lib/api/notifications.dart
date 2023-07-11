@@ -82,7 +82,7 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
   }
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toJson() { // TODO test MessageFcmMessage.toJson round-trip
     final result = _$MessageFcmMessageToJson(this);
     final recipient = this.recipient;
     switch (recipient) {
