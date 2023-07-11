@@ -64,7 +64,11 @@ dependencies:
   firebase_core: ^2.14.0
   flutter_local_notifications_platform_interface: ^7.0.0+1
   flutter_local_notifications:
-    path: ../local-notifications/flutter_local_notifications
+    # path: ../local-notifications/flutter_local_notifications
+    git:
+      url: https://github.com/gnprice/flutter_local_notifications
+      ref: 5a0239b36
+      path: flutter_local_notifications/
 
 dev_dependencies:
   flutter_driver:
