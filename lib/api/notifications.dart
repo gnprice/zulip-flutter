@@ -26,7 +26,7 @@ class UnexpectedFcmMessage extends FcmMessage {
   Map<String, dynamic> toJson() => json;
 }
 
-abstract class FcmMessageWithIdentity extends FcmMessage {
+sealed class FcmMessageWithIdentity extends FcmMessage {
   final String server;
   final int realmId;
   final Uri realmUri;

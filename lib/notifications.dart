@@ -85,31 +85,37 @@ class NotificationService {
   void _onRemoteMessage(RemoteMessage message) {
     print(message.data);
     final data = FcmMessage.fromJson(message.data);
-    if (data is MessageFcmMessage) {
-      _ensureChannel();
-      print('content: ${data.content}');
-      FlutterLocalNotificationsPlugin().show(
-        _kNotificationId,
-        switch (data.recipient) {
-          FcmMessageStreamRecipient(:var stream?, :var topic) =>
-            '$stream > $topic',
-          FcmMessageStreamRecipient(:var topic) =>
-            '(unknown stream) > $topic', // TODO get stream name from data
-          FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>
-            '${data.senderFullName} to you and ${allRecipientIds.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
-          FcmMessageDmRecipient() =>
-            data.senderFullName,
-        },
-        data.content, // TODO
-        payload: jsonEncode(message.data),
-        NotificationDetails(android: AndroidNotificationDetails(
-          _kChannelId, 'channel name',
-          tag: _conversationKey(data),
-          color: kZulipBrandColor,
-          icon: 'zulip_notification', // TODO vary for debug
-          // TODO inbox-style
-        )));
+    switch (data) {
+      case MessageFcmMessage(): _onMessageFcmMessage(data, message);
+      case RemoveFcmMessage(): break; // TODO handle
+      case UnexpectedFcmMessage(): break; // TODO(log)
     }
+  }
+
+  void _onMessageFcmMessage(MessageFcmMessage data, RemoteMessage message) {
+    _ensureChannel();
+    print('content: ${data.content}');
+    FlutterLocalNotificationsPlugin().show(
+      _kNotificationId,
+      switch (data.recipient) {
+        FcmMessageStreamRecipient(:var stream?, :var topic) =>
+          '$stream > $topic',
+        FcmMessageStreamRecipient(:var topic) =>
+          '(unknown stream) > $topic', // TODO get stream name from data
+        FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>
+          '${data.senderFullName} to you and ${allRecipientIds.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
+        FcmMessageDmRecipient() =>
+          data.senderFullName,
+      },
+      data.content, // TODO
+      payload: jsonEncode(message.data),
+      NotificationDetails(android: AndroidNotificationDetails(
+        _kChannelId, 'channel name',
+        tag: _conversationKey(data),
+        color: kZulipBrandColor,
+        icon: 'zulip_notification', // TODO vary for debug
+        // TODO inbox-style
+      )));
   }
 
   String _conversationKey(MessageFcmMessage data) {
