@@ -1,4 +1,6 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:test/fake.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:zulip/model/binding.dart';
 import 'package:zulip/model/store.dart';
@@ -58,6 +60,7 @@ class TestZulipBinding extends ZulipBinding {
     _resetStore();
     _resetLaunchUrl();
     _resetDeviceInfo();
+    _resetFirebase();
   }
 
   /// The current global store offered to a [GlobalStoreWidget].
@@ -153,5 +156,34 @@ class TestZulipBinding extends ZulipBinding {
   @override
   Future<BaseDeviceInfo> deviceInfo() {
     return Future(() => deviceInfoResult);
+  }
+
+  void _resetFirebase() {
+    _firebaseInitialized = false;
+    _firebaseMessaging = null;
+  }
+
+  bool _firebaseInitialized = false;
+  FakeFirebaseMessaging? _firebaseMessaging;
+
+  @override
+  Future<void> firebaseInitializeApp() async {
+    _firebaseInitialized = true;
+  }
+
+  @override
+  FakeFirebaseMessaging get firebaseMessaging {
+    assert(_firebaseInitialized);
+    return (_firebaseMessaging ??= FakeFirebaseMessaging());
+  }
+}
+
+class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
+  String? token = '0123456789abcdef';
+
+  @override
+  Future<String?> getToken({String? vapidKey}) async {
+    assert(vapidKey == null);
+    return token;
   }
 }

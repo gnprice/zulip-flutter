@@ -1,7 +1,10 @@
 import 'package:device_info_plus/device_info_plus.dart' as device_info_plus;
+import 'package:firebase_core/firebase_core.dart' as firebase_core;
+import 'package:firebase_messaging/firebase_messaging.dart' as firebase_messaging;
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 
+import '../firebase_options.dart';
 import '../widgets/store.dart';
 import 'store.dart';
 
@@ -81,6 +84,14 @@ abstract class ZulipBinding {
   ///
   /// This wraps [device_info_plus.DeviceInfoPlugin.deviceInfo].
   Future<BaseDeviceInfo> deviceInfo();
+
+  /// Initialize Firebase, to use for notifications.
+  ///
+  /// This wraps [firebase_core.Firebase.initializeApp].
+  Future<void> firebaseInitializeApp();
+
+  /// Wraps [firebase_messaging.FirebaseMessaging.instance].
+  firebase_messaging.FirebaseMessaging get firebaseMessaging;
 }
 
 /// Like [device_info_plus.BaseDeviceInfo], but without things we don't use.
@@ -147,5 +158,15 @@ class LiveZulipBinding extends ZulipBinding {
       device_info_plus.IosDeviceInfo(:var systemVersion) => IosDeviceInfo(systemVersion: systemVersion),
       _                                                  => throw UnimplementedError(),
     };
+  }
+
+  @override
+  Future<void> firebaseInitializeApp() {
+    return firebase_core.Firebase.initializeApp(options: kFirebaseOptions);
+  }
+
+  @override
+  firebase_messaging.FirebaseMessaging get firebaseMessaging {
+    return firebase_messaging.FirebaseMessaging.instance;
   }
 }
