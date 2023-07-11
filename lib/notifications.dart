@@ -95,18 +95,19 @@ class NotificationService {
   void _onMessageFcmMessage(MessageFcmMessage data, Map<String, dynamic> dataJson) {
     _ensureChannel();
     print('content: ${data.content}');
+    final title = switch (data.recipient) {
+      FcmMessageStreamRecipient(:var stream?, :var topic) =>
+        '$stream > $topic',
+      FcmMessageStreamRecipient(:var topic) =>
+        '(unknown stream) > $topic', // TODO get stream name from data
+      FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>
+        '${data.senderFullName} to you and ${allRecipientIds.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
+      FcmMessageDmRecipient() =>
+        data.senderFullName,
+    };
     FlutterLocalNotificationsPlugin().show(
       _kNotificationId,
-      switch (data.recipient) {
-        FcmMessageStreamRecipient(:var stream?, :var topic) =>
-          '$stream > $topic',
-        FcmMessageStreamRecipient(:var topic) =>
-          '(unknown stream) > $topic', // TODO get stream name from data
-        FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>
-          '${data.senderFullName} to you and ${allRecipientIds.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
-        FcmMessageDmRecipient() =>
-          data.senderFullName,
-      },
+      title,
       data.content, // TODO
       payload: jsonEncode(dataJson),
       NotificationDetails(android: AndroidNotificationDetails(
