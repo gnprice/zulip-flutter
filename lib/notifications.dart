@@ -93,7 +93,7 @@ class NotificationService {
   }
 
   void _onMessageFcmMessage(MessageFcmMessage data, Map<String, dynamic> dataJson) {
-    _ensureChannel();
+    NotificationChannelManager._ensureChannel();
     print('content: ${data.content}');
     final title = switch (data.recipient) {
       FcmMessageStreamRecipient(:var stream?, :var topic) =>
@@ -111,7 +111,7 @@ class NotificationService {
       data.content, // TODO
       payload: jsonEncode(dataJson),
       NotificationDetails(android: AndroidNotificationDetails(
-        _kChannelId, 'channel name',
+        NotificationChannelManager._kChannelId, 'channel name',
         tag: _conversationKey(data),
         color: kZulipBrandColor,
         icon: 'zulip_notification', // TODO vary for debug
@@ -158,8 +158,19 @@ class NotificationService {
       PerAccountStoreWidget(accountId: account.id,
         child: MessageListPage(narrow: narrow))));
   }
+}
 
-  void _ensureChannel() async { // TODO "ensure"
+/// Service for configuring our Android "notification channel".
+class NotificationChannelManager {
+  static const _kChannelId = 'messages-1';
+
+  /// The vibration pattern we set for notifications.
+  // We try to set a vibration pattern that, with the phone in one's pocket,
+  // is both distinctly present and distinctly different from the default.
+  // Discussion: https://chat.zulip.org/#narrow/stream/48-mobile/topic/notification.20vibration.20pattern/near/1284530
+  static final _kVibrationPattern = Int64List.fromList([0, 125, 100, 450]);
+
+  static void _ensureChannel() async { // TODO "ensure"
     final plugin = FlutterLocalNotificationsPlugin();
     await plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(AndroidNotificationChannel(
@@ -176,10 +187,3 @@ class NotificationService {
 // We rely on the tag instead.
 const _kNotificationId = 0;
 
-const _kChannelId = 'messages-1';
-
-/// The vibration pattern we set for notifications.
-// We try to set a vibration pattern that, with the phone in one's pocket,
-// is both distinctly present and distinctly different from the default.
-// Discussion: https://chat.zulip.org/#narrow/stream/48-mobile/topic/notification.20vibration.20pattern/near/1284530
-final _kVibrationPattern = Int64List.fromList([0, 125, 100, 450]);
