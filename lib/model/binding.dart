@@ -11,6 +11,9 @@ import 'store.dart';
 /// Alias for [url_launcher.LaunchMode].
 typedef UrlLaunchMode = url_launcher.LaunchMode;
 
+/// Alias for [firebase_messaging.RemoteMessage].
+typedef FirebaseRemoteMessage = firebase_messaging.RemoteMessage;
+
 /// A singleton service providing the app's data and use of Flutter plugins.
 ///
 /// Only one instance will be constructed in the lifetime of the app,
@@ -92,6 +95,9 @@ abstract class ZulipBinding {
 
   /// Wraps [firebase_messaging.FirebaseMessaging.instance].
   firebase_messaging.FirebaseMessaging get firebaseMessaging;
+
+  /// Wraps [firebase_messaging.FirebaseMessaging.onMessage].
+  Stream<firebase_messaging.RemoteMessage> get firebaseMessagingOnMessage;
 }
 
 /// Like [device_info_plus.BaseDeviceInfo], but without things we don't use.
@@ -182,5 +188,10 @@ class LiveZulipBinding extends ZulipBinding {
   @override
   firebase_messaging.FirebaseMessaging get firebaseMessaging {
     return firebase_messaging.FirebaseMessaging.instance;
+  }
+
+  @override
+  Stream<firebase_messaging.RemoteMessage> get firebaseMessagingOnMessage {
+    return firebase_messaging.FirebaseMessaging.onMessage;
   }
 }

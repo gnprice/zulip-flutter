@@ -185,6 +185,9 @@ class TestZulipBinding extends ZulipBinding {
     assert(_firebaseInitialized);
     return (_firebaseMessaging ??= FakeFirebaseMessaging());
   }
+
+  @override
+  Stream<RemoteMessage> get firebaseMessagingOnMessage => firebaseMessaging.onMessage.stream;
 }
 
 class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
@@ -222,4 +225,6 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
 
   @override
   Stream<String> get onTokenRefresh => _tokenController.stream;
+
+  StreamController<RemoteMessage> onMessage = StreamController.broadcast();
 }

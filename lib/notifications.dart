@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -48,7 +47,7 @@ class NotificationService {
     // TODO(#324) defer notif setup if user not logged into any accounts
     //   (in order to avoid calling for permissions)
 
-    FirebaseMessaging.onMessage.listen(_onRemoteMessage);
+    ZulipBinding.instance.firebaseMessagingOnMessage.listen(_onRemoteMessage);
     FlutterLocalNotificationsPlugin().initialize(
       const InitializationSettings(
         android: AndroidInitializationSettings('zulip_notification'),
@@ -82,7 +81,7 @@ class NotificationService {
     token.value = value;
   }
 
-  void _onRemoteMessage(RemoteMessage message) {
+  void _onRemoteMessage(FirebaseRemoteMessage message) {
     print(message.data);
     final data = FcmMessage.fromJson(message.data);
     switch (data) {
