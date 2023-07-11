@@ -18,6 +18,9 @@ MessageFcmMessage _$MessageFcmMessageFromJson(Map<String, dynamic> json) =>
       senderEmail: json['sender_email'] as String,
       senderAvatarUrl: Uri.parse(json['sender_avatar_url'] as String),
       senderFullName: json['sender_full_name'] as String,
+      recipient: FcmMessageRecipient.fromJson(
+          MessageFcmMessage._readWhole(json, 'recipient')
+              as Map<String, dynamic>),
       pmUsers: _$JsonConverterFromJson<String, List<int>>(
           json['pm_users'], const _IntListConverter().fromJson),
       zulipMessageId:
@@ -55,6 +58,14 @@ Json? _$JsonConverterToJson<Json, Value>(
   Json? Function(Value value) toJson,
 ) =>
     value == null ? null : toJson(value);
+
+FcmMessageStreamRecipient _$FcmMessageStreamRecipientFromJson(
+        Map<String, dynamic> json) =>
+    FcmMessageStreamRecipient(
+      streamId: json['stream_id'] as int,
+      stream: json['stream'] as String?,
+      topic: json['topic'] as String,
+    );
 
 RemoveFcmMessage _$RemoveFcmMessageFromJson(Map<String, dynamic> json) =>
     RemoveFcmMessage(

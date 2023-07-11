@@ -52,15 +52,16 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
   final Uri senderAvatarUrl;
   final String senderFullName;
 
-  final List<int>? pmUsers; // TODO split stream/private
+  @JsonKey(includeToJson: false, readValue: _readWhole)
+  final FcmMessageRecipient recipient;
 
-  // final int? streamId; // TODO
-  // final String? stream;
-  // final String? topic;
+  final List<int>? pmUsers; // TODO split stream/private
 
   final int zulipMessageId;
   final String content;
   final int time; // in Unix seconds UTC
+
+  static Object? _readWhole(Map json, String key) => json;
 
   MessageFcmMessage({
     required super.server,
@@ -71,6 +72,7 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
     required this.senderEmail,
     required this.senderAvatarUrl,
     required this.senderFullName,
+    required this.recipient,
     required this.pmUsers,
     required this.zulipMessageId,
     required this.content,
@@ -83,7 +85,58 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
   }
 
   @override
-  Map<String, dynamic> toJson() => _$MessageFcmMessageToJson(this);
+  Map<String, dynamic> toJson() {
+    final result = _$MessageFcmMessageToJson(this);
+    final recipient = this.recipient;
+    switch (recipient) {
+      case FcmMessageDmRecipient(allRecipientIds: [_] || [_, _]):
+        break;
+      case FcmMessageDmRecipient(:var allRecipientIds):
+        result['pm_users'] = const _IntListConverter().toJson(allRecipientIds);
+      case FcmMessageStreamRecipient():
+        result['stream_id'] = recipient.streamId;
+        if (recipient.stream != null) result['stream'] = recipient.stream;
+        result['topic'] = recipient.topic;
+    }
+    return result;
+  }
+}
+
+sealed class FcmMessageRecipient {
+  FcmMessageRecipient();
+
+  factory FcmMessageRecipient.fromJson(Map<String, dynamic> json) {
+    return json.containsKey('stream_id')
+      ? FcmMessageStreamRecipient.fromJson(json)
+      : FcmMessageDmRecipient.fromJson(json);
+  }
+}
+
+@JsonSerializable(fieldRename: FieldRename.snake, createToJson: false)
+class FcmMessageStreamRecipient extends FcmMessageRecipient {
+  final int streamId;
+  final String? stream;
+  final String topic;
+
+  FcmMessageStreamRecipient({required this.streamId, required this.stream, required this.topic});
+
+  factory FcmMessageStreamRecipient.fromJson(Map<String, dynamic> json) =>
+    _$FcmMessageStreamRecipientFromJson(json);
+}
+
+class FcmMessageDmRecipient extends FcmMessageRecipient {
+  final List<int> allRecipientIds;
+
+  FcmMessageDmRecipient({required this.allRecipientIds});
+
+  factory FcmMessageDmRecipient.fromJson(Map<String, dynamic> json) {
+    return FcmMessageDmRecipient(allRecipientIds: switch (json) {
+      {'pm_users': var pmUsers} => const _IntListConverter().fromJson(pmUsers),
+      {'sender_id': int() && var senderId, 'user_id': int() && var userId} =>
+        senderId != userId ? ([senderId, userId]..sort()) : [userId],
+      _ => throw Exception("bad recipient"),
+    });
+  }
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
