@@ -90,12 +90,13 @@ class NotificationService {
       print('content: ${data.content}');
       FlutterLocalNotificationsPlugin().show(
         _kNotificationId,
-        switch (data) {
-          // TODO stream messages
-          MessageFcmMessage(:var pmUsers?, :var senderFullName) =>
-            '$senderFullName to you and ${pmUsers.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
-          MessageFcmMessage(:var senderFullName) =>
-            senderFullName,
+        switch (data.recipient) {
+          FcmMessageStreamRecipient(:var stream, :var topic) =>
+            '$stream > $topic',
+          FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>
+            '${data.senderFullName} to you and ${allRecipientIds.length - 2} others', // TODO(i18n), also plural; TODO use others' names, from data
+          FcmMessageDmRecipient() =>
+            data.senderFullName,
         },
         data.content, // TODO
         payload: jsonEncode(message.data),
@@ -111,10 +112,9 @@ class NotificationService {
 
   String _conversationKey(MessageFcmMessage data) {
     final groupKey = _groupKey(data);
-    final conversation = switch (data) {
-      // TODO stream messages
-      MessageFcmMessage(:var pmUsers?) => 'group-dm:$pmUsers', // TODO
-      MessageFcmMessage(:var senderId) => 'dm:$senderId',
+    final conversation = switch (data.recipient) {
+      FcmMessageStreamRecipient(:var streamId, :var topic) => 'stream:$streamId:$topic',
+      FcmMessageDmRecipient(:var allRecipientIds) => 'dm:${allRecipientIds.join(',')}',
     };
     return '$groupKey|$conversation';
   }
@@ -136,12 +136,11 @@ class NotificationService {
       account.realmUrl == data.realmUri && account.userId == data.userId);
     if (account == null) return; // TODO(log)
 
-    final narrow = switch (data) {
-      // TODO stream messages
-      MessageFcmMessage(:var pmUsers?) =>
-        DmNarrow(allRecipientIds: pmUsers, selfUserId: account.userId),
-      MessageFcmMessage(:var senderId) =>
-        DmNarrow(allRecipientIds: [senderId, account.userId]..sort(), selfUserId: account.userId),
+    final narrow = switch (data.recipient) {
+      FcmMessageStreamRecipient(:var streamId, :var topic) =>
+        TopicNarrow(streamId, topic),
+      FcmMessageDmRecipient(:var allRecipientIds) =>
+        DmNarrow(allRecipientIds: allRecipientIds, selfUserId: account.userId),
     };
 
     print('  account: $account, narrow: $narrow');

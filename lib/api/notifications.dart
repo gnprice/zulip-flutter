@@ -55,8 +55,6 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
   @JsonKey(includeToJson: false, readValue: _readWhole)
   final FcmMessageRecipient recipient;
 
-  final List<int>? pmUsers; // TODO split stream/private
-
   final int zulipMessageId;
   final String content;
   final int time; // in Unix seconds UTC
@@ -73,7 +71,6 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
     required this.senderAvatarUrl,
     required this.senderFullName,
     required this.recipient,
-    required this.pmUsers,
     required this.zulipMessageId,
     required this.content,
     required this.time,

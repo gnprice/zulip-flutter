@@ -21,8 +21,6 @@ MessageFcmMessage _$MessageFcmMessageFromJson(Map<String, dynamic> json) =>
       recipient: FcmMessageRecipient.fromJson(
           MessageFcmMessage._readWhole(json, 'recipient')
               as Map<String, dynamic>),
-      pmUsers: _$JsonConverterFromJson<String, List<int>>(
-          json['pm_users'], const _IntListConverter().fromJson),
       zulipMessageId:
           const _IntConverter().fromJson(json['zulip_message_id'] as String),
       content: json['content'] as String,
@@ -40,24 +38,10 @@ Map<String, dynamic> _$MessageFcmMessageToJson(MessageFcmMessage instance) =>
       'sender_email': instance.senderEmail,
       'sender_avatar_url': instance.senderAvatarUrl.toString(),
       'sender_full_name': instance.senderFullName,
-      'pm_users': _$JsonConverterToJson<String, List<int>>(
-          instance.pmUsers, const _IntListConverter().toJson),
       'zulip_message_id': const _IntConverter().toJson(instance.zulipMessageId),
       'content': instance.content,
       'time': const _IntConverter().toJson(instance.time),
     };
-
-Value? _$JsonConverterFromJson<Json, Value>(
-  Object? json,
-  Value? Function(Json json) fromJson,
-) =>
-    json == null ? null : fromJson(json as Json);
-
-Json? _$JsonConverterToJson<Json, Value>(
-  Value? value,
-  Json? Function(Value value) toJson,
-) =>
-    value == null ? null : toJson(value);
 
 FcmMessageStreamRecipient _$FcmMessageStreamRecipientFromJson(
         Map<String, dynamic> json) =>
