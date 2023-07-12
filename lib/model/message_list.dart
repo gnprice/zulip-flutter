@@ -61,7 +61,7 @@ class MessageListView extends ChangeNotifier {
       narrow: narrow.apiEncode(),
       anchor: AnchorCode.newest, // TODO(#80): switch to firstUnread
       numBefore: 100,
-      numAfter: 10,
+      numAfter: 0,
     );
     messages.addAll(result.messages);
     contents.addAll(_contentsOfMessages(result.messages));

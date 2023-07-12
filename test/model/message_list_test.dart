@@ -93,7 +93,7 @@ void main() {
       narrow: narrow.apiEncode(),
       anchor: 'newest',
       numBefore: 100,
-      numAfter: 10,
+      numAfter: 0,
     );
   });
 
