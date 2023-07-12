@@ -99,7 +99,9 @@ class ApiConnection {
     Map<String, dynamic>? json;
     try {
       final bytes = await response.stream.toBytes();
+      final stopwatch = Stopwatch()..start();
       json = jsonDecode(utf8.decode(bytes));
+      print("jsonDecode: ${stopwatch.elapsed.inMilliseconds}ms");
     } catch (e) {
       // We'll throw something below, seeing `json` is null.
     }
@@ -109,7 +111,10 @@ class ApiConnection {
     }
 
     try {
-      return fromJson(json);
+      final stopwatch = Stopwatch()..start();
+      final result = fromJson(json);
+      print("fromJson: ${stopwatch.elapsed.inMilliseconds}ms");
+      return result;
     } catch (e) {
       throw MalformedServerResponseException(
         routeName: routeName, httpStatus: httpStatus, data: json);
