@@ -97,6 +97,18 @@ class MessageListAppBarTitle extends StatelessWidget {
   }
 }
 
+/// The approximate height of a short message in the message list.
+const _kShortMessageHeight = 80;
+
+/// The point at which we fetch more history, in pixels from the start or end.
+///
+/// When the user scrolls to within this distance of the start (or end) of the
+/// history we currently have, we make a request to fetch the next batch of
+/// older (or newer) messages.
+//
+// When the user reaches this point, they're at least halfway through the
+// previous batch.
+const kFetchMessagesBufferPixels = (kMessageListFetchBatchSize / 2) * _kShortMessageHeight;
 
 class MessageList extends StatefulWidget {
   const MessageList({super.key, required this.narrow});
@@ -109,6 +121,13 @@ class MessageList extends StatefulWidget {
 
 class _MessageListState extends State<MessageList> {
   MessageListView? model;
+  final ScrollController scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    scrollController.addListener(_onScroll);
+  }
 
   @override
   void didChangeDependencies() {
@@ -126,13 +145,14 @@ class _MessageListState extends State<MessageList> {
   @override
   void dispose() {
     model?.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
   void _initModel(PerAccountStore store) {
     model = MessageListView.init(store: store, narrow: widget.narrow);
     model!.addListener(_modelChanged);
-    model!.fetch();
+    model!.fetchInitial();
   }
 
   void _modelChanged() {
@@ -140,6 +160,17 @@ class _MessageListState extends State<MessageList> {
       // The actual state lives in the [MessageListView] model.
       // This method was called because that just changed.
     });
+  }
+
+  void _onScroll() {
+    final position = scrollController.position;
+    final extentRemainingAboveViewport = position.maxScrollExtent - position.pixels;
+    if (extentRemainingAboveViewport < kFetchMessagesBufferPixels) {
+      // TODO: This ends up firing a second time shortly after we fetch a batch.
+      //   The result is that each time we decide to fetch a batch, we end up
+      //   fetching two batches in quick succession.
+      model?.fetchOlder();
+    }
   }
 
   @override
@@ -178,6 +209,7 @@ class _MessageListState extends State<MessageList> {
         _ => ScrollViewKeyboardDismissBehavior.manual,
       },
 
+      controller: scrollController,
       itemCount: length,
       // Setting reverse: true means the scroll starts at the bottom.
       // Flipping the indexes (in itemBuilder) means the start/bottom
@@ -194,6 +226,11 @@ class _MessageListState extends State<MessageList> {
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
                 child: Text("No earlier messages."))), // TODO use an icon
+          MessageListLoadingItem() =>
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: CircularProgressIndicator())), // TODO perhaps a different indicator
           MessageListMessageItem(:var message, :var content) =>
             MessageItem(
               trailing: i == 0 ? const SizedBox(height: 8) : const SizedBox(height: 11),

@@ -25,6 +25,11 @@ class MessageListMessageItem extends MessageListItem {
   MessageListMessageItem(this.message, this.content);
 }
 
+/// Indicates the app is loading more messages at the top or bottom.
+class MessageListLoadingItem extends MessageListItem {
+  const MessageListLoadingItem();
+}
+
 /// Indicates we've reached the oldest message in the narrow.
 class MessageListHistoryStartItem extends MessageListItem {
   const MessageListHistoryStartItem();
@@ -53,6 +58,10 @@ mixin _MessageSequence {
   bool get haveOldest => _haveOldest;
   bool _haveOldest = false;
 
+  /// Whether we are currently fetching the next batch of older messages.
+  bool get fetchingOlder => _fetchingOlder;
+  bool _fetchingOlder = false;
+
   /// The parsed message contents, as a list parallel to [messages].
   ///
   /// The i'th element is the result of parsing the i'th element of [messages].
@@ -68,7 +77,7 @@ mixin _MessageSequence {
   /// before, between, or after the messages.
   ///
   /// This information is completely derived from [messages] and
-  /// the flag [haveOldest].
+  /// the flags [haveOldest] and [fetchingOlder].
   /// It exists as an optimization, to memoize that computation.
   final QueueList<MessageListItem> items = QueueList();
 
@@ -82,6 +91,19 @@ mixin _MessageSequence {
     contents.add(parseContent(message.content));
     assert(contents.length == messages.length);
     _processMessage(messages.length - 1);
+  }
+
+  void _insertAllMessages(int index, Iterable<Message> toInsert) {
+    // TODO parse/process messages in smaller batches, to not drop frames.
+    //   On a Pixel 5, a batch of 100 messages takes ~15-20ms in _insertAllMessages.
+    //   (Before that, ~2-5ms in jsonDecode and 0ms in fromJson,
+    //   so skip worrying about those steps.)
+    assert(contents.length == messages.length);
+    messages.insertAll(index, toInsert);
+    contents.insertAll(index, toInsert.map(
+      (message) => parseContent(message.content)));
+    assert(contents.length == messages.length);
+    _reprocessAll();
   }
 
   /// Redo all computations from scratch, based on [messages].
@@ -106,12 +128,19 @@ mixin _MessageSequence {
 
   /// Update [items] to include markers at start and end as appropriate.
   void _updateEndMarkers() {
-    switch ((items.firstOrNull, haveOldest)) {
-      case (MessageListHistoryStartItem(), true): break;
-      case (MessageListHistoryStartItem(), _   ): items.removeFirst();
+    assert(!(haveOldest && fetchingOlder));
+    switch ((items.firstOrNull, fetchingOlder, haveOldest)) {
+      case (MessageListLoadingItem(),      true, _): break;
+      case (MessageListLoadingItem(),      _, true): items[0] = const MessageListHistoryStartItem();
+      case (MessageListLoadingItem(),      _,    _): items.removeFirst();
 
-      case (_,                             true): items.addFirst(const MessageListHistoryStartItem());
-      case (_,                                _): break;
+      case (MessageListHistoryStartItem(), true, _): items[0] = const MessageListLoadingItem();
+      case (MessageListHistoryStartItem(), _, true): break;
+      case (MessageListHistoryStartItem(), _,    _): items.removeFirst();
+
+      case (_,                             true, _): items.addFirst(const MessageListLoadingItem());
+      case (_,                             _, true): items.addFirst(const MessageListHistoryStartItem());
+      case (_,                             _,    _): break;
     }
   }
 
@@ -133,13 +162,12 @@ mixin _MessageSequence {
 /// Lifecycle:
 ///  * Create with [init].
 ///  * Add listeners with [addListener].
-///  * Fetch messages with [fetch].  When the fetch completes, this object
+///  * Fetch messages with [fetchInitial].  When the fetch completes, this object
 ///    will notify its listeners (as it will any other time the data changes.)
+///  * Fetch more messages as needed with [fetchOlder].
 ///  * On reassemble, call [reassemble].
 ///  * When the object will no longer be used, call [dispose] to free
 ///    resources on the [PerAccountStore].
-///
-/// TODO support fetching another batch
 class MessageListView with ChangeNotifier, _MessageSequence {
   MessageListView._({required this.store, required this.narrow});
 
@@ -159,10 +187,11 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   final PerAccountStore store;
   final Narrow narrow;
 
-  Future<void> fetch() async {
+  /// Fetch messages, starting from scratch.
+  Future<void> fetchInitial() async {
     // TODO(#80): fetch from anchor firstUnread, instead of newest
     // TODO(#82): fetch from a given message ID as anchor
-    assert(!fetched && !haveOldest);
+    assert(!fetched && !haveOldest && !fetchingOlder);
     assert(messages.isEmpty && contents.isEmpty);
     // TODO schedule all this in another isolate
     final result = await getMessages(store.connection,
@@ -178,6 +207,39 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     _haveOldest = result.foundOldest;
     _updateEndMarkers();
     notifyListeners();
+  }
+
+  /// Fetch the next batch of older messages, if applicable.
+  Future<void> fetchOlder() async {
+    if (haveOldest) return;
+    if (fetchingOlder) return;
+    assert(fetched);
+    assert(messages.isNotEmpty);
+    _fetchingOlder = true;
+    _updateEndMarkers();
+    notifyListeners();
+    try {
+      final result = await getMessages(store.connection,
+        narrow: narrow.apiEncode(),
+        anchor: NumericAnchor(messages[0].id),
+        includeAnchor: false,
+        numBefore: kMessageListFetchBatchSize,
+        numAfter: 0,
+      );
+
+      if (result.messages.isNotEmpty
+          && result.messages.last.id == messages[0].id) {
+        // TODO(server-6): includeAnchor should make this impossible
+        result.messages.removeLast();
+      }
+
+      _insertAllMessages(0, result.messages);
+      _haveOldest = result.foundOldest;
+    } finally {
+      _fetchingOlder = false;
+      _updateEndMarkers();
+      notifyListeners();
+    }
   }
 
   /// Add [message] to this view, if it belongs here.
