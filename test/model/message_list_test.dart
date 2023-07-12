@@ -79,7 +79,8 @@ void main() {
     prepare(narrow: narrow);
     connection.prepare(json: newestResult(
       foundOldest: false,
-      messages: List.generate(100, (i) => eg.streamMessage(id: 1000 + i)),
+      messages: List.generate(kMessageListFetchBatchSize,
+        (i) => eg.streamMessage(id: 1000 + i)),
     ).toJson());
     final fetchFuture = model.fetch();
     check(model).fetched.isFalse();
@@ -88,11 +89,11 @@ void main() {
     checkNotNotified();
     await fetchFuture;
     checkNotifiedOnce();
-    check(model).messages.length.equals(100);
+    check(model).messages.length.equals(kMessageListFetchBatchSize);
     checkLastRequest(
       narrow: narrow.apiEncode(),
       anchor: 'newest',
-      numBefore: 100,
+      numBefore: kMessageListFetchBatchSize,
       numAfter: 0,
     );
   });
