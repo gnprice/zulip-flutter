@@ -165,8 +165,7 @@ class _MessageListState extends State<MessageList> {
   }
 
   Widget _buildListView(context) {
-    final length = model!.messages.length;
-    assert(model!.contents.length == length);
+    final length = model!.items.length;
     return StickyHeaderListView.builder(
       // TODO: Offer `ScrollViewKeyboardDismissBehavior.interactive` (or
       //   similar) if that is ever offered:
@@ -187,10 +186,16 @@ class _MessageListState extends State<MessageList> {
       // TODO handle scroll starting at first unread, or link anchor
       // TODO on new message when scrolled up, anchor scroll to what's in view
       reverse: true,
-      itemBuilder: (context, i) => MessageItem(
-        trailing: i == 0 ? const SizedBox(height: 8) : const SizedBox(height: 11),
-        message: model!.messages[length - 1 - i],
-        content: model!.contents[length - 1 - i]));
+      itemBuilder: (context, i) {
+        final data = model!.items[length - 1 - i];
+        return switch (data) {
+          MessageListMessageItem(:var message, :var content) =>
+            MessageItem(
+              trailing: i == 0 ? const SizedBox(height: 8) : const SizedBox(height: 11),
+              message: message,
+              content: content)
+        };
+      });
   }
 }
 
