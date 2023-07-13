@@ -166,6 +166,9 @@ class _MessageListState extends State<MessageList> {
     final position = scrollController.position;
     final extentRemainingAboveViewport = position.maxScrollExtent - position.pixels;
     if (extentRemainingAboveViewport < kFetchMessagesBufferPixels) {
+      if (model != null && !model!.haveOldest && !model!.fetchingOlder) {
+        debugPrint("fetching older at distance ${extentRemainingAboveViewport.toStringAsFixed(1)} / ${position.maxScrollExtent.toStringAsFixed(1)}");
+      }
       // TODO: This ends up firing a second time shortly after we fetch a batch.
       //   The result is that each time we decide to fetch a batch, we end up
       //   fetching two batches in quick succession.

@@ -215,6 +215,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     if (fetchingOlder) return;
     assert(fetched);
     assert(messages.isNotEmpty);
+    final stopwatch = Stopwatch()..start();
     _fetchingOlder = true;
     _updateEndMarkers();
     notifyListeners();
@@ -226,6 +227,8 @@ class MessageListView with ChangeNotifier, _MessageSequence {
         numBefore: kMessageListFetchBatchSize,
         numAfter: 0,
       );
+      debugPrint("fetching: ${stopwatch.elapsed.inMilliseconds}ms for request");
+      stopwatch.reset();
 
       if (result.messages.isNotEmpty
           && result.messages.last.id == messages[0].id) {
@@ -235,6 +238,9 @@ class MessageListView with ChangeNotifier, _MessageSequence {
 
       _insertAllMessages(0, result.messages);
       _haveOldest = result.foundOldest;
+      debugPrint("fetching: ${stopwatch.elapsed.inMilliseconds}ms for processing");
+      stopwatch.stop();
+      debugPrint("fetched older -> ${messages.length} messages in list");
     } finally {
       _fetchingOlder = false;
       _updateEndMarkers();
