@@ -192,6 +192,9 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
 
     final extentRemainingAboveViewport = scrollMetrics.maxScrollExtent - scrollMetrics.pixels;
     if (extentRemainingAboveViewport < kFetchMessagesBufferPixels) {
+      if (model != null && !model!.haveOldest && !model!.fetchingOlder) {
+        debugPrint("fetching older at distance ${extentRemainingAboveViewport.toStringAsFixed(1)} / ${scrollMetrics.maxScrollExtent.toStringAsFixed(1)}");
+      }
       // TODO: This ends up firing a second time shortly after we fetch a batch.
       //   The result is that each time we decide to fetch a batch, we end up
       //   fetching two batches in quick succession.  This is basically harmless
