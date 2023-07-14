@@ -112,6 +112,7 @@ class MessageList extends StatefulWidget {
 class _MessageListState extends State<MessageList> {
   MessageListView? model;
   final scrollController = ScrollController();
+  bool showScrollToBottom = false;
 
   @override
   void initState() {
@@ -153,7 +154,13 @@ class _MessageListState extends State<MessageList> {
   }
 
   void _onScroll() {
-    // TODO
+    final offset = scrollController.position.pixels;
+    final shouldShowScrollToBottom = (offset > 1000);
+    if (shouldShowScrollToBottom != showScrollToBottom) {
+      setState(() {
+        showScrollToBottom = shouldShowScrollToBottom;
+      });
+    }
   }
 
   void _scrollToBottom() {
@@ -188,17 +195,18 @@ class _MessageListState extends State<MessageList> {
               constraints: const BoxConstraints(maxWidth: 760),
               child: Stack(children: [
                 _buildListView(context),
-                Positioned(
-                  bottom: 16,
-                  right: 8,
-                  child: ClipOval(
-                    child: Material(
-                      color: Theme.of(context).colorScheme.primary,
-                      child: Ink(
-                        child: IconButton.filled(
-                          onPressed: _scrollToBottom,
-                          color: Colors.white,
-                          icon: const Icon(Icons.keyboard_arrow_down)))))),
+                if (showScrollToBottom)
+                  Positioned(
+                    bottom: 16,
+                    right: 8,
+                    child: ClipOval(
+                      child: Material(
+                        color: Theme.of(context).colorScheme.primary,
+                        child: Ink(
+                          child: IconButton.filled(
+                            onPressed: _scrollToBottom,
+                            color: Colors.white,
+                            icon: const Icon(Icons.keyboard_arrow_down)))))),
               ]))))));
   }
 
