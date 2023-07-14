@@ -369,6 +369,15 @@ class StreamTopicRecipientHeader extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600)))),
           // TODO topic links?
           // Then web also has edit/resolve/mute buttons. Skip those for mobile.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+            child: Text(
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: _kRecipientHeaderDateColor),
+              _kRecipientHeaderDateFormat.format(
+                DateTime.fromMillisecondsSinceEpoch(message.timestamp * 1000))),
+          ),
         ])));
   }
 }
@@ -401,6 +410,10 @@ class DmRecipientHeader extends StatelessWidget {
 
 final _kDmRecipientHeaderColor =
     const HSLColor.fromAHSL(1, 0, 0, 0.27).toColor();
+
+final _kRecipientHeaderDateColor = const HSLColor.fromAHSL(0.75, 0, 0, 0.15).toColor();
+
+final _kRecipientHeaderDateFormat = DateFormat('y-MM-dd', 'en_US'); // TODO(i18n)
 
 /// A widget with the distinctive chevron-tailed shape in Zulip recipient headers.
 class RecipientHeaderChevronContainer extends StatelessWidget {
