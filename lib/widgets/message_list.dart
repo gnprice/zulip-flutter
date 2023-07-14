@@ -195,10 +195,14 @@ class _MessageListState extends State<MessageList> {
               constraints: const BoxConstraints(maxWidth: 760),
               child: Stack(children: [
                 _buildListView(context),
-                if (showScrollToBottom)
-                  Positioned(
-                    bottom: 16,
-                    right: 8,
+
+                Positioned(
+                  bottom: 16,
+                  right: 8,
+                  child: AnimatedOpacity(
+                    opacity: showScrollToBottom ? 1 : 0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.fastOutSlowIn,
                     child: ClipOval(
                       child: Material(
                         color: Theme.of(context).colorScheme.primary,
@@ -206,7 +210,7 @@ class _MessageListState extends State<MessageList> {
                           child: IconButton.filled(
                             onPressed: _scrollToBottom,
                             color: Colors.white,
-                            icon: const Icon(Icons.keyboard_arrow_down)))))),
+                            icon: const Icon(Icons.keyboard_arrow_down))))))),
               ]))))));
   }
 
