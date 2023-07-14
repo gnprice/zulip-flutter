@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -109,6 +111,13 @@ class MessageList extends StatefulWidget {
 
 class _MessageListState extends State<MessageList> {
   MessageListView? model;
+  final scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    scrollController.addListener(_onScroll);
+  }
 
   @override
   void didChangeDependencies() {
@@ -126,6 +135,7 @@ class _MessageListState extends State<MessageList> {
   @override
   void dispose() {
     model?.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
@@ -140,6 +150,21 @@ class _MessageListState extends State<MessageList> {
       // The actual state lives in the [MessageListView] model.
       // This method was called because that just changed.
     });
+  }
+
+  void _onScroll() {
+    // TODO
+  }
+
+  void _scrollToBottom() {
+    const maxPixelsPerSec = 8000;
+    final minDurationSec = scrollController.position.pixels / maxPixelsPerSec;
+    scrollController.animateTo(
+      0,
+      duration: Duration(
+        milliseconds: max(300, (minDurationSec * 1000).floor())),
+      curve: Curves.linear,
+    );
   }
 
   @override
@@ -161,7 +186,26 @@ class _MessageListState extends State<MessageList> {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
-              child: _buildListView(context))))));
+              child: Stack(children: [
+                _buildListView(context),
+                Positioned(
+                  bottom: 16,
+                  right: 8,
+                  child: FilledButton(
+                    onPressed: _scrollToBottom,
+                    style: ButtonStyle(padding: MaterialStatePropertyAll(EdgeInsets.all(20))),
+                    child: Icon(Icons.keyboard_arrow_down),
+                  )),
+
+                  // IconButton(
+                  //   onPressed: () => debugPrint("pressed"),
+                  //   icon: Container(
+                  //     height: 48, width: 48,
+                  //     decoration: ShapeDecoration(color: Colors.blue, shape: CircleBorder()),
+                  //     child: Icon(
+                  //       Icons.keyboard_arrow_down),
+                  //   ))),
+              ]))))));
   }
 
   Widget _buildListView(context) {
@@ -179,6 +223,7 @@ class _MessageListState extends State<MessageList> {
         _ => ScrollViewKeyboardDismissBehavior.manual,
       },
 
+      controller: scrollController,
       itemCount: length,
       // Setting reverse: true means the scroll starts at the bottom.
       // Flipping the indexes (in itemBuilder) means the start/bottom
