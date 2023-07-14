@@ -191,20 +191,14 @@ class _MessageListState extends State<MessageList> {
                 Positioned(
                   bottom: 16,
                   right: 8,
-                  child: FilledButton(
-                    onPressed: _scrollToBottom,
-                    style: ButtonStyle(padding: MaterialStatePropertyAll(EdgeInsets.all(20))),
-                    child: Icon(Icons.keyboard_arrow_down),
-                  )),
-
-                  // IconButton(
-                  //   onPressed: () => debugPrint("pressed"),
-                  //   icon: Container(
-                  //     height: 48, width: 48,
-                  //     decoration: ShapeDecoration(color: Colors.blue, shape: CircleBorder()),
-                  //     child: Icon(
-                  //       Icons.keyboard_arrow_down),
-                  //   ))),
+                  child: ClipOval(
+                    child: Material(
+                      color: Theme.of(context).colorScheme.primary,
+                      child: Ink(
+                        child: IconButton.filled(
+                          onPressed: _scrollToBottom,
+                          color: Colors.white,
+                          icon: const Icon(Icons.keyboard_arrow_down)))))),
               ]))))));
   }
 
