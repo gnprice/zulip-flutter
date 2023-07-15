@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -388,6 +389,13 @@ class DmRecipientHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final store = PerAccountStoreWidget.of(context);
+    final otherNames = message.allRecipientIds
+      .where((id) => id != store.account.userId)
+      .map((id) => store.users[id]?.fullName ?? '(unknown user)')
+      .sorted()
+      .join(", ");
+
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: () {
@@ -400,8 +408,8 @@ class DmRecipientHeader extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: RecipientHeaderChevronContainer(
           color: _kDmRecipientHeaderColor,
-          child: const Text("Direct message", // TODO DM recipient headers
-            style: TextStyle(color: Colors.white)))));
+          child: Text(style: const TextStyle(color: Colors.white),
+            'You and $otherNames'))));
   }
 }
 
