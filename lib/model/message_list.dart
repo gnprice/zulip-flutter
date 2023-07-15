@@ -181,6 +181,7 @@ mixin _MessageSequence {
     // and date separators #173.
     final message = messages[index];
     final content = contents[index];
+    bool canShareSender;
     if (index > 0 && _canShareRecipientHeader(messages[index - 1], message)) {
       final prevMessageItem = items
         .lastWhere((item) => item is MessageListMessageItem)
@@ -188,10 +189,12 @@ mixin _MessageSequence {
       assert(identical(prevMessageItem.message, messages[index - 1]));
       assert(prevMessageItem.isLastInBlock);
       prevMessageItem.isLastInBlock = false;
+      canShareSender = (prevMessageItem.message.senderId == message.senderId);
     } else {
       items.add(MessageListRecipientHeaderItem(message));
+      canShareSender = false;
     }
-    items.add(MessageListMessageItem(message, content, showSender: message.id.isEven, isLastInBlock: true));
+    items.add(MessageListMessageItem(message, content, showSender: !canShareSender, isLastInBlock: true));
   }
 
   static bool _canShareRecipientHeader(Message prevMessage, Message message) {
