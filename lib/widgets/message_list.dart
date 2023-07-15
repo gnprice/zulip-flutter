@@ -491,20 +491,7 @@ class MessageWithPossibleSender extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = PerAccountStoreWidget.of(context);
     final message = item.message;
-
-    final Widget avatar;
-    if (!item.showSender) {
-      avatar = const SizedBox.shrink();
-    } else if (message.avatarUrl == null) { // TODO handle computing gravatars
-      avatar = const SizedBox.shrink();
-    } else {
-      avatar = RealmContentNetworkImage(
-        resolveUrl(message.avatarUrl!, store.account), // TODO get avatarUrl from user data
-        filterQuality: FilterQuality.medium,
-      );
-    }
 
     final time = _kMessageTimestampFormat
       .format(DateTime.fromMillisecondsSinceEpoch(1000 * message.timestamp));
@@ -518,13 +505,9 @@ class MessageWithPossibleSender extends StatelessWidget {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(3, 6, 11, 0),
-            child: SizedBox(
-              width: 35,
-              height: 35,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(4)),
-                clipBehavior: Clip.antiAlias,
-                child: avatar))),
+            child: item.showSender
+              ? Avatar(size: 35, avatarUrl: message.avatarUrl) // TODO get from user data
+              : const SizedBox(width: 35, height: 35)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -554,3 +537,35 @@ final _kMessageTimestampStyle = TextStyle(
   fontSize: 12,
   fontWeight: FontWeight.w400,
   color: const HSLColor.fromAHSL(0.4, 0, 0, 0.2).toColor());
+
+class Avatar extends StatelessWidget {
+  const Avatar({super.key, required this.size, required this.avatarUrl});
+
+  final double size;
+
+  /// Has the same semantics as [User.avatarUrl] and [Message.avatarUrl].
+  final String? avatarUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = PerAccountStoreWidget.of(context);
+
+    final Widget avatar;
+    if (avatarUrl == null) { // TODO handle computing gravatars
+      avatar = const SizedBox.shrink();
+    } else {
+      avatar = RealmContentNetworkImage(
+        resolveUrl(avatarUrl!, store.account),
+        filterQuality: FilterQuality.medium,
+      );
+    }
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.all(Radius.circular(4)),
+        clipBehavior: Clip.antiAlias,
+        child: avatar));
+  }
+}
