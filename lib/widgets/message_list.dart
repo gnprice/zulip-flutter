@@ -633,7 +633,6 @@ class MessageWithoutSender extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 3),
                 MessageContent(message: message, content: content),
               ])),
           Container(

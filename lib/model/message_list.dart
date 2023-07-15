@@ -191,7 +191,7 @@ mixin _MessageSequence {
     } else {
       items.add(MessageListRecipientHeaderItem(message));
     }
-    items.add(MessageListMessageItem(message, content, showSender: true, isLastInBlock: true));
+    items.add(MessageListMessageItem(message, content, showSender: message.id.isEven, isLastInBlock: true));
   }
 
   static bool _canShareRecipientHeader(Message prevMessage, Message message) {
