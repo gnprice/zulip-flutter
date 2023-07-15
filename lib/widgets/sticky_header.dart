@@ -155,7 +155,7 @@ class SliverStickyHeaderList extends SliverMultiBoxAdaptorWidget {
 
   @override
   SliverMultiBoxAdaptorElement createElement() =>
-    SliverMultiBoxAdaptorElement(this, replaceMovedChildren: true);
+    _SliverStickyHeaderListElement(this, replaceMovedChildren: true);
 
   @override
   RenderSliverStickyHeaderList createRenderObject(BuildContext context) {
@@ -164,8 +164,109 @@ class SliverStickyHeaderList extends SliverMultiBoxAdaptorWidget {
   }
 }
 
+class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
+  _SliverStickyHeaderListElement(super.widget, {super.replaceMovedChildren});
+
+  @override
+  RenderSliverStickyHeaderList get renderObject => super.renderObject as RenderSliverStickyHeaderList;
+
+  Element? _header;
+
+  @override
+  void visitChildren(ElementVisitor visitor) {
+    super.visitChildren(visitor);
+    if (_header != null) visitor(_header!);
+  }
+
+  @override
+  void forgetChild(Element child) {
+    if (child == _header) {
+      _header = null;
+      // Skip super, which assumes child is one of the super-managed children.
+      // This also skips [Element.forgetChild]; TODO is that OK?
+    } else {
+      super.forgetChild(child);
+    }
+  }
+
+  @override
+  void mount(Element? parent, Object? newSlot) {
+    super.mount(parent, newSlot);
+    renderObject.updateCallback(_layout);
+  }
+
+  @override
+  void update(covariant SliverMultiBoxAdaptorWidget newWidget) {
+    assert(widget != newWidget);
+    super.update(newWidget);
+    assert(widget == newWidget);
+    renderObject.updateCallback(_layout);
+  }
+
+  @override
+  void unmount() {
+    renderObject.updateCallback(null);
+    super.unmount();
+  }
+
+  void _layout() {
+    debugPrint("_SliverStickyHeaderListElement._layout"); // TODO implement
+  }
+
+  @override
+  void insertRenderObjectChild(RenderObject child, int? slot) {
+    if (slot == null) {
+      final renderObject = this.renderObject;
+      assert(renderObject.debugValidateChild(child));
+      renderObject.header = child as RenderBox;
+      assert(renderObject == this.renderObject);
+    } else {
+      super.insertRenderObjectChild(child, slot);
+    }
+  }
+
+  @override
+  void moveRenderObjectChild(RenderObject child, int? oldSlot, int? newSlot) {
+    if (oldSlot == null || newSlot == null) {
+      assert(false);
+    } else {
+      super.moveRenderObjectChild(child, oldSlot, newSlot);
+    }
+  }
+
+  @override
+  void removeRenderObjectChild(RenderObject child, int? slot) {
+    if (slot == null) {
+      final renderObject = this.renderObject;
+      assert(renderObject.header == child);
+      renderObject.header = null;
+      assert(renderObject == this.renderObject);
+    } else {
+      super.removeRenderObjectChild(child, slot);
+    }
+  }
+}
+
+
+
 class RenderSliverStickyHeaderList extends RenderSliverList {
   RenderSliverStickyHeaderList({required super.childManager});
+
+  // Modeled on [RenderObjectWithChildMixin.child].
+  RenderBox? get header => _header;
+  RenderBox? _header;
+  set header(RenderBox? value) {
+    if (_header != null) dropChild(_header!);
+    _header = value;
+    if (_header != null) adoptChild(_header!);
+  }
+
+  VoidCallback? _callback;
+  void updateCallback(VoidCallback? value) {
+    if (value == _callback) return;
+    _callback = value;
+    markNeedsLayout();
+  }
 
   @override
   void performLayout() {
@@ -175,38 +276,80 @@ class RenderSliverStickyHeaderList extends RenderSliverList {
 
     // debugPrint("our constraints: $constraints");
     // debugPrint("our geometry: $geometry");
-    final scrollOffset = constraints.scrollOffset;
+    // final scrollOffset = constraints.scrollOffset;
     // debugPrint("our scroll offset: $scrollOffset");
 
-    RenderBox? child;
-    for (child = firstChild; child != null; child = childAfter(child)) {
-      final parentData = child.parentData! as SliverMultiBoxAdaptorParentData;
-      assert(parentData.layoutOffset != null);
+    // RenderBox? child;
+    // for (child = firstChild; child != null; child = childAfter(child)) {
+    //   final parentData = child.parentData! as SliverMultiBoxAdaptorParentData;
+    //   assert(parentData.layoutOffset != null);
+    //
+    //   RenderBox? innerChild = child;
+    //   while (innerChild is RenderProxyBox) {
+    //     innerChild = innerChild.child;
+    //   }
+    //   if (innerChild is! RenderStickyHeader) {
+    //     continue;
+    //   }
+    //   assert(axisDirectionToAxis(innerChild.direction) == constraints.axis);
+    //
+    //   double childScrollOffset;
+    //   if (innerChild.direction == constraints.axisDirection) {
+    //     childScrollOffset = math.max(0.0,
+    //       scrollOffset - parentData.layoutOffset!);
+    //   } else {
+    //     final childEndOffset =
+    //       parentData.layoutOffset! + child.size.onAxis(constraints.axis);
+    //     // TODO should this be our layoutExtent or paintExtent, or what?
+    //     childScrollOffset = math.max(0.0,
+    //       childEndOffset - (scrollOffset + geometry!.layoutExtent));
+    //   }
+    //   innerChild.provideScrollPosition(childScrollOffset);
+    // }
+  }
 
-      RenderBox? innerChild = child;
-      while (innerChild is RenderProxyBox) {
-        innerChild = innerChild.child;
-      }
-      if (innerChild is! RenderStickyHeader) {
-        continue;
-      }
-      assert(axisDirectionToAxis(innerChild.direction) == constraints.axis);
+  @override
+  bool hitTestChildren(SliverHitTestResult result, {required double mainAxisPosition, required double crossAxisPosition}) {
+    // TODO implement hitTestChildren
+    return super.hitTestChildren(result, mainAxisPosition: mainAxisPosition, crossAxisPosition: crossAxisPosition);
+    // return header?.hitTest(result, )
+    //   ?? super.hitTestChildren(result, mainAxisPosition: mainAxisPosition, crossAxisPosition: crossAxisPosition);
+  }
 
-      double childScrollOffset;
-      if (innerChild.direction == constraints.axisDirection) {
-        childScrollOffset = math.max(0.0,
-          scrollOffset - parentData.layoutOffset!);
-      } else {
-        final childEndOffset =
-          parentData.layoutOffset! + child.size.onAxis(constraints.axis);
-        // TODO should this be our layoutExtent or paintExtent, or what?
-        childScrollOffset = math.max(0.0,
-          childEndOffset - (scrollOffset + geometry!.layoutExtent));
-      }
-      innerChild.provideScrollPosition(childScrollOffset);
-    }
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    super.paint(context, offset);
+    header?.paint(context, offset); // TODO allow header an offset
   }
 }
+
+class StickyHeaderParentData extends ContainerBoxParentData<RenderBox> {
+  Widget? header;
+}
+
+class StickyHeaderProvider extends ParentDataWidget<StickyHeaderParentData> {
+  const StickyHeaderProvider({super.key, required super.child, required this.header});
+
+  final Widget header;
+
+  @override
+  void applyParentData(RenderObject renderObject) {
+    assert(renderObject.parentData is StickyHeaderParentData);
+    final parentData = renderObject.parentData! as StickyHeaderParentData;
+    if (parentData.header != header) {
+      parentData.header = header;
+      renderObject.parent?.markNeedsLayout();
+    }
+  }
+
+  @override
+  Type get debugTypicalAncestorWidgetClass => StickyHeaderListView;
+}
+
+
+
+
+
 
 enum StickyHeaderSlot { header, content }
 
