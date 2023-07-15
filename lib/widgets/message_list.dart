@@ -400,10 +400,14 @@ class DmRecipientHeader extends StatelessWidget {
           MessageListPage.buildRoute(context: context, narrow: narrow));
       },
       child: DecoratedBox(
-        decoration: BoxDecoration(border: Border(
-          top: BorderSide(color: _kDmRecipientHeaderColor),
-          right: BorderSide(color: _kDmRecipientHeaderColor),
-        )),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: _kDmRecipientHeaderColor),
+            bottom: BorderSide(color: _kDmRecipientHeaderColor),
+            right: BorderSide(color: _kDmRecipientHeaderColor),
+          ),
+        ),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           RecipientHeaderChevronContainer(
             color: _kDmRecipientHeaderColor,
