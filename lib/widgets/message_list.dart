@@ -385,11 +385,17 @@ class DmRecipientHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
-    final otherNames = message.allRecipientIds
-      .where((id) => id != store.account.userId)
-      .map((id) => store.users[id]?.fullName ?? '(unknown user)')
-      .sorted()
-      .join(", ");
+    final String title;
+    if (message.allRecipientIds.length > 1) {
+      final otherNames = message.allRecipientIds
+        .where((id) => id != store.account.userId)
+        .map((id) => store.users[id]?.fullName ?? '(unknown user)')
+        .sorted()
+        .join(", ");
+      title = 'You and $otherNames';
+    } else {
+      title = 'You with yourself'; // TODO pick string; web has glitchy "You and $yourname"
+    }
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -407,7 +413,7 @@ class DmRecipientHeader extends StatelessWidget {
           RecipientHeaderChevronContainer(
             color: _kDmRecipientHeaderColor,
             child: Text(style: const TextStyle(color: Colors.white),
-              'You and $otherNames')),
+              title)),
           RecipientHeaderDate(message: message),
         ])));
   }
