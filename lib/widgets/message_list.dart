@@ -518,13 +518,13 @@ class MessageWithPossibleSender extends StatelessWidget {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(3, 6, 11, 0),
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(4))),
+            child: SizedBox(
               width: 35,
               height: 35,
-              child: avatar)),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(4)),
+                clipBehavior: Clip.antiAlias,
+                child: avatar))),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
