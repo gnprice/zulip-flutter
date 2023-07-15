@@ -550,15 +550,10 @@ class Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
 
-    final Widget avatar;
-    if (avatarUrl == null) { // TODO handle computing gravatars
-      avatar = const SizedBox.shrink();
-    } else {
-      avatar = RealmContentNetworkImage(
-        resolveUrl(avatarUrl!, store.account),
-        filterQuality: FilterQuality.medium,
-      );
-    }
+    final String? resolvedUrl = switch (avatarUrl) {
+      null          => null, // TODO handle computing gravatars
+      var avatarUrl => resolveUrl(avatarUrl, store.account),
+    };
 
     return SizedBox(
       width: size,
@@ -566,6 +561,10 @@ class Avatar extends StatelessWidget {
       child: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(4)),
         clipBehavior: Clip.antiAlias,
-        child: avatar));
+        child: resolvedUrl == null
+          ? const SizedBox.shrink()
+          : RealmContentNetworkImage(
+              filterQuality: FilterQuality.medium,
+              resolvedUrl)));
   }
 }
