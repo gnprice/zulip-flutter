@@ -154,18 +154,24 @@ class StickyHeaderListView extends BoxScrollView {
   @override
   Widget buildChildLayout(BuildContext context) {
     return SliverStickyHeaderList(
+      headerPlacement: reverse ? HeaderPlacement.end : HeaderPlacement.start,
       headerBuilder: headerBuilder,
       delegate: childrenDelegate);
   }
 }
 
+/// Where a header goes, in terms of the list's scrolling direction.
+enum HeaderPlacement { start, end }
+
 class SliverStickyHeaderList extends SliverMultiBoxAdaptorWidget {
   const SliverStickyHeaderList({
     super.key,
+    required this.headerPlacement,
     required this.headerBuilder,
     required super.delegate,
   });
 
+  final HeaderPlacement headerPlacement;
   final HeaderBuilder headerBuilder;
 
   @override
@@ -270,7 +276,7 @@ class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
 class RenderSliverStickyHeaderList extends RenderSliverList {
   RenderSliverStickyHeaderList({required super.childManager});
 
-  HeaderBuilder get headerBuilder => (childManager as _SliverStickyHeaderListElement).widget.headerBuilder;
+  SliverStickyHeaderList get widget => (childManager as _SliverStickyHeaderListElement).widget;
 
   // Modeled on [RenderObjectWithChildMixin.child].
   RenderBox? get header => _header;
@@ -288,7 +294,11 @@ class RenderSliverStickyHeaderList extends RenderSliverList {
     markNeedsLayout();
   }
 
-  RenderBox? _findHeaderProvidingChild() {
+  /// The unique child, if any, that spans the start of the visible portion
+  /// of the list.
+  ///
+  /// This means (child start) <= (viewport start) < (child end).
+  RenderBox? _findChildAtStart() {
     final scrollOffset = constraints.scrollOffset;
     // debugPrint("our scroll offset: $scrollOffset");
 
@@ -310,6 +320,32 @@ class RenderSliverStickyHeaderList extends RenderSliverList {
     }
   }
 
+  /// The unique child, if any, that spans the end of the visible portion
+  /// of the list.
+  ///
+  /// This means (child start) < (viewport end) <= (child end).
+  RenderBox? _findChildAtEnd() {
+    // TODO should this be our layoutExtent or paintExtent, or what?
+    final endOffset = constraints.scrollOffset + geometry!.layoutExtent;
+
+    RenderBox? child;
+    for (child = lastChild; ; child = childBefore(child)) {
+      if (child == null) {
+        // Ran out of children.
+        return null;
+      }
+      final parentData = child.parentData! as SliverMultiBoxAdaptorParentData;
+      assert(parentData.layoutOffset != null);
+      if (endOffset > parentData.layoutOffset! + child.size.onAxis(constraints.axis)) {
+        // This child already stops before the end of the sliver's viewport.
+        return null;
+      }
+      if (endOffset > parentData.layoutOffset!) {
+        return child;
+      }
+    }
+  }
+
   int? _previousHeaderProvidingIndex;
 
   @override
@@ -322,7 +358,10 @@ class RenderSliverStickyHeaderList extends RenderSliverList {
     // debugPrint("our constraints: $constraints");
     // debugPrint("our geometry: $geometry");
 
-    final child = _findHeaderProvidingChild();
+    final child = switch (widget.headerPlacement) {
+      HeaderPlacement.start => _findChildAtStart(),
+      HeaderPlacement.end   => _findChildAtEnd(),
+    };
     final index = child == null ? null : indexOf(child);
     if (index != _previousHeaderProvidingIndex) {
       _previousHeaderProvidingIndex = index;
