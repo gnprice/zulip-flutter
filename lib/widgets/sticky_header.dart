@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+typedef HeaderBuilder = Widget? Function(BuildContext context, int index);
+
 class StickyHeaderListView extends BoxScrollView {
   // Like ListView, but with sticky headers.
   StickyHeaderListView({
@@ -18,6 +20,7 @@ class StickyHeaderListView extends BoxScrollView {
     bool addRepaintBoundaries = true,
     bool addSemanticIndexes = true,
     super.cacheExtent,
+    required this.headerBuilder,
     List<Widget> children = const <Widget>[],
     int? semanticChildCount,
     super.dragStartBehavior,
@@ -44,6 +47,7 @@ class StickyHeaderListView extends BoxScrollView {
     super.physics,
     super.shrinkWrap,
     super.padding,
+    required this.headerBuilder,
     required NullableIndexedWidgetBuilder itemBuilder,
     ChildIndexGetter? findChildIndexCallback,
     int? itemCount,
@@ -80,6 +84,7 @@ class StickyHeaderListView extends BoxScrollView {
     super.physics,
     super.shrinkWrap,
     super.padding,
+    required this.headerBuilder,
     required NullableIndexedWidgetBuilder itemBuilder,
     ChildIndexGetter? findChildIndexCallback,
     required IndexedWidgetBuilder separatorBuilder,
@@ -133,6 +138,7 @@ class StickyHeaderListView extends BoxScrollView {
     super.physics,
     super.shrinkWrap,
     super.padding,
+    required this.headerBuilder,
     required this.childrenDelegate,
     super.cacheExtent,
     super.semanticChildCount,
@@ -143,15 +149,24 @@ class StickyHeaderListView extends BoxScrollView {
   });
 
   final SliverChildDelegate childrenDelegate;
+  final HeaderBuilder headerBuilder;
 
   @override
   Widget buildChildLayout(BuildContext context) {
-    return SliverStickyHeaderList(delegate: childrenDelegate);
+    return SliverStickyHeaderList(
+      headerBuilder: headerBuilder,
+      delegate: childrenDelegate);
   }
 }
 
 class SliverStickyHeaderList extends SliverMultiBoxAdaptorWidget {
-  const SliverStickyHeaderList({super.key, required super.delegate});
+  const SliverStickyHeaderList({
+    super.key,
+    required this.headerBuilder,
+    required super.delegate,
+  });
+
+  final HeaderBuilder headerBuilder;
 
   @override
   SliverMultiBoxAdaptorElement createElement() =>
@@ -166,6 +181,9 @@ class SliverStickyHeaderList extends SliverMultiBoxAdaptorWidget {
 
 class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
   _SliverStickyHeaderListElement(super.widget, {super.replaceMovedChildren});
+
+  @override
+  SliverStickyHeaderList get widget => super.widget as SliverStickyHeaderList;
 
   @override
   RenderSliverStickyHeaderList get renderObject => super.renderObject as RenderSliverStickyHeaderList;
@@ -196,7 +214,7 @@ class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
   }
 
   @override
-  void update(covariant SliverMultiBoxAdaptorWidget newWidget) {
+  void update(covariant SliverStickyHeaderList newWidget) {
     assert(widget != newWidget);
     super.update(newWidget);
     assert(widget == newWidget);
@@ -251,6 +269,8 @@ class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
 
 class RenderSliverStickyHeaderList extends RenderSliverList {
   RenderSliverStickyHeaderList({required super.childManager});
+
+  HeaderBuilder get headerBuilder => (childManager as _SliverStickyHeaderListElement).widget.headerBuilder;
 
   // Modeled on [RenderObjectWithChildMixin.child].
   RenderBox? get header => _header;
