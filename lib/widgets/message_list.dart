@@ -402,12 +402,7 @@ class DmRecipientHeader extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(
-            top: BorderSide(color: _kDmRecipientHeaderColor),
-            bottom: BorderSide(color: _kDmRecipientHeaderColor),
-            right: BorderSide(color: _kDmRecipientHeaderColor),
-          ),
-        ),
+          border: Border.all(color: _kDmRecipientHeaderColor)),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           RecipientHeaderChevronContainer(
             color: _kDmRecipientHeaderColor,
