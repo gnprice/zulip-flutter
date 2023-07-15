@@ -327,24 +327,34 @@ class StickyHeaderParentData extends ContainerBoxParentData<RenderBox> {
   Widget? header;
 }
 
-class StickyHeaderProvider extends ParentDataWidget<StickyHeaderParentData> {
-  const StickyHeaderProvider({super.key, required super.child, required this.header});
+class StickyHeaderProvider extends StatelessWidget {
+   const StickyHeaderProvider({super.key, required this.child, required this.header});
 
   final Widget header;
+  final Widget child;
 
   @override
-  void applyParentData(RenderObject renderObject) {
-    assert(renderObject.parentData is StickyHeaderParentData);
-    final parentData = renderObject.parentData! as StickyHeaderParentData;
-    if (parentData.header != header) {
-      parentData.header = header;
-      renderObject.parent?.markNeedsLayout();
-    }
-  }
-
-  @override
-  Type get debugTypicalAncestorWidgetClass => StickyHeaderListView;
+  Widget build(BuildContext context) => child;
 }
+
+// class StickyHeaderProvider extends ParentDataWidget<StickyHeaderParentData> {
+//   const StickyHeaderProvider({super.key, required super.child, required this.header});
+//
+//   final Widget header;
+//
+//   @override
+//   void applyParentData(RenderObject renderObject) {
+//     assert(renderObject.parentData is StickyHeaderParentData);
+//     final parentData = renderObject.parentData! as StickyHeaderParentData;
+//     if (parentData.header != header) {
+//       parentData.header = header;
+//       renderObject.parent?.markNeedsLayout();
+//     }
+//   }
+//
+//   @override
+//   Type get debugTypicalAncestorWidgetClass => StickyHeaderListView;
+// }
 
 
 
