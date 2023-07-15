@@ -29,9 +29,15 @@ class MessageListRecipientHeaderItem extends MessageListItem {
 class MessageListMessageItem extends MessageListItem {
   final Message message;
   final ZulipContent content;
+  bool showSender;
   bool isLastInBlock;
 
-  MessageListMessageItem(this.message, this.content, {required this.isLastInBlock});
+  MessageListMessageItem(
+    this.message,
+    this.content, {
+    required this.showSender,
+    required this.isLastInBlock,
+  });
 }
 
 /// Indicates the app is loading more messages at the top or bottom.
@@ -128,7 +134,7 @@ mixin _MessageSequence {
       && items[itemIndex] is MessageListMessageItem
       && identical((items[itemIndex] as MessageListMessageItem).message, message));
     // TODO WORK HERE fixup for recipient headers
-    items[itemIndex] = MessageListMessageItem(isLastInBlock: true, message, content);
+    items[itemIndex] = MessageListMessageItem(showSender: true, isLastInBlock: true, message, content);
   }
 
   /// Append [message] to [messages], and update derived data accordingly.
@@ -185,7 +191,7 @@ mixin _MessageSequence {
     } else {
       items.add(MessageListRecipientHeaderItem(message));
     }
-    items.add(MessageListMessageItem(message, content, isLastInBlock: true));
+    items.add(MessageListMessageItem(message, content, showSender: true, isLastInBlock: true));
   }
 
   static bool _canShareRecipientHeader(Message prevMessage, Message message) {

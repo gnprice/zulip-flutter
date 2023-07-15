@@ -393,7 +393,9 @@ class MessageItem extends StatelessWidget {
     return Column(children: [
       DecoratedBox(
         decoration: borderDecoration,
-        child: MessageWithSender(message: message, content: item.content)),
+        child: item.showSender
+          ? MessageWithSender(message: message, content: item.content)
+          : MessageWithoutSender(message: message, content: item.content)),
       if (trailing != null && item.isLastInBlock) trailing!,
     ]);
 
@@ -593,6 +595,45 @@ class MessageWithSender extends StatelessWidget {
                 Text(message.senderFullName, // TODO get from user data
                   style: const TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
+                MessageContent(message: message, content: content),
+              ])),
+          Container(
+            width: 80,
+            padding: const EdgeInsets.only(top: 4, right: 2),
+            alignment: Alignment.topRight,
+            child: Text(time, style: _kMessageTimestampStyle)),
+        ])));
+  }
+}
+
+class MessageWithoutSender extends StatelessWidget {
+  const MessageWithoutSender(
+    {super.key, required this.message, required this.content});
+
+  final Message message;
+  final ZulipContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO dedupe with MessageWithSender
+    final time = _kMessageTimestampFormat
+      .format(DateTime.fromMillisecondsSinceEpoch(1000 * message.timestamp));
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPress: () => showMessageActionSheet(context: context, message: message),
+      // TODO clean up this layout, by less precisely imitating web
+      child: Padding(
+        padding: const EdgeInsets.only(top: 2, bottom: 3, left: 8, right: 8),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(3, 6, 11, 0),
+            child: SizedBox(width: 35, height: 35)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 3),
                 MessageContent(message: message, content: content),
               ])),
           Container(
