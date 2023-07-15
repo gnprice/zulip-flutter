@@ -372,12 +372,9 @@ class StreamTopicRecipientHeader extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
             child: Text(
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: _kRecipientHeaderDateColor),
+              style: _kRecipientHeaderDateStyle,
               _kRecipientHeaderDateFormat.format(
-                DateTime.fromMillisecondsSinceEpoch(message.timestamp * 1000))),
-          ),
+                DateTime.fromMillisecondsSinceEpoch(message.timestamp * 1000)))),
         ])));
   }
 }
@@ -408,10 +405,12 @@ class DmRecipientHeader extends StatelessWidget {
   }
 }
 
-final _kDmRecipientHeaderColor =
-    const HSLColor.fromAHSL(1, 0, 0, 0.27).toColor();
+final _kDmRecipientHeaderColor = const HSLColor.fromAHSL(1, 0, 0, 0.27).toColor();
 
-final _kRecipientHeaderDateColor = const HSLColor.fromAHSL(0.75, 0, 0, 0.15).toColor();
+final _kRecipientHeaderDateStyle = TextStyle(
+  fontWeight: FontWeight.w600,
+  color: const HSLColor.fromAHSL(0.75, 0, 0, 0.15).toColor(),
+);
 
 final _kRecipientHeaderDateFormat = DateFormat('y-MM-dd', 'en_US'); // TODO(i18n)
 
