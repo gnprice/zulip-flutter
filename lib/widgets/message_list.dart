@@ -385,14 +385,13 @@ class MessageItem extends StatelessWidget {
       shape: Border(
         left: recipientBorder, bottom: restBorder, right: restBorder));
 
-    return StickyHeader(
-      header: RecipientHeader(message: message),
-      content: Column(children: [
-        DecoratedBox(
-          decoration: borderDecoration,
-          child: MessageWithSender(message: message, content: item.content)),
-        if (trailing != null) trailing!,
-      ]));
+    return Column(children: [
+      RecipientHeader(message: message),
+      DecoratedBox(
+        decoration: borderDecoration,
+        child: MessageWithSender(message: message, content: item.content)),
+      if (trailing != null) trailing!,
+    ]);
 
     // Web handles the left-side recipient marker in a funky way:
     //   box-shadow: inset 3px 0px 0px -1px #c2726a, -1px 0px 0px 0px #c2726a;
