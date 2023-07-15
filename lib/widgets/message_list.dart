@@ -280,6 +280,8 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
                 child: CircularProgressIndicator())), // TODO perhaps a different indicator
+          MessageListRecipientHeaderItem() =>
+            RecipientHeader(item: data),
           MessageListMessageItem() =>
             MessageItem(
               trailing: i == 0 ? const SizedBox(height: 8) : const SizedBox(height: 11),
@@ -323,14 +325,14 @@ class ScrollToBottomButton extends StatelessWidget {
 }
 
 class RecipientHeader extends StatelessWidget {
-  const RecipientHeader({super.key, required this.message});
+  const RecipientHeader({super.key, required this.item});
 
-  final Message message;
+  final MessageListRecipientHeaderItem item;
 
   @override
   Widget build(BuildContext context) {
     // TODO recipient headings depend on narrow
-    final message = this.message;
+    final message = item.message;
     switch (message) {
       case StreamMessage():
         final store = PerAccountStoreWidget.of(context);
@@ -383,10 +385,12 @@ class MessageItem extends StatelessWidget {
       // right than at bottom and in the recipient header: black 10% alpha,
       // vs. 88% lightness.  Assume that's an accident.
       shape: Border(
-        left: recipientBorder, bottom: restBorder, right: restBorder));
+        left: recipientBorder,
+        right: restBorder,
+        bottom: item.isLastInBlock ? restBorder : BorderSide.none,
+      ));
 
     return Column(children: [
-      RecipientHeader(message: message),
       DecoratedBox(
         decoration: borderDecoration,
         child: MessageWithSender(message: message, content: item.content)),
