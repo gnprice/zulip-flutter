@@ -235,6 +235,8 @@ class _MessageListState extends State<MessageList> {
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
                 child: CircularProgressIndicator())), // TODO perhaps a different indicator
+          MessageListRecipientHeaderItem() =>
+            RecipientHeader(item: data),
           MessageListMessageItem() =>
             MessageItem(
               trailing: i == 0 ? const SizedBox(height: 8) : const SizedBox(height: 11),
@@ -243,6 +245,29 @@ class _MessageListState extends State<MessageList> {
       });
   }
 }
+
+class RecipientHeader extends StatelessWidget {
+  const RecipientHeader({super.key, required this.item});
+
+  final MessageListRecipientHeaderItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO recipient headings depend on narrow
+    final message = item.message;
+    switch (message) {
+      case StreamMessage():
+        final store = PerAccountStoreWidget.of(context);
+        final subscription = store.subscriptions[message.streamId];
+        final highlightBorderColor = colorForStream(subscription);
+        return StreamTopicRecipientHeader(
+          message: message, streamColor: highlightBorderColor);
+      case DmMessage():
+        return DmRecipientHeader(message: message);
+    }
+  }
+}
+
 
 class MessageItem extends StatelessWidget {
   const MessageItem({
@@ -256,26 +281,19 @@ class MessageItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO recipient headings depend on narrow
-
     final store = PerAccountStoreWidget.of(context);
     final message = item.message;
 
     Color highlightBorderColor;
     Color restBorderColor;
-    Widget recipientHeader;
     if (message is StreamMessage) {
       final msg = message;
       final subscription = store.subscriptions[msg.streamId];
       highlightBorderColor = colorForStream(subscription);
       restBorderColor = _kStreamMessageBorderColor;
-      recipientHeader = StreamTopicRecipientHeader(
-        message: msg, streamColor: highlightBorderColor);
     } else if (message is DmMessage) {
-      final msg = message;
       highlightBorderColor = _kDmRecipientHeaderColor;
       restBorderColor = _kDmRecipientHeaderColor;
-      recipientHeader = DmRecipientHeader(message: msg);
     } else {
       throw Exception("impossible message type: ${message.runtimeType}");
     }
@@ -289,10 +307,12 @@ class MessageItem extends StatelessWidget {
       // right than at bottom and in the recipient header: black 10% alpha,
       // vs. 88% lightness.  Assume that's an accident.
       shape: Border(
-        left: recipientBorder, bottom: restBorder, right: restBorder));
+        left: recipientBorder,
+        right: restBorder,
+        bottom: item.isLastInBlock ? restBorder : BorderSide.none,
+      ));
 
     return Column(children: [
-      recipientHeader,
       DecoratedBox(
         decoration: borderDecoration,
         child: MessageWithSender(message: message, content: item.content)),

@@ -17,12 +17,19 @@ sealed class MessageListItem {
   const MessageListItem();
 }
 
+class MessageListRecipientHeaderItem extends MessageListItem {
+  final Message message;
+
+  MessageListRecipientHeaderItem(this.message);
+}
+
 /// A message to show in the message list.
 class MessageListMessageItem extends MessageListItem {
   final Message message;
   final ZulipContent content;
+  final bool isLastInBlock;
 
-  MessageListMessageItem(this.message, this.content);
+  MessageListMessageItem(this.message, this.content, {required this.isLastInBlock});
 }
 
 /// Indicates the app is loading more messages at the top or bottom.
@@ -123,7 +130,11 @@ mixin _MessageSequence {
     // This will get more complicated to handle the ways that messages interact
     // with the display of neighboring messages: sender headings #175,
     // recipient headings #174, and date separators #173.
-    items.add(MessageListMessageItem(messages[index], contents[index]));
+    items.add(MessageListRecipientHeaderItem(messages[index]));
+    items.add(MessageListMessageItem(
+      isLastInBlock: true,
+      messages[index], contents[index],
+    ));
   }
 
   /// Update [items] to include markers at start and end as appropriate.
