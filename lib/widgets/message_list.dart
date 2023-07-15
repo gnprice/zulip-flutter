@@ -370,12 +370,7 @@ class StreamTopicRecipientHeader extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600)))),
           // TODO topic links?
           // Then web also has edit/resolve/mute buttons. Skip those for mobile.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-            child: Text(
-              style: _kRecipientHeaderDateStyle,
-              _kRecipientHeaderDateFormat.format(
-                DateTime.fromMillisecondsSinceEpoch(message.timestamp * 1000)))),
+          RecipientHeaderDate(message: message),
         ])));
   }
 }
@@ -404,16 +399,38 @@ class DmRecipientHeader extends StatelessWidget {
         Navigator.push(context,
           MessageListPage.buildRoute(context: context, narrow: narrow));
       },
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: RecipientHeaderChevronContainer(
-          color: _kDmRecipientHeaderColor,
-          child: Text(style: const TextStyle(color: Colors.white),
-            'You and $otherNames'))));
+      child: DecoratedBox(
+        decoration: BoxDecoration(border: Border(
+          top: BorderSide(color: _kDmRecipientHeaderColor),
+          right: BorderSide(color: _kDmRecipientHeaderColor),
+        )),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          RecipientHeaderChevronContainer(
+            color: _kDmRecipientHeaderColor,
+            child: Text(style: const TextStyle(color: Colors.white),
+              'You and $otherNames')),
+          RecipientHeaderDate(message: message),
+        ])));
   }
 }
 
 final _kDmRecipientHeaderColor = const HSLColor.fromAHSL(1, 0, 0, 0.27).toColor();
+
+class RecipientHeaderDate extends StatelessWidget {
+  const RecipientHeaderDate({super.key, required this.message});
+
+  final Message message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+      child: Text(
+        style: _kRecipientHeaderDateStyle,
+        _kRecipientHeaderDateFormat.format(
+          DateTime.fromMillisecondsSinceEpoch(message.timestamp * 1000))));
+  }
+}
 
 final _kRecipientHeaderDateStyle = TextStyle(
   fontWeight: FontWeight.w600,
