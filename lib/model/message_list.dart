@@ -29,7 +29,7 @@ class MessageListRecipientHeaderItem extends MessageListItem {
 class MessageListMessageItem extends MessageListItem {
   final Message message;
   final ZulipContent content;
-  final bool isLastInBlock;
+  bool isLastInBlock;
 
   MessageListMessageItem(this.message, this.content, {required this.isLastInBlock});
 }
@@ -173,11 +173,24 @@ mixin _MessageSequence {
     // This will get more complicated to handle the ways that messages interact
     // with the display of neighboring messages: sender headings #175,
     // recipient headings #174, and date separators #173.
-    items.add(MessageListRecipientHeaderItem(messages[index]));
-    items.add(MessageListMessageItem(
-      isLastInBlock: true,
-      messages[index], contents[index],
-    ));
+    final message = messages[index];
+    final content = contents[index];
+    if (index > 0 && _canShareRecipientHeader(messages[index - 1], message)) {
+      final prevMessageItem = items
+        .lastWhere((item) => item is MessageListMessageItem)
+        as MessageListMessageItem;
+      assert(identical(prevMessageItem.message, messages[index - 1]));
+      assert(prevMessageItem.isLastInBlock);
+      prevMessageItem.isLastInBlock = false;
+    } else {
+      items.add(MessageListRecipientHeaderItem(message));
+    }
+    items.add(MessageListMessageItem(message, content, isLastInBlock: true));
+  }
+
+  static bool _canShareRecipientHeader(Message prevMessage, Message message) {
+    return message.id.isEven; // TODO TEMP HACK
+    return false; // TODO
   }
 
   /// Update [items] to include markers at start and end as appropriate.
