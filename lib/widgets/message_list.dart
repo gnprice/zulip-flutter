@@ -235,11 +235,10 @@ class _MessageListState extends State<MessageList> {
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
                 child: CircularProgressIndicator())), // TODO perhaps a different indicator
-          MessageListMessageItem(:var message, :var content) =>
+          MessageListMessageItem() =>
             MessageItem(
               trailing: i == 0 ? const SizedBox(height: 8) : const SizedBox(height: 11),
-              message: message,
-              content: content)
+              item: data),
         };
       });
   }
@@ -248,13 +247,11 @@ class _MessageListState extends State<MessageList> {
 class MessageItem extends StatelessWidget {
   const MessageItem({
     super.key,
-    required this.message,
-    required this.content,
+    required this.item,
     this.trailing,
   });
 
-  final Message message;
-  final ZulipContent content;
+  final MessageListMessageItem item;
   final Widget? trailing;
 
   @override
@@ -262,19 +259,20 @@ class MessageItem extends StatelessWidget {
     // TODO recipient headings depend on narrow
 
     final store = PerAccountStoreWidget.of(context);
+    final message = item.message;
 
     Color highlightBorderColor;
     Color restBorderColor;
     Widget recipientHeader;
     if (message is StreamMessage) {
-      final msg = (message as StreamMessage);
+      final msg = message;
       final subscription = store.subscriptions[msg.streamId];
       highlightBorderColor = colorForStream(subscription);
       restBorderColor = _kStreamMessageBorderColor;
       recipientHeader = StreamTopicRecipientHeader(
         message: msg, streamColor: highlightBorderColor);
     } else if (message is DmMessage) {
-      final msg = (message as DmMessage);
+      final msg = message;
       highlightBorderColor = _kDmRecipientHeaderColor;
       restBorderColor = _kDmRecipientHeaderColor;
       recipientHeader = DmRecipientHeader(message: msg);
@@ -297,7 +295,7 @@ class MessageItem extends StatelessWidget {
       recipientHeader,
       DecoratedBox(
         decoration: borderDecoration,
-        child: MessageWithSender(message: message, content: content)),
+        child: MessageWithSender(message: message, content: item.content)),
       if (trailing != null) trailing!,
     ]);
 
