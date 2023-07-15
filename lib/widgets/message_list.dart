@@ -314,9 +314,7 @@ class MessageItem extends StatelessWidget {
     return Column(children: [
       DecoratedBox(
         decoration: borderDecoration,
-        child: item.showSender
-          ? MessageWithSender(item: item)
-          : MessageWithoutSender(item: item)),
+        child: MessageWithSender(item: item)),
       if (trailing != null && item.isLastInBlock) trailing!,
     ]);
 
@@ -497,7 +495,9 @@ class MessageWithSender extends StatelessWidget {
     final message = item.message;
 
     final Widget avatar;
-    if (message.avatarUrl == null) { // TODO handle computing gravatars
+    if (!item.showSender) {
+      avatar = const SizedBox.shrink();
+    } else if (message.avatarUrl == null) { // TODO handle computing gravatars
       avatar = const SizedBox.shrink();
     } else {
       avatar = RealmContentNetworkImage(
@@ -529,48 +529,12 @@ class MessageWithSender extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 3),
-                Text(message.senderFullName, // TODO get from user data
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                MessageContent(message: message, content: item.content),
-              ])),
-          Container(
-            width: 80,
-            padding: const EdgeInsets.only(top: 4, right: 2),
-            alignment: Alignment.topRight,
-            child: Text(time, style: _kMessageTimestampStyle)),
-        ])));
-  }
-}
-
-class MessageWithoutSender extends StatelessWidget {
-  const MessageWithoutSender({super.key, required this.item});
-
-  final MessageListMessageItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final message = item.message;
-
-    // TODO dedupe with MessageWithSender
-    final time = _kMessageTimestampFormat
-      .format(DateTime.fromMillisecondsSinceEpoch(1000 * message.timestamp));
-
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onLongPress: () => showMessageActionSheet(context: context, message: message),
-      // TODO clean up this layout, by less precisely imitating web
-      child: Padding(
-        padding: const EdgeInsets.only(top: 2, bottom: 3, left: 8, right: 8),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(3, 6, 11, 0),
-            child: SizedBox(width: 35, height: 35)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+                if (item.showSender) ...[
+                  const SizedBox(height: 3),
+                  Text(message.senderFullName, // TODO get from user data
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                ],
                 MessageContent(message: message, content: item.content),
               ])),
           Container(
