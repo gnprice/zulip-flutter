@@ -316,7 +316,7 @@ class MessageItem extends StatelessWidget {
       DecoratedBox(
         decoration: borderDecoration,
         child: MessageWithSender(message: message, content: item.content)),
-      if (trailing != null) trailing!,
+      if (trailing != null && item.isLastInBlock) trailing!,
     ]);
 
     // Web handles the left-side recipient marker in a funky way:
