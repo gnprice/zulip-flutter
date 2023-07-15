@@ -183,6 +183,7 @@ mixin _MessageSequence {
     final content = contents[index];
     bool canShareSender;
     if (index > 0 && _canShareRecipientHeader(messages[index - 1], message)) {
+      // TODO test this logic
       final prevMessageItem = items
         .lastWhere((item) => item is MessageListMessageItem)
         as MessageListMessageItem;
