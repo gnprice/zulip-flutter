@@ -227,8 +227,8 @@ class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
     super.unmount();
   }
 
-  void _layout() {
-    debugPrint("_SliverStickyHeaderListElement._layout"); // TODO implement
+  void _layout(int? index) {
+    debugPrint("_SliverStickyHeaderListElement._layout index: $index"); // TODO implement
   }
 
   @override
@@ -281,23 +281,56 @@ class RenderSliverStickyHeaderList extends RenderSliverList {
     if (_header != null) adoptChild(_header!);
   }
 
-  VoidCallback? _callback;
-  void updateCallback(VoidCallback? value) {
+  void Function(int? index)? _callback;
+  void updateCallback(void Function(int? index)? value) {
     if (value == _callback) return;
     _callback = value;
     markNeedsLayout();
   }
 
+  RenderBox? _findHeaderProvidingChild() {
+    final scrollOffset = constraints.scrollOffset;
+    // debugPrint("our scroll offset: $scrollOffset");
+
+    RenderBox? child;
+    for (child = firstChild; ; child = childAfter(child)) {
+      if (child == null) {
+        // Ran out of children.
+        return null;
+      }
+      final parentData = child.parentData! as SliverMultiBoxAdaptorParentData;
+      assert(parentData.layoutOffset != null);
+      if (scrollOffset < parentData.layoutOffset!) {
+        // This child is already past the start of the sliver's viewport.
+        return null;
+      }
+      if (scrollOffset < parentData.layoutOffset! + child.size.onAxis(constraints.axis)) {
+        return child;
+      }
+    }
+  }
+
+  int? _previousHeaderProvidingIndex;
+
   @override
   void performLayout() {
-    super.performLayout();
-
+    assert(_callback != null);
     assert(constraints.growthDirection == GrowthDirection.forward); // TODO dir
+
+    super.performLayout();
 
     // debugPrint("our constraints: $constraints");
     // debugPrint("our geometry: $geometry");
-    // final scrollOffset = constraints.scrollOffset;
-    // debugPrint("our scroll offset: $scrollOffset");
+
+    final child = _findHeaderProvidingChild();
+    final index = child == null ? null : indexOf(child);
+    if (index != _previousHeaderProvidingIndex) {
+      _previousHeaderProvidingIndex = index;
+      _callback!(index); // TODO invokeLayoutCallback
+    }
+
+
+
 
     // RenderBox? child;
     // for (child = firstChild; child != null; child = childAfter(child)) {
