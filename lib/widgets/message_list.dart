@@ -503,11 +503,11 @@ class MessageWithPossibleSender extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(top: 2, bottom: 3, left: 8, right: 8),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(3, 6, 11, 0),
-            child: item.showSender
-              ? Avatar(size: 35, avatarUrl: message.avatarUrl) // TODO get from user data
-              : const SizedBox(width: 35, height: 35)),
+          item.showSender
+            ? Padding(
+                padding: const EdgeInsets.fromLTRB(3, 6, 11, 0),
+                child: Avatar(size: 35, avatarUrl: message.avatarUrl)) // TODO get from user data
+            : const SizedBox(width: 3 + 35 + 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
