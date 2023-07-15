@@ -314,7 +314,7 @@ class MessageItem extends StatelessWidget {
     return Column(children: [
       DecoratedBox(
         decoration: borderDecoration,
-        child: MessageWithSender(item: item)),
+        child: MessageWithPossibleSender(item: item)),
       if (trailing != null && item.isLastInBlock) trailing!,
     ]);
 
@@ -483,9 +483,9 @@ class RecipientHeaderChevronContainer extends StatelessWidget {
   }
 }
 
-/// A Zulip message, showing the sender's name and avatar.
-class MessageWithSender extends StatelessWidget {
-  const MessageWithSender({super.key, required this.item});
+/// A Zulip message, showing the sender's name and avatar if specified.
+class MessageWithPossibleSender extends StatelessWidget {
+  const MessageWithPossibleSender({super.key, required this.item});
 
   final MessageListMessageItem item;
 
