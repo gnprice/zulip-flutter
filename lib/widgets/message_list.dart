@@ -496,15 +496,15 @@ class MessageWithSender extends StatelessWidget {
     final store = PerAccountStoreWidget.of(context);
     final message = item.message;
 
-    final avatarUrl = message.avatarUrl == null // TODO get from user data
-      ? null // TODO handle computing gravatars
-      : resolveUrl(message.avatarUrl!, store.account);
-    final avatar = (avatarUrl == null)
-      ? const SizedBox.shrink()
-      : RealmContentNetworkImage(
-          avatarUrl,
-          filterQuality: FilterQuality.medium,
-        );
+    final Widget avatar;
+    if (message.avatarUrl == null) { // TODO handle computing gravatars
+      avatar = const SizedBox.shrink();
+    } else {
+      avatar = RealmContentNetworkImage(
+        resolveUrl(message.avatarUrl!, store.account), // TODO get avatarUrl from user data
+        filterQuality: FilterQuality.medium,
+      );
+    }
 
     final time = _kMessageTimestampFormat
       .format(DateTime.fromMillisecondsSinceEpoch(1000 * message.timestamp));
