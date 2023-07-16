@@ -153,7 +153,7 @@ class StickyHeaderListView extends BoxScrollView {
 
   @override
   Widget buildChildLayout(BuildContext context) {
-    return _SliverStickyHeaderListInner(
+    return _SliverStickyHeaderList(
       headerPlacement: reverse ? HeaderPlacement.end : HeaderPlacement.start,
       headerBuilder: headerBuilder,
       delegate: childrenDelegate);
@@ -251,9 +251,9 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 
     @pragma('vm:notify-debugger-on-exception')
     void layoutCallback() {
-      // final built = index == null ? null : widget.headerBuilder(this, index);
+      final built = index == null ? null : widget.headerBuilder(this, index);
 
-      // TODO WORK HERE: _header = updateChild(_header, built, null);
+      _header = updateChild(_header, built, _SliverStickyHeaderListSlot.header);
 
       // TODO finish implementing _layout
     }
