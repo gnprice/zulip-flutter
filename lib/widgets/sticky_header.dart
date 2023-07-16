@@ -412,7 +412,7 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
       context.paintChild(child!, offset);
     }
     if (header != null && geometry!.visible) {
-      context.paintChild(child!, offset); // TODO give header an offset
+      context.paintChild(header!, offset); // TODO give header an offset
     }
   }
 
