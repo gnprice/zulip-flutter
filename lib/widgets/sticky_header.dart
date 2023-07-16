@@ -367,10 +367,32 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
 
   @override
   void performLayout() {
+    final constraints = this.constraints;
+
     assert(child != null);
     child!.layout(constraints, parentUsesSize: true);
-    geometry = child!.geometry;
-    // TODO performLayout on header
+    SliverGeometry geometry = child!.geometry!;
+
+    if (header != null) {
+      header!.layout(constraints.asBoxConstraints(), parentUsesSize: true);
+      final headerExtent = header!.size.onAxis(constraints.axis);
+      final paintedHeaderSize = calculatePaintOffset(constraints, from: 0, to: headerExtent);
+      final cacheExtent = calculateCacheOffset(constraints, from: 0, to: headerExtent);
+
+      assert(0 <= paintedHeaderSize && paintedHeaderSize.isFinite);
+
+      geometry = SliverGeometry( // TODO review these again
+        scrollExtent: geometry.scrollExtent,
+        paintExtent: math.max(geometry.paintExtent, paintedHeaderSize),
+        cacheExtent: math.max(geometry.cacheExtent, cacheExtent),
+        maxPaintExtent: math.max(geometry.maxPaintExtent, headerExtent),
+        hitTestExtent: math.max(geometry.hitTestExtent, paintedHeaderSize),
+        hasVisualOverflow: geometry.hasVisualOverflow
+          || headerExtent > constraints.remainingPaintExtent,
+      );
+    }
+
+    this.geometry = geometry;
   }
 
   @override
