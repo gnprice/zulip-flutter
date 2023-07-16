@@ -163,9 +163,116 @@ class StickyHeaderListView extends BoxScrollView {
 /// Where a header goes, in terms of the list's scrolling direction.
 enum HeaderPlacement { start, end }
 
+class _SliverStickyHeaderList extends RenderObjectWidget {
+  const _SliverStickyHeaderList({
+    required this.headerPlacement,
+    required this.headerBuilder,
+    required this.delegate,
+  });
+
+  final HeaderPlacement headerPlacement;
+  final HeaderBuilder headerBuilder;
+  final SliverChildDelegate delegate;
+
+  _SliverStickyHeaderListInner _buildInner() {
+    return _SliverStickyHeaderListInner(
+      headerPlacement: headerPlacement,
+      headerBuilder: headerBuilder,
+      delegate: delegate,
+    );
+  }
+
+  @override
+  _SliverStickyHeaderListElement createElement() => _SliverStickyHeaderListElement(this);
+
+  @override
+  _RenderSliverStickyHeaderList createRenderObject(BuildContext context) => _RenderSliverStickyHeaderList();
+}
+
 enum _SliverStickyHeaderListSlot { header, list }
 
-class _RenderSliverStickyHeaderList extends RenderSliver {
+class _SliverStickyHeaderListElement extends RenderObjectElement {
+  _SliverStickyHeaderListElement(_SliverStickyHeaderList super.widget);
+
+  @override
+  _SliverStickyHeaderList get widget => super.widget as _SliverStickyHeaderList;
+
+  @override
+  _RenderSliverStickyHeaderList get renderObject => super.renderObject as _RenderSliverStickyHeaderList;
+
+  //
+  // Compare SingleChildRenderObjectElement.
+  //
+
+  Element? _header;
+  Element? _child;
+
+  @override
+  void visitChildren(ElementVisitor visitor) {
+    if (_header != null) visitor(_header!);
+    if (_child != null) visitor(_child!);
+  }
+
+  @override
+  void forgetChild(Element child) {
+    if (child == _header) {
+      assert(child != _child);
+      _header = null;
+    } else if (child == _child) {
+      _child = null;
+    }
+    super.forgetChild(child);
+  }
+
+  @override
+  void mount(Element? parent, Object? newSlot) {
+    super.mount(parent, newSlot);
+    _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
+  }
+
+  @override
+  void update(_SliverStickyHeaderList newWidget) {
+    super.update(newWidget);
+    assert(widget == newWidget);
+    _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
+    // TODO updateChild header too?
+  }
+
+  @override
+  void insertRenderObjectChild(RenderObject child, _SliverStickyHeaderListSlot slot) {
+    final renderObject = this.renderObject;
+    switch (slot) {
+      case _SliverStickyHeaderListSlot.header:
+        assert(child is RenderBox);
+        renderObject.header = child as RenderBox;
+      case _SliverStickyHeaderListSlot.list:
+        assert(child is _RenderSliverStickyHeaderListInner);
+        renderObject.child = child as _RenderSliverStickyHeaderListInner;
+    }
+    assert(renderObject == this.renderObject);
+  }
+
+  @override
+  void moveRenderObjectChild(covariant RenderObject child, covariant Object? oldSlot, covariant Object? newSlot) {
+    assert(false);
+  }
+
+  @override
+  void removeRenderObjectChild(RenderObject child, _SliverStickyHeaderListSlot slot) {
+    final renderObject = this.renderObject;
+    switch (slot) {
+      case _SliverStickyHeaderListSlot.header:
+        assert(renderObject.header == child);
+        renderObject.header = null;
+      case _SliverStickyHeaderListSlot.list:
+        assert(renderObject.child == child);
+        renderObject.child = null;
+    }
+    assert(renderObject == this.renderObject);
+  }
+}
+
+class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelpers {
 
   //
   // Managing the two children [header] and [child].
@@ -180,9 +287,9 @@ class _RenderSliverStickyHeaderList extends RenderSliver {
     if (_header != null) adoptChild(_header!);
   }
 
-  RenderSliver? get child => _child;
-  RenderSliver? _child;
-  set child(RenderSliver? value) {
+  _RenderSliverStickyHeaderListInner? get child => _child;
+  _RenderSliverStickyHeaderListInner? _child;
+  set child(_RenderSliverStickyHeaderListInner? value) {
     if (_child != null) dropChild(_child!);
     _child = value;
     if (_child != null) adoptChild(_child!);
@@ -222,16 +329,67 @@ class _RenderSliverStickyHeaderList extends RenderSliver {
     ];
   }
 
+  //
+  // The sliver protocol.
+  // Modeled on [RenderProxySliver] as to [child],
+  // and [RenderSliverSingleBoxAdapter] as to [header].
+  //
+
+  @override
+  void setupParentData(RenderObject child) {
+    if (child.parentData is! SliverPhysicalParentData) {
+      child.parentData = SliverPhysicalParentData();
+    }
+  }
+
   @override
   void performLayout() {
+    assert(child != null);
+    child!.layout(constraints, parentUsesSize: true);
+    geometry = child!.geometry;
+    // TODO performLayout on header
+  }
 
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (child != null) {
+      context.paintChild(child!, offset);
+    }
+    if (header != null && geometry!.visible) {
+      context.paintChild(child!, offset); // TODO give header an offset
+    }
+  }
+
+  @override
+  bool hitTestChildren(SliverHitTestResult result, {required double mainAxisPosition, required double crossAxisPosition}) {
+    assert(child != null);
+    assert(geometry!.hitTestExtent > 0.0);
+    if (header != null
+      && hitTestBoxChild(BoxHitTestResult.wrap(result), header!,
+           mainAxisPosition: mainAxisPosition, crossAxisPosition: crossAxisPosition)) {
+      return true;
+    }
+    return child!.hitTest(result,
+      mainAxisPosition: mainAxisPosition, crossAxisPosition: crossAxisPosition);
+  }
+
+  @override
+  double childMainAxisPosition(RenderObject child) {
+    if (child == this.child) return 0.0;
+    assert(child == header);
+    return 0.0; // TODO give header an offset
+  }
+
+  @override
+  void applyPaintTransform(RenderObject child, Matrix4 transform) {
+    assert(child == this.child || child == header);
+    final childParentData = child.parentData! as SliverPhysicalParentData;
+    childParentData.applyPaintTransform(transform);
   }
 }
 
-
 class _SliverStickyHeaderListInner extends SliverMultiBoxAdaptorWidget {
   const _SliverStickyHeaderListInner({
-    super.key,
     required this.headerPlacement,
     required this.headerBuilder,
     required super.delegate,
@@ -241,43 +399,24 @@ class _SliverStickyHeaderListInner extends SliverMultiBoxAdaptorWidget {
   final HeaderBuilder headerBuilder;
 
   @override
-  SliverMultiBoxAdaptorElement createElement() =>
-    _SliverStickyHeaderListElement(this, replaceMovedChildren: true);
+  _SliverStickyHeaderListInnerElement createElement() =>
+    _SliverStickyHeaderListInnerElement(this, replaceMovedChildren: true);
 
   @override
   _RenderSliverStickyHeaderListInner createRenderObject(BuildContext context) {
-    final element = context as SliverMultiBoxAdaptorElement;
+    final element = context as _SliverStickyHeaderListInnerElement;
     return _RenderSliverStickyHeaderListInner(childManager: element);
   }
 }
 
-class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
-  _SliverStickyHeaderListElement(super.widget, {super.replaceMovedChildren});
+class _SliverStickyHeaderListInnerElement extends SliverMultiBoxAdaptorElement {
+  _SliverStickyHeaderListInnerElement(super.widget, {super.replaceMovedChildren});
 
   @override
   _SliverStickyHeaderListInner get widget => super.widget as _SliverStickyHeaderListInner;
 
   @override
   _RenderSliverStickyHeaderListInner get renderObject => super.renderObject as _RenderSliverStickyHeaderListInner;
-
-  Element? _header;
-
-  @override
-  void visitChildren(ElementVisitor visitor) {
-    super.visitChildren(visitor);
-    if (_header != null) visitor(_header!);
-  }
-
-  @override
-  void forgetChild(Element child) {
-    if (child == _header) {
-      _header = null;
-      // Skip super, which assumes child is one of the super-managed children.
-      // This also skips [Element.forgetChild]; TODO is that OK?
-    } else {
-      super.forgetChild(child);
-    }
-  }
 
   @override
   void mount(Element? parent, Object? newSlot) {
@@ -304,65 +443,21 @@ class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
 
     @pragma('vm:notify-debugger-on-exception')
     void layoutCallback() {
-      final built = index == null ? null : widget.headerBuilder(this, index);
+      // final built = index == null ? null : widget.headerBuilder(this, index);
 
-      _header = updateChild(_header, built, null);
+      // TODO WORK HERE point this at parent: _header = updateChild(_header, built, null);
 
       // TODO finish implementing _layout
     }
 
     owner!.buildScope(this, layoutCallback);
   }
-
-  @override
-  void insertRenderObjectChild(RenderObject child, int? slot) {
-    if (slot == null) {
-      final renderObject = this.renderObject;
-      assert(renderObject.debugValidateChild(child));
-      renderObject.header = child as RenderBox;
-      assert(renderObject == this.renderObject);
-    } else {
-      super.insertRenderObjectChild(child, slot);
-    }
-  }
-
-  @override
-  void moveRenderObjectChild(RenderObject child, int? oldSlot, int? newSlot) {
-    if (oldSlot == null || newSlot == null) {
-      assert(false);
-    } else {
-      super.moveRenderObjectChild(child, oldSlot, newSlot);
-    }
-  }
-
-  @override
-  void removeRenderObjectChild(RenderObject child, int? slot) {
-    if (slot == null) {
-      final renderObject = this.renderObject;
-      assert(renderObject.header == child);
-      renderObject.header = null;
-      assert(renderObject == this.renderObject);
-    } else {
-      super.removeRenderObjectChild(child, slot);
-    }
-  }
 }
-
-
 
 class _RenderSliverStickyHeaderListInner extends RenderSliverList {
   _RenderSliverStickyHeaderListInner({required super.childManager});
 
-  _SliverStickyHeaderListInner get widget => (childManager as _SliverStickyHeaderListElement).widget;
-
-  // Modeled on [RenderObjectWithChildMixin.child].
-  RenderBox? get header => _header;
-  RenderBox? _header;
-  set header(RenderBox? value) {
-    if (_header != null) dropChild(_header!);
-    _header = value;
-    if (_header != null) adoptChild(_header!);
-  }
+  _SliverStickyHeaderListInner get widget => (childManager as _SliverStickyHeaderListInnerElement).widget;
 
   void Function(int? index)? _callback;
   void updateCallback(void Function(int? index)? value) {
@@ -477,20 +572,6 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     //   }
     //   innerChild.provideScrollPosition(childScrollOffset);
     // }
-  }
-
-  @override
-  bool hitTestChildren(SliverHitTestResult result, {required double mainAxisPosition, required double crossAxisPosition}) {
-    // TODO implement hitTestChildren
-    return super.hitTestChildren(result, mainAxisPosition: mainAxisPosition, crossAxisPosition: crossAxisPosition);
-    // return header?.hitTest(result, )
-    //   ?? super.hitTestChildren(result, mainAxisPosition: mainAxisPosition, crossAxisPosition: crossAxisPosition);
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    super.paint(context, offset);
-    header?.paint(context, offset); // TODO allow header an offset
   }
 }
 
