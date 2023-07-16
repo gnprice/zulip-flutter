@@ -256,7 +256,7 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     owner!.buildScope(this, layoutCallback);
   }
 
-  void _layout(int? index) {
+  void _layout(int? index) { // TODO refactor this better; fold into the render object?
     renderObject._updateHeader(this, index);
   }
 
