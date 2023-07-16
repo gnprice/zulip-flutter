@@ -430,7 +430,7 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
   double childMainAxisPosition(RenderObject child) {
     if (child == this.child) return 0.0;
     assert(child == header);
-    return 0.0; // TODO give header an offset
+    return 0.0; // TODO fix for headerPlacement end; TODO also give header an offset
   }
 
   @override
