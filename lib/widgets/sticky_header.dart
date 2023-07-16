@@ -234,7 +234,18 @@ class _SliverStickyHeaderListElement extends SliverMultiBoxAdaptorElement {
   }
 
   void _layout(int? index) {
-    debugPrint("_SliverStickyHeaderListElement._layout index: $index"); // TODO implement
+    debugPrint("_SliverStickyHeaderListElement._layout index: $index");
+
+    @pragma('vm:notify-debugger-on-exception')
+    void layoutCallback() {
+      final built = index == null ? null : widget.headerBuilder(this, index);
+
+      _header = updateChild(_header, built, null);
+
+      // TODO finish implementing _layout
+    }
+
+    owner!.buildScope(this, layoutCallback);
   }
 
   @override
@@ -365,7 +376,9 @@ class RenderSliverStickyHeaderList extends RenderSliverList {
     final index = child == null ? null : indexOf(child);
     if (index != _previousHeaderProvidingIndex) {
       _previousHeaderProvidingIndex = index;
-      _callback!(index); // TODO invokeLayoutCallback
+      invokeLayoutCallback((constraints) {
+        _callback!(index);
+      });
     }
 
 
