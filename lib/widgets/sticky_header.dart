@@ -228,6 +228,7 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   void mount(Element? parent, Object? newSlot) {
     super.mount(parent, newSlot);
     _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
+    renderObject.child!.updateCallback(_layout);
   }
 
   @override
@@ -235,7 +236,29 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     super.update(newWidget);
     assert(widget == newWidget);
     _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
+    renderObject.child!.updateCallback(_layout);
     // TODO updateChild header too?
+  }
+
+  @override
+  void unmount() {
+    renderObject.child!.updateCallback(null);
+    super.unmount();
+  }
+
+  void _layout(int? index) {
+    debugPrint("_SliverStickyHeaderListElement._layout index: $index");
+
+    @pragma('vm:notify-debugger-on-exception')
+    void layoutCallback() {
+      // final built = index == null ? null : widget.headerBuilder(this, index);
+
+      // TODO WORK HERE: _header = updateChild(_header, built, null);
+
+      // TODO finish implementing _layout
+    }
+
+    owner!.buildScope(this, layoutCallback);
   }
 
   @override
@@ -410,48 +433,16 @@ class _SliverStickyHeaderListInner extends SliverMultiBoxAdaptorWidget {
 }
 
 class _SliverStickyHeaderListInnerElement extends SliverMultiBoxAdaptorElement {
-  _SliverStickyHeaderListInnerElement(super.widget, {super.replaceMovedChildren});
+  _SliverStickyHeaderListInnerElement(
+    _SliverStickyHeaderListInner super.widget, {
+    super.replaceMovedChildren,
+  });
 
   @override
   _SliverStickyHeaderListInner get widget => super.widget as _SliverStickyHeaderListInner;
 
   @override
   _RenderSliverStickyHeaderListInner get renderObject => super.renderObject as _RenderSliverStickyHeaderListInner;
-
-  @override
-  void mount(Element? parent, Object? newSlot) {
-    super.mount(parent, newSlot);
-    renderObject.updateCallback(_layout);
-  }
-
-  @override
-  void update(covariant _SliverStickyHeaderListInner newWidget) {
-    assert(widget != newWidget);
-    super.update(newWidget);
-    assert(widget == newWidget);
-    renderObject.updateCallback(_layout);
-  }
-
-  @override
-  void unmount() {
-    renderObject.updateCallback(null);
-    super.unmount();
-  }
-
-  void _layout(int? index) {
-    debugPrint("_SliverStickyHeaderListElement._layout index: $index");
-
-    @pragma('vm:notify-debugger-on-exception')
-    void layoutCallback() {
-      // final built = index == null ? null : widget.headerBuilder(this, index);
-
-      // TODO WORK HERE point this at parent: _header = updateChild(_header, built, null);
-
-      // TODO finish implementing _layout
-    }
-
-    owner!.buildScope(this, layoutCallback);
-  }
 }
 
 class _RenderSliverStickyHeaderListInner extends RenderSliverList {
