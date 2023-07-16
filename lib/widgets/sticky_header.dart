@@ -471,7 +471,13 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
   void updateCallback(void Function(int? index)? value) {
     if (value == _callback) return;
     _callback = value;
-    markNeedsLayout();
+    if (_callback != null) { // because that means this is unmount; TODO? clean up
+      // This condition isn't needed in LayoutBuilder, because there the
+      // render object that has an updateCallback is the same one corresponding
+      // to the element being unmounted, so it hasn't itself been unmounted already.
+      // See the recursion in [_InactiveElements._unmount].
+      markNeedsLayout();
+    }
   }
 
   /// The unique child, if any, that spans the start of the visible portion
