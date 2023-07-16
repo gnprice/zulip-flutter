@@ -246,19 +246,21 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     super.unmount();
   }
 
-  void _layout(int? index) {
-    debugPrint("_SliverStickyHeaderListElement._layout index: $index");
-
+  void _updateHeader(int? index) {
     @pragma('vm:notify-debugger-on-exception')
     void layoutCallback() {
       final built = index == null ? null : widget.headerBuilder(this, index);
 
+      debugPrint("_SliverStickyHeaderListElement._updateHeader updating to index: $index, widget: $built");
       _header = updateChild(_header, built, _SliverStickyHeaderListSlot.header);
-
-      // TODO finish implementing _layout
     }
 
     owner!.buildScope(this, layoutCallback);
+  }
+
+  void _layout(int? index) {
+    debugPrint("_SliverStickyHeaderListElement._layout index: $index");
+    renderObject._updateHeader(this, index);
   }
 
   @override
@@ -296,6 +298,15 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 }
 
 class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelpers {
+  // TODO reorganize this better
+  void _updateHeader(_SliverStickyHeaderListElement element, int? index) {
+    // The invokeLayoutCallback needs to happen on the same(?) RenderObject
+    // that will end up getting mutated.
+    invokeLayoutCallback((constraints) {
+      element._updateHeader(index);
+    });
+  }
+
 
   //
   // Managing the two children [header] and [child].
@@ -550,9 +561,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     final index = child == null ? null : indexOf(child);
     if (index != _previousHeaderProvidingIndex) {
       _previousHeaderProvidingIndex = index;
-      invokeLayoutCallback((constraints) {
-        _callback!(index);
-      });
+      _callback!(index);
     }
 
 
