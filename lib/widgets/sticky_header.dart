@@ -452,33 +452,20 @@ class _SliverStickyHeaderListInner extends SliverMultiBoxAdaptorWidget {
   final HeaderBuilder headerBuilder;
 
   @override
-  _SliverStickyHeaderListInnerElement createElement() =>
-    _SliverStickyHeaderListInnerElement(this, replaceMovedChildren: true);
+  SliverMultiBoxAdaptorElement createElement() =>
+    SliverMultiBoxAdaptorElement(this, replaceMovedChildren: true);
 
   @override
   _RenderSliverStickyHeaderListInner createRenderObject(BuildContext context) {
-    final element = context as _SliverStickyHeaderListInnerElement;
+    final element = context as SliverMultiBoxAdaptorElement;
     return _RenderSliverStickyHeaderListInner(childManager: element);
   }
-}
-
-class _SliverStickyHeaderListInnerElement extends SliverMultiBoxAdaptorElement {
-  _SliverStickyHeaderListInnerElement(
-    _SliverStickyHeaderListInner super.widget, {
-    super.replaceMovedChildren,
-  });
-
-  @override
-  _SliverStickyHeaderListInner get widget => super.widget as _SliverStickyHeaderListInner;
-
-  @override
-  _RenderSliverStickyHeaderListInner get renderObject => super.renderObject as _RenderSliverStickyHeaderListInner;
 }
 
 class _RenderSliverStickyHeaderListInner extends RenderSliverList {
   _RenderSliverStickyHeaderListInner({required super.childManager});
 
-  _SliverStickyHeaderListInner get widget => (childManager as _SliverStickyHeaderListInnerElement).widget;
+  _SliverStickyHeaderListInner get widget => (childManager as SliverMultiBoxAdaptorElement).widget as _SliverStickyHeaderListInner;
 
   void Function(int? index)? _callback;
   void updateCallback(void Function(int? index)? value) {
