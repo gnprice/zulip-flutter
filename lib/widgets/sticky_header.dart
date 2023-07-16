@@ -250,8 +250,6 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     @pragma('vm:notify-debugger-on-exception')
     void layoutCallback() {
       final built = index == null ? null : widget.headerBuilder(this, index);
-
-      debugPrint("_SliverStickyHeaderListElement._updateHeader updating to index: $index, widget: $built");
       _header = updateChild(_header, built, _SliverStickyHeaderListSlot.header);
     }
 
@@ -259,7 +257,6 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   }
 
   void _layout(int? index) {
-    debugPrint("_SliverStickyHeaderListElement._layout index: $index");
     renderObject._updateHeader(this, index);
   }
 
