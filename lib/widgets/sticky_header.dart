@@ -317,21 +317,19 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
   Widget? _headerWidget;
 
   void _rebuildHeader(RenderBox? listChild) {
+    debugPrint('_RenderSliverStickyHeaderList._rebuildHeader');
     final item = _findStickyHeaderItem(listChild);
 
-    if (item?.header == _headerWidget) {
-      // Nothing to update; we can save the cost of invokeLayoutCallback.
-      return;
-    }
-    _headerWidget = item?.header;
+    if (item?.header != _headerWidget) {
+      _headerWidget = item?.header;
 
-    debugPrint('_RenderSliverStickyHeaderList._rebuildHeader');
-    // The invokeLayoutCallback needs to happen on the same(?) RenderObject
-    // that will end up getting mutated.  Attempting it on the child RenderObject
-    // would trip an assertion.
-    invokeLayoutCallback((constraints) {
-      _element._rebuildHeader(item);
-    });
+      // The invokeLayoutCallback needs to happen on the same(?) RenderObject
+      // that will end up getting mutated.  Attempting it on the child RenderObject
+      // would trip an assertion.
+      invokeLayoutCallback((constraints) {
+        _element._rebuildHeader(item);
+      });
+    }
   }
 
   RenderStickyHeaderItem? _findStickyHeaderItem(RenderBox? child) {
