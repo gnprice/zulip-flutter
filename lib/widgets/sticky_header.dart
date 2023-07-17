@@ -228,7 +228,8 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   void mount(Element? parent, Object? newSlot) {
     super.mount(parent, newSlot);
     _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
-    renderObject.child!.updateCallback(_layout);
+    renderObject.child!._parentElement = this;
+    renderObject.child!.markNeedsLayout();
   }
 
   @override
@@ -236,13 +237,13 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     super.update(newWidget);
     assert(widget == newWidget);
     _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
-    renderObject.child!.updateCallback(_layout);
     // TODO updateChild header too?
+    renderObject.child!.markNeedsLayout();
   }
 
   @override
   void unmount() {
-    renderObject.child!.updateCallback(null);
+    renderObject.child!._parentElement = null;
     super.unmount();
   }
 
@@ -467,18 +468,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
 
   _SliverStickyHeaderListInner get widget => (childManager as SliverMultiBoxAdaptorElement).widget as _SliverStickyHeaderListInner;
 
-  void Function(int? index)? _callback;
-  void updateCallback(void Function(int? index)? value) {
-    if (value == _callback) return;
-    _callback = value;
-    if (_callback != null) { // because that means this is unmount; TODO? clean up
-      // This condition isn't needed in LayoutBuilder, because there the
-      // render object that has an updateCallback is the same one corresponding
-      // to the element being unmounted, so it hasn't itself been unmounted already.
-      // See the recursion in [_InactiveElements._unmount].
-      markNeedsLayout();
-    }
-  }
+  _SliverStickyHeaderListElement? _parentElement;
 
   /// The unique child, if any, that spans the start of the visible portion
   /// of the list.
@@ -536,7 +526,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
 
   @override
   void performLayout() {
-    assert(_callback != null);
+    assert(_parentElement != null);
     assert(constraints.growthDirection == GrowthDirection.forward); // TODO dir
 
     super.performLayout();
@@ -551,7 +541,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     final index = child == null ? null : indexOf(child);
     if (index != _previousHeaderProvidingIndex) {
       _previousHeaderProvidingIndex = index;
-      _callback!(index);
+      _parentElement!._layout(index);
     }
   }
 }
