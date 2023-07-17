@@ -343,16 +343,18 @@ class RecipientHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     // TODO recipient headings depend on narrow
     final message = item.message;
+    final Widget header;
     switch (message) {
       case StreamMessage():
         final store = PerAccountStoreWidget.of(context);
         final subscription = store.subscriptions[message.streamId];
         final highlightBorderColor = colorForStream(subscription);
-        return StreamTopicRecipientHeader(
+        header = StreamTopicRecipientHeader(
           message: message, streamColor: highlightBorderColor);
       case DmMessage():
-        return DmRecipientHeader(message: message);
+        header = DmRecipientHeader(message: message);
     }
+    return StickyHeaderItem(header: header, child: header);
   }
 }
 

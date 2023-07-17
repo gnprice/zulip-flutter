@@ -270,10 +270,9 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     super.performRebuild();
   }
 
-  void _rebuildHeader(int? index) {
+  void _rebuildHeader(RenderStickyHeaderItem? item) {
     owner!.buildScope(this, () {
-      final built = index == null ? null : widget.headerBuilder(this, index);
-      _header = updateChild(_header, built, _SliverStickyHeaderListSlot.header);
+      _header = updateChild(_header, item?.header, _SliverStickyHeaderListSlot.header);
     });
   }
 
@@ -318,12 +317,12 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
 
   final _SliverStickyHeaderListElement _element;
 
-  void _rebuildHeader(int? index) {
+  void _rebuildHeader(RenderStickyHeaderItem? item) {
     // The invokeLayoutCallback needs to happen on the same(?) RenderObject
     // that will end up getting mutated.  Attempting it on the child RenderObject
     // would trip an assertion.
     invokeLayoutCallback((constraints) {
-      _element._rebuildHeader(index);
+      _element._rebuildHeader(item);
     });
   }
 
@@ -545,6 +544,15 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
   int? _previousHeaderProvidingIndex;
   bool _headerNeedsRebuild = false;
 
+  RenderStickyHeaderItem? _findStickyHeaderItem(RenderBox? child) {
+    RenderBox? node = child;
+    do {
+      if (node is RenderStickyHeaderItem) return node;
+      if (node is! RenderProxyBox) return null;
+      node = node.child;
+    } while (true);
+  }
+
   @override
   void performLayout() {
     assert(constraints.growthDirection == GrowthDirection.forward); // TODO dir
@@ -559,7 +567,8 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     if (_headerNeedsRebuild || index != _previousHeaderProvidingIndex) {
       _previousHeaderProvidingIndex = index;
       _headerNeedsRebuild = false;
-      (parent! as _RenderSliverStickyHeaderList)._rebuildHeader(index);
+      final item = _findStickyHeaderItem(child);
+      (parent! as _RenderSliverStickyHeaderList)._rebuildHeader(item);
     }
   }
 }
