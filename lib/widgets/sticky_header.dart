@@ -30,7 +30,9 @@ class RenderStickyHeaderItem extends RenderProxyBox {
   set header(Widget value) {
     if (header == value) return;
     _header = value;
-    // TODO mark needs build
+    // Mark for layout, to cause the enclosing list to lay out
+    // so that [_RenderSliverStickyListInner.performLayout] runs.
+    markNeedsLayout();
   }
 }
 
@@ -562,7 +564,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     };
     final index = child == null ? null : indexOf(child);
     debugPrint('performLayout index: $index, _headerNeedsRebuild: $_headerNeedsRebuild');
-    if (_headerNeedsRebuild || index != _previousHeaderProvidingIndex) {
+    if (true) { // TODO can we short-circuit this at all?  Do need to rerun when child's header changed.
       _previousHeaderProvidingIndex = index;
       _headerNeedsRebuild = false;
       final item = _findStickyHeaderItem(child);
