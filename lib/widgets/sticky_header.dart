@@ -365,7 +365,8 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
   //
   // The sliver protocol.
   // Modeled on [RenderProxySliver] as to [child],
-  // and [RenderSliverSingleBoxAdapter] as to [header].
+  // and [RenderSliverToBoxAdapter] (along with [RenderSliverSingleBoxAdapter],
+  // its base class) as to [header].
   //
 
   @override
