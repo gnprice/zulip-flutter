@@ -177,7 +177,6 @@ class _SliverStickyHeaderList extends RenderObjectWidget {
   _SliverStickyHeaderListInner _buildInner() {
     return _SliverStickyHeaderListInner(
       headerPlacement: headerPlacement,
-      headerBuilder: headerBuilder,
       delegate: delegate,
     );
   }
@@ -444,12 +443,10 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
 class _SliverStickyHeaderListInner extends SliverMultiBoxAdaptorWidget {
   const _SliverStickyHeaderListInner({
     required this.headerPlacement,
-    required this.headerBuilder,
     required super.delegate,
   });
 
   final HeaderPlacement headerPlacement;
-  final HeaderBuilder headerBuilder;
 
   @override
   SliverMultiBoxAdaptorElement createElement() =>
