@@ -314,7 +314,15 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
 
   final _SliverStickyHeaderListElement _element;
 
+  Widget? _headerWidget;
+
   void _rebuildHeader(RenderStickyHeaderItem? item) {
+    if (item?.header == _headerWidget) {
+      // Nothing to update; we can save the cost of invokeLayoutCallback.
+      return;
+    }
+    _headerWidget = item?.header;
+
     debugPrint('_RenderSliverStickyHeaderList._rebuildHeader');
     // The invokeLayoutCallback needs to happen on the same(?) RenderObject
     // that will end up getting mutated.  Attempting it on the child RenderObject
@@ -540,8 +548,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     markNeedsLayout();
   }
 
-  int? _previousHeaderProvidingIndex;
-  bool _headerNeedsRebuild = false;
+  bool _headerNeedsRebuild = false; // TODO do we need a version of this?
 
   RenderStickyHeaderItem? _findStickyHeaderItem(RenderBox? child) {
     RenderBox? node = child;
@@ -562,14 +569,8 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
       HeaderPlacement.start => _findChildAtStart(),
       HeaderPlacement.end   => _findChildAtEnd(),
     };
-    final index = child == null ? null : indexOf(child);
-    debugPrint('performLayout index: $index, _headerNeedsRebuild: $_headerNeedsRebuild');
-    if (true) { // TODO can we short-circuit this at all?  Do need to rerun when child's header changed.
-      _previousHeaderProvidingIndex = index;
-      _headerNeedsRebuild = false;
-      final item = _findStickyHeaderItem(child);
-      (parent! as _RenderSliverStickyHeaderList)._rebuildHeader(item);
-    }
+    final item = _findStickyHeaderItem(child);
+    (parent! as _RenderSliverStickyHeaderList)._rebuildHeader(item);
   }
 }
 
