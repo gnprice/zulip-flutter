@@ -221,17 +221,6 @@ class _MessageListState extends State<MessageList> {
       // TODO handle scroll starting at first unread, or link anchor
       // TODO on new message when scrolled up, anchor scroll to what's in view
       reverse: true,
-      headerBuilder: (context, i) {
-        final data = model!.items[length - 1 - i];
-        return switch (data) {
-          MessageListHistoryStartItem() || MessageListLoadingItem() =>
-            null,
-          MessageListRecipientHeaderItem() =>
-            RecipientHeader(item: data),
-          MessageListMessageItem(:var message) =>
-            RecipientHeader(item: MessageListRecipientHeaderItem(message)),
-        };
-      },
       itemBuilder: (context, i) {
         final data = model!.items[length - 1 - i];
         return switch (data) {
