@@ -49,7 +49,6 @@ class StickyHeaderListView extends BoxScrollView {
     bool addRepaintBoundaries = true,
     bool addSemanticIndexes = true,
     super.cacheExtent,
-    required this.headerBuilder,
     List<Widget> children = const <Widget>[],
     int? semanticChildCount,
     super.dragStartBehavior,
@@ -76,7 +75,6 @@ class StickyHeaderListView extends BoxScrollView {
     super.physics,
     super.shrinkWrap,
     super.padding,
-    required this.headerBuilder,
     required NullableIndexedWidgetBuilder itemBuilder,
     ChildIndexGetter? findChildIndexCallback,
     int? itemCount,
@@ -113,7 +111,6 @@ class StickyHeaderListView extends BoxScrollView {
     super.physics,
     super.shrinkWrap,
     super.padding,
-    required this.headerBuilder,
     required NullableIndexedWidgetBuilder itemBuilder,
     ChildIndexGetter? findChildIndexCallback,
     required IndexedWidgetBuilder separatorBuilder,
@@ -167,7 +164,6 @@ class StickyHeaderListView extends BoxScrollView {
     super.physics,
     super.shrinkWrap,
     super.padding,
-    required this.headerBuilder,
     required this.childrenDelegate,
     super.cacheExtent,
     super.semanticChildCount,
@@ -178,13 +174,11 @@ class StickyHeaderListView extends BoxScrollView {
   });
 
   final SliverChildDelegate childrenDelegate;
-  final HeaderBuilder headerBuilder;
 
   @override
   Widget buildChildLayout(BuildContext context) {
     return _SliverStickyHeaderList(
       headerPlacement: reverse ? HeaderPlacement.end : HeaderPlacement.start,
-      headerBuilder: headerBuilder,
       delegate: childrenDelegate);
   }
 }
@@ -194,7 +188,6 @@ enum HeaderPlacement { start, end }
 
 class _SliverStickyHeaderList extends RenderObjectWidget {
   _SliverStickyHeaderList({
-    required this.headerBuilder,
     required HeaderPlacement headerPlacement,
     required SliverChildDelegate delegate,
   }) : child = _SliverStickyHeaderListInner(
@@ -202,7 +195,6 @@ class _SliverStickyHeaderList extends RenderObjectWidget {
     delegate: delegate,
   );
 
-  final HeaderBuilder headerBuilder;
   final _SliverStickyHeaderListInner child;
 
   @override
