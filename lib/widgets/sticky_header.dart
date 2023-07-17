@@ -544,11 +544,8 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
 
   void markHeaderNeedsRebuild() {
     debugPrint('markHeaderNeedsRebuild');
-    _headerNeedsRebuild = true;
     markNeedsLayout();
   }
-
-  bool _headerNeedsRebuild = false; // TODO do we need a version of this?
 
   RenderStickyHeaderItem? _findStickyHeaderItem(RenderBox? child) {
     RenderBox? node = child;
