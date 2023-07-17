@@ -228,8 +228,7 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   void mount(Element? parent, Object? newSlot) {
     super.mount(parent, newSlot);
     _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
-    renderObject.child!._parentElement = this;
-    renderObject.child!.markNeedsLayout();
+    renderObject._element = this;
   }
 
   @override
@@ -238,12 +237,11 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     assert(widget == newWidget);
     _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
     // TODO updateChild header too?
-    renderObject.child!.markNeedsLayout();
   }
 
   @override
   void unmount() {
-    renderObject.child!._parentElement = null;
+    renderObject._element = null;
     super.unmount();
   }
 
@@ -255,10 +253,6 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     }
 
     owner!.buildScope(this, layoutCallback);
-  }
-
-  void _layout(int? index) { // TODO refactor this better; fold into the render object?
-    renderObject._updateHeader(this, index);
   }
 
   @override
@@ -297,13 +291,15 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 
 class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelpers {
   // TODO reorganize this better
-  void _updateHeader(_SliverStickyHeaderListElement element, int? index) {
+  void _updateHeader(int? index) {
     // The invokeLayoutCallback needs to happen on the same(?) RenderObject
     // that will end up getting mutated.
     invokeLayoutCallback((constraints) {
-      element._updateHeader(index);
+      _element!._updateHeader(index);
     });
   }
+
+  _SliverStickyHeaderListElement? _element;
 
 
   //
@@ -468,8 +464,6 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
 
   _SliverStickyHeaderListInner get widget => (childManager as SliverMultiBoxAdaptorElement).widget as _SliverStickyHeaderListInner;
 
-  _SliverStickyHeaderListElement? _parentElement;
-
   /// The unique child, if any, that spans the start of the visible portion
   /// of the list.
   ///
@@ -526,7 +520,6 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
 
   @override
   void performLayout() {
-    assert(_parentElement != null);
     assert(constraints.growthDirection == GrowthDirection.forward); // TODO dir
 
     super.performLayout();
@@ -541,7 +534,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     final index = child == null ? null : indexOf(child);
     if (index != _previousHeaderProvidingIndex) {
       _previousHeaderProvidingIndex = index;
-      _parentElement!._layout(index);
+      (parent! as _RenderSliverStickyHeaderList)._updateHeader(index);
     }
   }
 }
