@@ -265,6 +265,8 @@ class RecipientHeader extends StatelessWidget {
       case DmMessage():
         header = DmRecipientHeader(message: message);
     }
+    // return header;
+    // return StickyHeaderItem(header: Container(height: 32, color: Colors.blue), child: header);
     return StickyHeaderItem(header: header, child: header);
   }
 }
