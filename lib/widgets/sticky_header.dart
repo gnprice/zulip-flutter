@@ -316,7 +316,9 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
 
   Widget? _headerWidget;
 
-  void _rebuildHeader(RenderStickyHeaderItem? item) {
+  void _rebuildHeader(RenderBox? listChild) {
+    final item = _findStickyHeaderItem(listChild);
+
     if (item?.header == _headerWidget) {
       // Nothing to update; we can save the cost of invokeLayoutCallback.
       return;
@@ -330,6 +332,15 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
     invokeLayoutCallback((constraints) {
       _element._rebuildHeader(item);
     });
+  }
+
+  RenderStickyHeaderItem? _findStickyHeaderItem(RenderBox? child) {
+    RenderBox? node = child;
+    do {
+      if (node is RenderStickyHeaderItem) return node;
+      if (node is! RenderProxyBox) return null;
+      node = node.child;
+    } while (true);
   }
 
   //
@@ -547,15 +558,6 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     markNeedsLayout();
   }
 
-  RenderStickyHeaderItem? _findStickyHeaderItem(RenderBox? child) {
-    RenderBox? node = child;
-    do {
-      if (node is RenderStickyHeaderItem) return node;
-      if (node is! RenderProxyBox) return null;
-      node = node.child;
-    } while (true);
-  }
-
   @override
   void performLayout() {
     assert(constraints.growthDirection == GrowthDirection.forward); // TODO dir
@@ -566,8 +568,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
       HeaderPlacement.start => _findChildAtStart(),
       HeaderPlacement.end   => _findChildAtEnd(),
     };
-    final item = _findStickyHeaderItem(child);
-    (parent! as _RenderSliverStickyHeaderList)._rebuildHeader(item);
+    (parent! as _RenderSliverStickyHeaderList)._rebuildHeader(child);
   }
 }
 
