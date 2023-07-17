@@ -345,7 +345,7 @@ class RecipientHeader extends StatelessWidget {
     }
     // return header;
     // return StickyHeaderItem(header: Container(height: 32, color: Colors.blue), child: header);
-    return StickyHeaderItem(header: header, child: header);
+    return StickyHeaderItem(keepHeaderWithinItemBounds: false, header: header, child: header);
   }
 }
 
@@ -401,6 +401,7 @@ class MessageItem extends StatelessWidget {
     ]);
 
     return StickyHeaderItem(
+      keepHeaderWithinItemBounds: item.isLastInBlock,
       header: RecipientHeader(item: MessageListRecipientHeaderItem(message)),
       child: child);
 
