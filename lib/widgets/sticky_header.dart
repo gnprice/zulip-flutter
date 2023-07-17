@@ -6,7 +6,14 @@ import 'package:flutter/widgets.dart';
 typedef HeaderBuilder = Widget? Function(BuildContext context, int index);
 
 class StickyHeaderItem extends SingleChildRenderObjectWidget {
-  const StickyHeaderItem({super.key, super.child, required this.header});
+  const StickyHeaderItem({
+    super.key,
+    this.keepHeaderWithinItemBounds = true,
+    required this.header,
+    super.child,
+  });
+
+  final bool keepHeaderWithinItemBounds; // TODO better name, or at least doc
 
   final Widget header;
 
@@ -17,13 +24,23 @@ class StickyHeaderItem extends SingleChildRenderObjectWidget {
 
   @override
   void updateRenderObject(BuildContext context, RenderStickyHeaderItem renderObject) {
-    renderObject.header = header;
+    renderObject
+      ..keepHeaderWithinItemBounds = keepHeaderWithinItemBounds
+      ..header = header;
   }
 }
 
 class RenderStickyHeaderItem extends RenderProxyBox {
   RenderStickyHeaderItem({required Widget header})
    : _header = header;
+
+  bool get keepHeaderWithinItemBounds => _keepHeaderWithinItemBounds;
+  bool _keepHeaderWithinItemBounds = true;
+  set keepHeaderWithinItemBounds(bool value) {
+    if (keepHeaderWithinItemBounds == value) return;
+    _keepHeaderWithinItemBounds = value;
+    markNeedsLayout();
+  }
 
   Widget get header => _header;
   Widget _header;
@@ -315,6 +332,7 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
   final _SliverStickyHeaderListElement _element;
 
   Widget? _headerWidget;
+  bool? _keepHeaderWithinItemBounds;
 
   void _rebuildHeader(RenderBox? listChild) {
     debugPrint('_RenderSliverStickyHeaderList._rebuildHeader');
@@ -329,6 +347,16 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
       invokeLayoutCallback((constraints) {
         _element._rebuildHeader(item);
       });
+    }
+
+    if (item?.keepHeaderWithinItemBounds != _keepHeaderWithinItemBounds) {
+      _keepHeaderWithinItemBounds = item?.keepHeaderWithinItemBounds;
+      assert(debugDoingThisLayout);
+      // This will affect the result of layout... but this method is only called
+      // when we're already in the middle of our own performLayout,
+      // laying out our child.  So we haven't yet used this information,
+      // and will use the updated version after the child's layout returns.
+      markNeedsPaint();
     }
   }
 
