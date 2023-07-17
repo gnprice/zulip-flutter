@@ -250,6 +250,8 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 
   @override
   void update(_SliverStickyHeaderList newWidget) {
+    debugPrint("update");
+    // debugPrintStack();
     super.update(newWidget);
     assert(widget == newWidget);
     _child = updateChild(_child, widget.child, _SliverStickyHeaderListSlot.list);
@@ -258,6 +260,7 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 
   @override
   void performRebuild() {
+    debugPrint("performRebuild");
     renderObject.child!.markHeaderNeedsRebuild();
     super.performRebuild();
   }
@@ -310,6 +313,7 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
   final _SliverStickyHeaderListElement _element;
 
   void _rebuildHeader(RenderStickyHeaderItem? item) {
+    debugPrint('_RenderSliverStickyHeaderList._rebuildHeader');
     // The invokeLayoutCallback needs to happen on the same(?) RenderObject
     // that will end up getting mutated.  Attempting it on the child RenderObject
     // would trip an assertion.
@@ -529,6 +533,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
   }
 
   void markHeaderNeedsRebuild() {
+    debugPrint('markHeaderNeedsRebuild');
     _headerNeedsRebuild = true;
     markNeedsLayout();
   }
@@ -556,6 +561,7 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
       HeaderPlacement.end   => _findChildAtEnd(),
     };
     final index = child == null ? null : indexOf(child);
+    debugPrint('performLayout index: $index, _headerNeedsRebuild: $_headerNeedsRebuild');
     if (_headerNeedsRebuild || index != _previousHeaderProvidingIndex) {
       _previousHeaderProvidingIndex = index;
       _headerNeedsRebuild = false;
