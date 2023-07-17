@@ -253,12 +253,12 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 
   void _rebuildHeader(int? index) {
     @pragma('vm:notify-debugger-on-exception')
-    void layoutCallback() {
+    void rebuildHeader() {
       final built = index == null ? null : widget.headerBuilder(this, index);
       _header = updateChild(_header, built, _SliverStickyHeaderListSlot.header);
     }
 
-    owner!.buildScope(this, layoutCallback);
+    owner!.buildScope(this, rebuildHeader);
   }
 
   @override
@@ -296,7 +296,9 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 }
 
 class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelpers {
-  // TODO reorganize this better
+
+  _SliverStickyHeaderListElement? _element;
+
   void _rebuildHeader(int? index) {
     // The invokeLayoutCallback needs to happen on the same(?) RenderObject
     // that will end up getting mutated.
@@ -304,9 +306,6 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
       _element!._rebuildHeader(index);
     });
   }
-
-  _SliverStickyHeaderListElement? _element;
-
 
   //
   // Managing the two children [header] and [child].
