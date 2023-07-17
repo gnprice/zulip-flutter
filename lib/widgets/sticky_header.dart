@@ -186,7 +186,10 @@ class _SliverStickyHeaderList extends RenderObjectWidget {
   _SliverStickyHeaderListElement createElement() => _SliverStickyHeaderListElement(this);
 
   @override
-  _RenderSliverStickyHeaderList createRenderObject(BuildContext context) => _RenderSliverStickyHeaderList();
+  _RenderSliverStickyHeaderList createRenderObject(BuildContext context) {
+    final element = context as _SliverStickyHeaderListElement;
+    return _RenderSliverStickyHeaderList(element: element);
+  }
 }
 
 enum _SliverStickyHeaderListSlot { header, list }
@@ -228,7 +231,6 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   void mount(Element? parent, Object? newSlot) {
     super.mount(parent, newSlot);
     _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
-    renderObject._element = this;
   }
 
   @override
@@ -243,12 +245,6 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   void performRebuild() {
     renderObject.child!.markHeaderNeedsRebuild();
     super.performRebuild();
-  }
-
-  @override
-  void unmount() {
-    renderObject._element = null;
-    super.unmount();
   }
 
   void _rebuildHeader(int? index) {
@@ -296,14 +292,18 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 }
 
 class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelpers {
+  _RenderSliverStickyHeaderList({
+    required _SliverStickyHeaderListElement element,
+  }) : _element = element;
 
-  _SliverStickyHeaderListElement? _element;
+  final _SliverStickyHeaderListElement _element;
 
   void _rebuildHeader(int? index) {
     // The invokeLayoutCallback needs to happen on the same(?) RenderObject
-    // that will end up getting mutated.
+    // that will end up getting mutated.  Attempting it on the child RenderObject
+    // would trip an assertion.
     invokeLayoutCallback((constraints) {
-      _element!._rebuildHeader(index);
+      _element._rebuildHeader(index);
     });
   }
 
