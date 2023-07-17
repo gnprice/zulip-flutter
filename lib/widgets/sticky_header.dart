@@ -236,7 +236,7 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     super.update(newWidget);
     assert(widget == newWidget);
     _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
-    // TODO updateChild header too?
+    renderObject.child!.markHeaderNeedsRebuild();
   }
 
   @override
@@ -245,7 +245,7 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
     super.unmount();
   }
 
-  void _updateHeader(int? index) {
+  void _rebuildHeader(int? index) {
     @pragma('vm:notify-debugger-on-exception')
     void layoutCallback() {
       final built = index == null ? null : widget.headerBuilder(this, index);
@@ -291,11 +291,11 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 
 class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelpers {
   // TODO reorganize this better
-  void _updateHeader(int? index) {
+  void _rebuildHeader(int? index) {
     // The invokeLayoutCallback needs to happen on the same(?) RenderObject
     // that will end up getting mutated.
     invokeLayoutCallback((constraints) {
-      _element!._updateHeader(index);
+      _element!._rebuildHeader(index);
     });
   }
 
@@ -516,7 +516,13 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     }
   }
 
+  void markHeaderNeedsRebuild() {
+    _headerNeedsRebuild = true;
+    markNeedsLayout();
+  }
+
   int? _previousHeaderProvidingIndex;
+  bool _headerNeedsRebuild = false;
 
   @override
   void performLayout() {
@@ -532,9 +538,10 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
       HeaderPlacement.end   => _findChildAtEnd(),
     };
     final index = child == null ? null : indexOf(child);
-    if (index != _previousHeaderProvidingIndex) {
+    if (_headerNeedsRebuild || index != _previousHeaderProvidingIndex) {
       _previousHeaderProvidingIndex = index;
-      (parent! as _RenderSliverStickyHeaderList)._updateHeader(index);
+      _headerNeedsRebuild = false;
+      (parent! as _RenderSliverStickyHeaderList)._rebuildHeader(index);
     }
   }
 }
