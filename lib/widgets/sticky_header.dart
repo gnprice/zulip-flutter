@@ -248,13 +248,10 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   }
 
   void _rebuildHeader(int? index) {
-    @pragma('vm:notify-debugger-on-exception')
-    void rebuildHeader() {
+    owner!.buildScope(this, () {
       final built = index == null ? null : widget.headerBuilder(this, index);
       _header = updateChild(_header, built, _SliverStickyHeaderListSlot.header);
-    }
-
-    owner!.buildScope(this, rebuildHeader);
+    });
   }
 
   @override
