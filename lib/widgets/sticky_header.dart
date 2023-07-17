@@ -240,6 +240,12 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   }
 
   @override
+  void performRebuild() {
+    renderObject.child!.markHeaderNeedsRebuild();
+    super.performRebuild();
+  }
+
+  @override
   void unmount() {
     renderObject._element = null;
     super.unmount();
