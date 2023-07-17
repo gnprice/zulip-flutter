@@ -369,8 +369,6 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
 
   @override
   void performLayout() {
-    final constraints = this.constraints;
-
     assert(child != null);
     child!.layout(constraints, parentUsesSize: true);
     SliverGeometry geometry = child!.geometry!;
@@ -465,7 +463,6 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
   /// This means (child start) <= (viewport start) < (child end).
   RenderBox? _findChildAtStart() {
     final scrollOffset = constraints.scrollOffset;
-    // debugPrint("our scroll offset: $scrollOffset");
 
     RenderBox? child;
     for (child = firstChild; ; child = childAfter(child)) {
@@ -524,9 +521,6 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
     assert(constraints.growthDirection == GrowthDirection.forward); // TODO dir
 
     super.performLayout();
-
-    // debugPrint("our constraints: $constraints");
-    // debugPrint("our geometry: $geometry");
 
     final child = switch (widget.headerPlacement) {
       HeaderPlacement.start => _findChildAtStart(),
