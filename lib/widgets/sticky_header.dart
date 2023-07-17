@@ -5,6 +5,35 @@ import 'package:flutter/widgets.dart';
 
 typedef HeaderBuilder = Widget? Function(BuildContext context, int index);
 
+class StickyHeaderItem extends SingleChildRenderObjectWidget {
+  const StickyHeaderItem({super.key, super.child, required this.header});
+
+  final Widget header;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return RenderStickyHeaderItem(header: header);
+  }
+
+  @override
+  void updateRenderObject(BuildContext context, RenderStickyHeaderItem renderObject) {
+    renderObject.header = header;
+  }
+}
+
+class RenderStickyHeaderItem extends RenderProxyBox {
+  RenderStickyHeaderItem({required Widget header})
+   : _header = header;
+
+  Widget get header => _header;
+  Widget _header;
+  set header(Widget value) {
+    if (header == value) return;
+    _header = value;
+    // TODO mark needs build
+  }
+}
+
 class StickyHeaderListView extends BoxScrollView {
   // Like ListView, but with sticky headers.
   StickyHeaderListView({
