@@ -164,22 +164,17 @@ class StickyHeaderListView extends BoxScrollView {
 enum HeaderPlacement { start, end }
 
 class _SliverStickyHeaderList extends RenderObjectWidget {
-  const _SliverStickyHeaderList({
-    required this.headerPlacement,
+  _SliverStickyHeaderList({
     required this.headerBuilder,
-    required this.delegate,
-  });
+    required HeaderPlacement headerPlacement,
+    required SliverChildDelegate delegate,
+  }) : child = _SliverStickyHeaderListInner(
+    headerPlacement: headerPlacement,
+    delegate: delegate,
+  );
 
-  final HeaderPlacement headerPlacement;
   final HeaderBuilder headerBuilder;
-  final SliverChildDelegate delegate;
-
-  _SliverStickyHeaderListInner _buildInner() {
-    return _SliverStickyHeaderListInner(
-      headerPlacement: headerPlacement,
-      delegate: delegate,
-    );
-  }
+  final _SliverStickyHeaderListInner child;
 
   @override
   _SliverStickyHeaderListElement createElement() => _SliverStickyHeaderListElement(this);
@@ -229,14 +224,14 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
   @override
   void mount(Element? parent, Object? newSlot) {
     super.mount(parent, newSlot);
-    _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
+    _child = updateChild(_child, widget.child, _SliverStickyHeaderListSlot.list);
   }
 
   @override
   void update(_SliverStickyHeaderList newWidget) {
     super.update(newWidget);
     assert(widget == newWidget);
-    _child = updateChild(_child, widget._buildInner(), _SliverStickyHeaderListSlot.list);
+    _child = updateChild(_child, widget.child, _SliverStickyHeaderListSlot.list);
     renderObject.child!.markHeaderNeedsRebuild();
   }
 
