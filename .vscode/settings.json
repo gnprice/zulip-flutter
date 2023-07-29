@@ -17,4 +17,9 @@
 
   // This much more focused automatic fix is helpful, though.
   "files.trimTrailingWhitespace": true,
+
+  // Don't mix in TODO comments among analyzer issues.
+  // We keep analysis clean, but use TODO comments routinely, so mixing them
+  // up means noise on the analysis signal.
+  "dart.showTodos": false,
 }
