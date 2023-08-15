@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../api/model/model.dart';
-import '../model/content.dart';
 import '../model/message_list.dart';
 import '../model/narrow.dart';
 import '../model/store.dart';
@@ -394,8 +393,8 @@ class MessageItem extends StatelessWidget {
       DecoratedBox(
         decoration: borderDecoration,
         child: item.showSender
-          ? MessageWithSender(message: message, content: item.content)
-          : MessageWithoutSender(message: message, content: item.content)),
+          ? MessageWithSender(item: item)
+          : MessageWithoutSender(item: item)),
       if (trailing != null && item.isLastInBlock) trailing!,
     ]);
 
@@ -566,14 +565,13 @@ class RecipientHeaderChevronContainer extends StatelessWidget {
 
 /// A Zulip message, showing the sender's name and avatar.
 class MessageWithSender extends StatelessWidget {
-  const MessageWithSender(
-    {super.key, required this.message, required this.content});
+  const MessageWithSender({super.key, required this.item});
 
-  final Message message;
-  final ZulipContent content;
+  final MessageListMessageItem item;
 
   @override
   Widget build(BuildContext context) {
+    final message = item.message;
     final time = _kMessageTimestampFormat
       .format(DateTime.fromMillisecondsSinceEpoch(1000 * message.timestamp));
 
@@ -595,7 +593,7 @@ class MessageWithSender extends StatelessWidget {
                 Text(message.senderFullName, // TODO get from user data
                   style: const TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                MessageContent(message: message, content: content),
+                MessageContent(message: message, content: item.content),
               ])),
           Container(
             width: 80,
@@ -607,14 +605,14 @@ class MessageWithSender extends StatelessWidget {
 }
 
 class MessageWithoutSender extends StatelessWidget {
-  const MessageWithoutSender(
-    {super.key, required this.message, required this.content});
+  const MessageWithoutSender({super.key, required this.item});
 
-  final Message message;
-  final ZulipContent content;
+  final MessageListMessageItem item;
 
   @override
   Widget build(BuildContext context) {
+    final message = item.message;
+
     // TODO dedupe with MessageWithSender
     final time = _kMessageTimestampFormat
       .format(DateTime.fromMillisecondsSinceEpoch(1000 * message.timestamp));
@@ -633,7 +631,7 @@ class MessageWithoutSender extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                MessageContent(message: message, content: content),
+                MessageContent(message: message, content: item.content),
               ])),
           Container(
             width: 80,
