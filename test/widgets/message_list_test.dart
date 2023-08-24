@@ -221,7 +221,7 @@ void main() {
     });
   });
 
-  group('MessageWithPossibleSender', () {
+  group('MessageWithSender', () {
     testWidgets('Updates avatar on RealmUserUpdateEvent', (tester) async {
       addTearDown(testBinding.reset);
 
@@ -230,7 +230,7 @@ void main() {
       RealmContentNetworkImage? findAvatarImageWidget(WidgetTester tester) {
         return tester.widgetList<RealmContentNetworkImage>(
           find.descendant(
-            of: find.byType(MessageWithPossibleSender),
+            of: find.byType(MessageWithSender),
             matching: find.byType(RealmContentNetworkImage))).firstOrNull;
       }
 

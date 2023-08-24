@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../api/model/model.dart';
+import '../model/content.dart';
 import '../model/message_list.dart';
 import '../model/narrow.dart';
 import '../model/store.dart';
@@ -395,7 +396,7 @@ class MessageItem extends StatelessWidget {
       RecipientHeader(message: message),
       DecoratedBox(
         decoration: borderDecoration,
-        child: MessageWithPossibleSender(item: item)),
+        child: MessageWithSender(message: message, content: item.content)),
       if (trailing != null) trailing!,
     ]);
 
@@ -569,15 +570,16 @@ class RecipientHeaderChevronContainer extends StatelessWidget {
   }
 }
 
-/// A Zulip message, showing the sender's name and avatar if specified.
-class MessageWithPossibleSender extends StatelessWidget {
-  const MessageWithPossibleSender({super.key, required this.item});
+/// A Zulip message, showing the sender's name and avatar.
+class MessageWithSender extends StatelessWidget {
+  const MessageWithSender(
+    {super.key, required this.message, required this.content});
 
-  final MessageListMessageItem item;
+  final Message message;
+  final ZulipContent content;
 
   @override
   Widget build(BuildContext context) {
-    final message = item.message;
     final time = _kMessageTimestampFormat
       .format(DateTime.fromMillisecondsSinceEpoch(1000 * message.timestamp));
 
@@ -590,8 +592,7 @@ class MessageWithPossibleSender extends StatelessWidget {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(3, 6, 11, 0),
-            child: Avatar(size: 35, borderRadius: 4,
-              userId: message.senderId)),
+            child: Avatar(userId: message.senderId, size: 35, borderRadius: 4)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -600,7 +601,7 @@ class MessageWithPossibleSender extends StatelessWidget {
                 Text(message.senderFullName, // TODO get from user data
                   style: const TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                MessageContent(message: message, content: item.content),
+                MessageContent(message: message, content: content),
               ])),
           Container(
             width: 80,
