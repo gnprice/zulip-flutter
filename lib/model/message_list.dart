@@ -19,25 +19,12 @@ sealed class MessageListItem {
   const MessageListItem();
 }
 
-class MessageListRecipientHeaderItem extends MessageListItem {
-  final Message message;
-
-  MessageListRecipientHeaderItem(this.message);
-}
-
 /// A message to show in the message list.
 class MessageListMessageItem extends MessageListItem {
   final Message message;
   final ZulipContent content;
-  bool showSender;
-  bool isLastInBlock;
 
-  MessageListMessageItem(
-    this.message,
-    this.content, {
-    required this.showSender,
-    required this.isLastInBlock,
-  });
+  MessageListMessageItem(this.message, this.content);
 }
 
 /// Indicates the app is loading more messages at the top or bottom.
@@ -117,8 +104,6 @@ mixin _MessageSequence {
           case MessageListDirection.older:       return -1;
           case MessageListDirection.newer:       return 1;
         }
-      case MessageListRecipientHeaderItem(:var message):
-        return (message.id <= messageId) ? -1 : 1;
       case MessageListMessageItem(:var message): return message.id.compareTo(messageId);
     }
   }
@@ -133,8 +118,7 @@ mixin _MessageSequence {
     assert(itemIndex > -1
       && items[itemIndex] is MessageListMessageItem
       && identical((items[itemIndex] as MessageListMessageItem).message, message));
-    // TODO WORK HERE fixup for recipient headers
-    items[itemIndex] = MessageListMessageItem(showSender: true, isLastInBlock: true, message, content);
+    items[itemIndex] = MessageListMessageItem(message, content);
   }
 
   /// Append [message] to [messages], and update derived data accordingly.
@@ -177,71 +161,9 @@ mixin _MessageSequence {
   /// This message must already have been parsed and reflected in [contents].
   void _processMessage(int index) {
     // This will get more complicated to handle the ways that messages interact
-    // with the display of neighboring messages: sender headings #175
-    // and date separators #173.
-    final message = messages[index];
-    final content = contents[index];
-    bool canShareSender;
-    if (index > 0 && _canShareRecipientHeader(messages[index - 1], message)) {
-      // TODO test this logic
-      final prevMessageItem = items
-        .lastWhere((item) => item is MessageListMessageItem)
-        as MessageListMessageItem;
-      assert(identical(prevMessageItem.message, messages[index - 1]));
-      assert(prevMessageItem.isLastInBlock);
-      prevMessageItem.isLastInBlock = false;
-      canShareSender = (prevMessageItem.message.senderId == message.senderId);
-    } else {
-      items.add(MessageListRecipientHeaderItem(message));
-      canShareSender = false;
-    }
-    items.add(MessageListMessageItem(message, content, showSender: !canShareSender, isLastInBlock: true));
-  }
-
-  static bool _canShareRecipientHeader(Message prevMessage, Message message) {
-    if (prevMessage is StreamMessage && message is StreamMessage) {
-      if (prevMessage.streamId != message.streamId) return false;
-      if (prevMessage.subject != message.subject) return false;
-    } else if (prevMessage is DmMessage && message is DmMessage) {
-      if (!_equalIdSequences(prevMessage.allRecipientIds, message.allRecipientIds)) {
-        return false;
-      }
-    } else {
-      return false;
-    }
-
-    // switch ((prevMessage, message)) {
-    //   case (StreamMessage(), StreamMessage()):
-    //     // TODO(dart-3): this doesn't type-narrow prevMessage and message
-    //   case (DmMessage(), DmMessage()):
-    //     // …
-    //   default:
-    //     return false;
-    // }
-
-    // TODO memoize [DateTime]s... also use memoized for showing date/time in msglist
-    final prevTime = DateTime.fromMillisecondsSinceEpoch(prevMessage.timestamp * 1000);
-    final time = DateTime.fromMillisecondsSinceEpoch(message.timestamp * 1000);
-    if (!_sameDay(prevTime, time)) return false;
-
-    return true;
-  }
-
-  // Intended for [Message.allRecipientIds].  Assumes efficient `length`.
-  static bool _equalIdSequences(Iterable<int> xs, Iterable<int> ys) {
-    if (xs.length != ys.length) return false;
-    final xs_ = xs.iterator; final ys_ = ys.iterator;
-    while (xs_.moveNext() && ys_.moveNext()) {
-      if (xs_.current != ys_.current) return false;
-    }
-    return true;
-  }
-
-  static bool _sameDay(DateTime date1, DateTime date2) {
-    if (date1.year != date2.year) return false;
-    if (date1.month != date2.month) return false;
-    if (date1.day != date2.day) return false;
-    return true;
+    // with the display of neighboring messages: sender headings #175,
+    // recipient headings #174, and date separators #173.
+    items.add(MessageListMessageItem(messages[index], contents[index]));
   }
 
   /// Update [items] to include markers at start and end as appropriate.

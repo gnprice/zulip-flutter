@@ -279,8 +279,6 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
                 child: CircularProgressIndicator())), // TODO perhaps a different indicator
-          MessageListRecipientHeaderItem() =>
-            RecipientHeader(item: data),
           MessageListMessageItem() =>
             MessageItem(
               trailing: i == 0 ? const SizedBox(height: 8) : const SizedBox(height: 11),
@@ -324,14 +322,14 @@ class ScrollToBottomButton extends StatelessWidget {
 }
 
 class RecipientHeader extends StatelessWidget {
-  const RecipientHeader({super.key, required this.item});
+  const RecipientHeader({super.key, required this.message});
 
-  final MessageListRecipientHeaderItem item;
+  final Message message;
 
   @override
   Widget build(BuildContext context) {
     // TODO recipient headings depend on narrow
-    final message = item.message;
+    final message = this.message;
     final Widget header;
     switch (message) {
       case StreamMessage():
@@ -390,19 +388,20 @@ class MessageItem extends StatelessWidget {
       shape: Border(
         left: recipientBorder,
         right: restBorder,
-        bottom: item.isLastInBlock ? restBorder : BorderSide.none,
+        bottom: restBorder,
       ));
 
     final child = Column(children: [
+      RecipientHeader(message: message),
       DecoratedBox(
         decoration: borderDecoration,
         child: MessageWithPossibleSender(item: item)),
-      if (trailing != null && item.isLastInBlock) trailing!,
+      if (trailing != null) trailing!,
     ]);
 
     return StickyHeaderItem(
-      keepHeaderWithinItemBounds: item.isLastInBlock,
-      header: RecipientHeader(item: MessageListRecipientHeaderItem(message)),
+      keepHeaderWithinItemBounds: true,
+      header: RecipientHeader(message: message),
       child: child);
 
     // Web handles the left-side recipient marker in a funky way:
@@ -589,22 +588,18 @@ class MessageWithPossibleSender extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(top: 2, bottom: 3, left: 8, right: 8),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          item.showSender
-            ? Padding(
-              padding: const EdgeInsets.fromLTRB(3, 6, 11, 0),
-              child: Avatar(size: 35, borderRadius: 4,
-                userId: message.senderId))
-            : const SizedBox(width: 3 + 35 + 11),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(3, 6, 11, 0),
+            child: Avatar(size: 35, borderRadius: 4,
+              userId: message.senderId)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (item.showSender) ...[
-                  const SizedBox(height: 3),
-                  Text(message.senderFullName, // TODO get from user data
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                ],
+                const SizedBox(height: 3),
+                Text(message.senderFullName, // TODO get from user data
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
                 MessageContent(message: message, content: item.content),
               ])),
           Container(
