@@ -322,6 +322,29 @@ class ScrollToBottomButton extends StatelessWidget {
   }
 }
 
+class RecipientHeader extends StatelessWidget {
+  const RecipientHeader({super.key, required this.message});
+
+  final Message message;
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO recipient headings depend on narrow
+    final message = this.message;
+    switch (message) {
+      case StreamMessage():
+        final store = PerAccountStoreWidget.of(context);
+        final subscription = store.subscriptions[message.streamId];
+        final highlightBorderColor = colorForStream(subscription);
+        return StreamTopicRecipientHeader(
+          message: message, streamColor: highlightBorderColor);
+      case DmMessage():
+        return DmRecipientHeader(message: message);
+    }
+  }
+}
+
+
 class MessageItem extends StatelessWidget {
   const MessageItem({
     super.key,
@@ -334,26 +357,19 @@ class MessageItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO recipient headings depend on narrow
-
     final store = PerAccountStoreWidget.of(context);
     final message = item.message;
 
     Color highlightBorderColor;
     Color restBorderColor;
-    Widget recipientHeader;
     if (message is StreamMessage) {
       final msg = message;
       final subscription = store.subscriptions[msg.streamId];
       highlightBorderColor = colorForStream(subscription);
       restBorderColor = _kStreamMessageBorderColor;
-      recipientHeader = StreamTopicRecipientHeader(
-        message: msg, streamColor: highlightBorderColor);
     } else if (message is DmMessage) {
-      final msg = message;
       highlightBorderColor = _kDmRecipientHeaderColor;
       restBorderColor = _kDmRecipientHeaderColor;
-      recipientHeader = DmRecipientHeader(message: msg);
     } else {
       throw Exception("impossible message type: ${message.runtimeType}");
     }
@@ -370,7 +386,7 @@ class MessageItem extends StatelessWidget {
         left: recipientBorder, bottom: restBorder, right: restBorder));
 
     return StickyHeader(
-      header: recipientHeader,
+      header: RecipientHeader(message: message),
       content: Column(children: [
         DecoratedBox(
           decoration: borderDecoration,
