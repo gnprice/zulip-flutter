@@ -40,21 +40,31 @@ abstract class Check {
   Future<CheckResult> check();
 }
 
-class AnalyzeCheck extends Check {
-  @override
-  String get name => 'analyze';
+abstract class CommandCheck extends Check {
+  List<String> checkCommand();
 
   @override
   Future<CheckResult> check() async {
-    final result = await Process.run('flutter', ['analyze']);
+    final command = checkCommand();
+    final result = await Process.run(command[0], command.sublist(1));
     if (result.exitCode != 0) {
       return (failure: (msg:
       // ignore: prefer_interpolation_to_compose_strings
-      'error: flutter analyze failed\n'
+      'error: suite failed: $name\n'
           + result.stdout
           + result.stderr
       ));
     }
     return (failure: null);
+  }
+}
+
+class AnalyzeCheck extends CommandCheck {
+  @override
+  String get name => 'analyze';
+
+  @override
+  List<String> checkCommand() {
+    return ['flutter', 'analyze'];
   }
 }
