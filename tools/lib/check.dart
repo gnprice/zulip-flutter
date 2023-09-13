@@ -3,6 +3,8 @@ import 'dart:io';
 
 Future<void> main() async {
   final checks = {AnalyzeCheck()};
+
+  print('Running checks: ${checks.map((c) => c.name).join(' ')}');
   final futures = {
     for (final check in checks)
       check: check.check().then((result) => (check: check, result: result)),
