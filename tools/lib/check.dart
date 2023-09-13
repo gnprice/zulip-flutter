@@ -23,6 +23,7 @@ Future<void> main() async {
     print('FAILED: ${failures.join(' ')}');
     exit(1);
   } else {
+    print('Passed!');
     exit(0);
   }
 }
