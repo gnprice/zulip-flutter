@@ -19,8 +19,10 @@ Future<void> main() async {
     final (:check, :result) = r; // https://github.com/dart-lang/sdk/issues/52004
     futures.remove(check);
     if (result.failure != null) {
-      print(result.failure!.msg);
+      print("${result.failure!.msg.substring(0, 100)}\n");
       failures.add(check.name);
+    } else {
+      print(r);
     }
   }
 
@@ -49,7 +51,9 @@ abstract class CommandCheck extends Check {
   @override
   Future<CheckResult> check() async {
     final command = checkCommand();
+    print(command);
     final result = await Process.run(command[0], command.sublist(1));
+    print('${result.exitCode} $command');
     if (result.exitCode != 0) {
       return (failure: (msg:
       // ignore: prefer_interpolation_to_compose_strings
@@ -78,5 +82,10 @@ class FlutterTestCheck extends CommandCheck {
   String get name => 'flutter-test';
 
   @override
-  List<String> checkCommand() => ['flutter', 'test'];
+  List<String> checkCommand() => [
+    'flutter', 'test',
+    'test/',
+    // 'test/widgets/message_list_test.dart',
+    // '--name', 'dimension updates change',
+  ];
 }

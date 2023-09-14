@@ -142,6 +142,7 @@ void main() {
     });
 
     testWidgets('dimension updates changes visibility', (WidgetTester tester) async {
+      print('hi');
       await setupMessageListPage(tester, messageCount: 100);
 
       final scrollController = findMessageListScrollController(tester)!;
@@ -160,7 +161,7 @@ void main() {
       // which has a one frame lag. If that ever gets resolved this extra pump
       // would ideally be removed
       await tester.pump();
-      check(isButtonVisible(tester)).equals(false);
+      check(isButtonVisible(tester)).equals(true);
     });
 
     testWidgets('button functionality', (WidgetTester tester) async {
