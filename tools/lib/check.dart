@@ -2,7 +2,10 @@
 import 'dart:io';
 
 Future<void> main() async {
-  final checks = {AnalyzeCheck()};
+  final checks = {
+    AnalyzeCheck(),
+    FlutterTestCheck(),
+  };
 
   print('Running checks: ${checks.map((c) => c.name).join(' ')}');
   final futures = {
@@ -64,7 +67,13 @@ class AnalyzeCheck extends CommandCheck {
   String get name => 'analyze';
 
   @override
-  List<String> checkCommand() {
-    return ['flutter', 'analyze'];
-  }
+  List<String> checkCommand() => ['flutter', 'analyze'];
+}
+
+class FlutterTestCheck extends CommandCheck {
+  @override
+  String get name => 'flutter-test';
+
+  @override
+  List<String> checkCommand() => ['flutter', 'test'];
 }
