@@ -54,8 +54,11 @@ abstract class CommandCheck extends Check {
       return (failure: (msg:
       // ignore: prefer_interpolation_to_compose_strings
       'error: suite failed: $name\n'
-          + result.stdout
-          + result.stderr
+        'STDOUT ==================\n'
+        '${result.stdout}\n'
+        'STDERR ==================\n'
+        '${result.stderr}\n'
+        'end =====================\n'
       ));
     }
     return (failure: null);
