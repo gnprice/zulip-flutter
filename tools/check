@@ -38,6 +38,9 @@ EOF
     exit 2
 }
 
+# TODO add --diff/--all etc, and have at least drift respect it
+#   build_runner should be easy enough too: see if any changed file has "part ….g.dart"
+# TODO add icon suite: scripts/icons/build-icon-font, see comment in ZulipIcons
 opt_fix=
 opt_suites=()
 while (( $# )); do
