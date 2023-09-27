@@ -20,7 +20,7 @@ this_dir=${BASH_SOURCE[0]%/*}
 
 ## CLI PARSING
 
-default_suites=(analyze flutter_test build_runner)
+default_suites=(analyze flutter_test build_runner drift)
 extra_suites=(
 )
 
@@ -41,7 +41,7 @@ EOF
 opt_suites=()
 while (( $# )); do
     case "$1" in
-        analyze|flutter_test|build_runner)
+        analyze|flutter_test|build_runner|drift)
             opt_suites+=("$1"); shift;;
         *) usage;;
     esac
@@ -77,6 +77,14 @@ run_build_runner() {
       '
 }
 
+run_drift() {
+    dart run drift_dev schema dump \
+        lib/model/database.dart test/model/schemas/
+    dart run drift_dev schema generate --data-classes --companions \
+        test/model/schemas/ test/model/schemas/
+    # TODO check if anything changed!
+}
+
 failed=()
 for suite in "${opt_suites[@]}"; do
     echo "Running $suite..."
@@ -84,6 +92,7 @@ for suite in "${opt_suites[@]}"; do
         analyze)      run_analyze ;;
         flutter_test) run_flutter_test ;;
         build_runner) run_build_runner ;;
+        drift)        run_drift ;;
     esac || failed+=($suite)
 done
 
