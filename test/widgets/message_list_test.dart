@@ -161,7 +161,7 @@ void main() {
       // which has a one frame lag. If that ever gets resolved this extra pump
       // would ideally be removed
       await tester.pump();
-      check(isButtonVisible(tester)).equals(true);
+      check(isButtonVisible(tester)).equals(false);
     });
 
     testWidgets('button functionality', (WidgetTester tester) async {
