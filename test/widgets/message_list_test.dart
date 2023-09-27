@@ -142,7 +142,6 @@ void main() {
     });
 
     testWidgets('dimension updates changes visibility', (WidgetTester tester) async {
-      print('hi');
       await setupMessageListPage(tester, messageCount: 100);
 
       final scrollController = findMessageListScrollController(tester)!;
