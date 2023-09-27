@@ -74,7 +74,7 @@ for suite in "${opt_suites[@]}"; do
     esac || failed+=($suite)
 done
 
-if [ -n "$failed" ]; then
+if (( ${#failed[@]} )); then
     cat >&2 <<EOF
 
 FAILED: ${failed[*]}
