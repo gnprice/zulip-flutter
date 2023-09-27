@@ -38,9 +38,11 @@ EOF
     exit 2
 }
 
+opt_fix=
 opt_suites=()
 while (( $# )); do
     case "$1" in
+        --fix) opt_fix=1; shift;;
         analyze|flutter_test|build_runner|drift)
             opt_suites+=("$1"); shift;;
         *) usage;;
@@ -94,12 +96,17 @@ run_drift() {
         "${schema_dir}" "${schema_dir}" \
     || return
 
-    if ! git diff --exit-code "${schema_dir}"; then
-        echo >&2 "Error: fresh drift_dev run didn't match existing schemas"
-        return 1
+    if git diff --quiet -- "${schema_dir}"; then
+        return
     fi
 
-    git reset -- "${schema_dir}"
+    if [ -n "${opt_fix}" ]; then
+        echo >&2 "There were schema updates:"
+        git diff --stat -- "${schema_dir}"
+    else
+        git diff -- "${schema_dir}"
+        echo >&2 "Error: fresh drift_dev run didn't match existing schemas"
+    fi
 }
 
 failed=()
