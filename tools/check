@@ -57,6 +57,8 @@ fi
 rootdir=$(git rev-parse --show-toplevel)
 cd "$rootdir"
 
+. tools/lib/git.sh
+
 run_analyze() {
     flutter analyze
 }
@@ -78,11 +80,26 @@ run_build_runner() {
 }
 
 run_drift() {
+    local schema_dir=test/model/schemas/
+
+    if ! no_uncommitted_changes "${schema_dir}"; then
+        echo >&2 "There are uncommitted changes in ${schema_dir}.  Aborting, to avoid losing your work."
+        return 1
+    fi
+
     dart run drift_dev schema dump \
-        lib/model/database.dart test/model/schemas/
+        lib/model/database.dart "${schema_dir}" \
+    || return
     dart run drift_dev schema generate --data-classes --companions \
-        test/model/schemas/ test/model/schemas/
-    # TODO check if anything changed!
+        "${schema_dir}" "${schema_dir}" \
+    || return
+
+    if ! git diff --exit-code "${schema_dir}"; then
+        echo >&2 "Error: fresh drift_dev run didn't match existing schemas"
+        return 1
+    fi
+
+    git reset -- "${schema_dir}"
 }
 
 failed=()
