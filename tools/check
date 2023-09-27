@@ -20,7 +20,7 @@ this_dir=${BASH_SOURCE[0]%/*}
 
 ## CLI PARSING
 
-default_suites=(analyze flutter_test)
+default_suites=(analyze flutter_test generate)
 extra_suites=(
 )
 
@@ -41,7 +41,7 @@ EOF
 opt_suites=()
 while (( $# )); do
     case "$1" in
-        analyze|flutter_test)
+        analyze|flutter_test|generate)
             opt_suites+=("$1"); shift;;
         *) usage;;
     esac
@@ -65,12 +65,17 @@ run_flutter_test() {
     flutter test
 }
 
+run_generate() {
+  dart run build_runner build --delete-conflicting-outputs
+}
+
 failed=()
 for suite in "${opt_suites[@]}"; do
     echo "Running $suite..."
     case "$suite" in
         analyze)      run_analyze ;;
         flutter_test) run_flutter_test ;;
+        generate)     run_generate ;;
     esac || failed+=($suite)
 done
 
