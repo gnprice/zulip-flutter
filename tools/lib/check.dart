@@ -44,17 +44,15 @@ abstract class CommandCheck extends Check {
   Future<CheckResult> check() async {
     final command = checkCommand();
     print(command);
-    final result = await Process.run(command[0], command.sublist(1));
-    print('${result.exitCode} $command');
-    if (result.exitCode != 0) {
+    final process = await Process.start(command[0], command.sublist(1));
+    process.stdout.pipe(stdout);
+    process.stderr.pipe(stderr);
+    print('awaiting...');
+    final exitCode = await process.exitCode;
+    print('$exitCode $command'); // ... this never gets reached!?
+    if (exitCode != 0) {
       return (failure: (msg:
-      // ignore: prefer_interpolation_to_compose_strings
-      'error: suite failed: $name\n'
-        'STDOUT ==================\n'
-        '${_shortenOutput(result.stdout)}\n'
-        'STDERR ==================\n'
-        '${_shortenOutput(result.stderr)}\n'
-        'end =====================\n'
+        'error: suite failed: $name'
       ));
     }
     return (failure: null);
@@ -81,15 +79,3 @@ class FlutterTestCheck extends CommandCheck {
     // '--name', 'dimension updates change',
   ];
 }
-
-String _shortenOutput(String fullOutput) {
-  if (fullOutput.length < _outputHeadMaxLength + _outputTailMaxLength) {
-    return fullOutput;
-  }
-  return '${fullOutput.substring(0, _outputHeadMaxLength)}[…\n'
-    '…\n'
-    '…]${fullOutput.substring(fullOutput.length - _outputTailMaxLength)}';
-}
-
-const _outputHeadMaxLength = 1000;
-const _outputTailMaxLength = 2000;
