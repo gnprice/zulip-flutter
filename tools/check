@@ -66,7 +66,15 @@ run_flutter_test() {
 }
 
 run_generate() {
-  dart run build_runner build --delete-conflicting-outputs
+    # build_runner has a --verbose, but lacks a --quiet.
+    # So we filter out "[INFO]" messages ourselves.
+    dart run build_runner build --delete-conflicting-outputs \
+    | perl -lne '
+        BEGIN { my $silence = 0 }
+        if (/^\[INFO\]/) { $silence = 1 }
+        elsif (/^\[[A-Z]/) { $silence = 0 }
+        print if (!$silence)
+      '
 }
 
 failed=()
