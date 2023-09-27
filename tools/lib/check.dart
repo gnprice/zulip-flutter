@@ -45,8 +45,8 @@ abstract class CommandCheck extends Check {
     final command = checkCommand();
     print(command);
     final process = await Process.start(command[0], command.sublist(1));
-    process.stdout.pipe(stdout);
-    process.stderr.pipe(stderr);
+    stdout.addStream(process.stdout);
+    stderr.addStream(process.stderr);
     print('awaiting...');
     final exitCode = await process.exitCode;
     print('$exitCode $command'); // ... this never gets reached!?
