@@ -13,7 +13,7 @@ Future<void> main() async {
     print("Running ${check.name}...");
     final result = await check.check();
     if (result.failure != null) {
-      print("${result.failure!.msg.substring(0, 100)}\n");
+      print("${result.failure!.msg}\n");
       failures.add(check.name);
     }
   }
@@ -51,9 +51,9 @@ abstract class CommandCheck extends Check {
       // ignore: prefer_interpolation_to_compose_strings
       'error: suite failed: $name\n'
         'STDOUT ==================\n'
-        '${result.stdout}\n'
+        '${_shortenOutput(result.stdout)}\n'
         'STDERR ==================\n'
-        '${result.stderr}\n'
+        '${_shortenOutput(result.stderr)}\n'
         'end =====================\n'
       ));
     }
@@ -80,4 +80,9 @@ class FlutterTestCheck extends CommandCheck {
     // 'test/widgets/message_list_test.dart',
     // '--name', 'dimension updates change',
   ];
+}
+
+String _shortenOutput(String fullOutput) {
+  if (fullOutput.length < 1000) return fullOutput;
+  return '${fullOutput.substring(0, 1000)}\n[…]';
 }
