@@ -84,6 +84,8 @@ run_build_runner() {
 run_drift() {
     local schema_dir=test/model/schemas/
 
+    # TODO also handle untracked files in schema_dir
+    #   (on checking for diff, on fix or cleanup, and so also at start)
     if ! no_uncommitted_changes "${schema_dir}"; then
         echo >&2 "There are uncommitted changes in ${schema_dir}.  Aborting, to avoid losing your work."
         return 1
@@ -104,8 +106,10 @@ run_drift() {
         echo >&2 "There were schema updates:"
         git diff --stat -- "${schema_dir}"
     else
-        git diff -- "${schema_dir}"
+        git diff --stat -- "${schema_dir}"
         echo >&2 "Error: fresh drift_dev run didn't match existing schemas"
+        git checkout HEAD -- "${schema_dir}"
+        return 1
     fi
 }
 
