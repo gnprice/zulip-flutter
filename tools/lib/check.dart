@@ -83,6 +83,13 @@ class FlutterTestCheck extends CommandCheck {
 }
 
 String _shortenOutput(String fullOutput) {
-  if (fullOutput.length < 1000) return fullOutput;
-  return '${fullOutput.substring(0, 1000)}\n[…]';
+  if (fullOutput.length < _outputHeadMaxLength + _outputTailMaxLength) {
+    return fullOutput;
+  }
+  return '${fullOutput.substring(0, _outputHeadMaxLength)}[…\n'
+    '…\n'
+    '…]${fullOutput.substring(fullOutput.length - _outputTailMaxLength)}';
 }
+
+const _outputHeadMaxLength = 1000;
+const _outputTailMaxLength = 2000;
