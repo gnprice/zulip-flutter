@@ -8,21 +8,13 @@ Future<void> main() async {
   };
 
   print('Running checks: ${checks.map((c) => c.name).join(' ')}');
-  final futures = {
-    for (final check in checks)
-      check: check.check().then((result) => (check: check, result: result)),
-  };
-
   List<String> failures = [];
-  while (futures.isNotEmpty) {
-    final r = await Future.any(futures.values);
-    final (:check, :result) = r; // https://github.com/dart-lang/sdk/issues/52004
-    futures.remove(check);
+  for (final check in checks) {
+    print("Running ${check.name}...");
+    final result = await check.check();
     if (result.failure != null) {
       print("${result.failure!.msg.substring(0, 100)}\n");
       failures.add(check.name);
-    } else {
-      print(r);
     }
   }
 
