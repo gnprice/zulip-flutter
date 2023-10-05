@@ -130,10 +130,19 @@ class FcmMessageDmRecipient extends FcmMessageRecipient {
   factory FcmMessageDmRecipient.fromJson(Map<String, dynamic> json) {
     return FcmMessageDmRecipient(allRecipientIds: switch (json) {
       {'pm_users': var pmUsers} => const _IntListConverter().fromJson(pmUsers),
-      {'sender_id': int() && var senderId, 'user_id': int() && var userId} =>
-        senderId != userId ? ([senderId, userId]..sort()) : [userId],
+      {'sender_id': var senderId, 'user_id': var userId} =>
+        _pairSet(const _IntConverter().fromJson(senderId),
+                 const _IntConverter().fromJson(userId)),
       _ => throw Exception("bad recipient"),
     });
+  }
+
+  /// The set {id1, id2}, represented as a sorted list.
+  // (In set theory this is called the "pair" of id1 and id2: https://en.wikipedia.org/wiki/Axiom_of_pairing .)
+  static List<int> _pairSet(int id1, int id2) {
+    if (id1 == id2) return [id1];
+    if (id1 < id2) return [id1, id2];
+    return [id2, id1];
   }
 }
 
