@@ -110,6 +110,7 @@ sealed class FcmMessageRecipient {
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake, createToJson: false)
+@_IntConverter()
 class FcmMessageStreamRecipient extends FcmMessageRecipient {
   final int streamId;
   final String? stream;
@@ -171,7 +172,7 @@ class _IntConverter extends JsonConverter<int, String> {
   const _IntConverter();
 
   @override
-  int fromJson(String json) => int.parse(json);
+  int fromJson(String json) => int.parse(json, radix: 10);
 
   @override
   String toJson(int value) => value.toString();
@@ -181,7 +182,8 @@ class _IntListConverter extends JsonConverter<List<int>, String> {
   const _IntListConverter();
 
   @override
-  List<int> fromJson(String json) => json.split(',').map(int.parse).toList();
+  List<int> fromJson(String json) =>
+    json.split(',').map((s) => int.parse(s, radix: 10)).toList();
 
   @override
   String toJson(List<int> value) => value.join(',');
