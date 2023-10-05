@@ -131,8 +131,7 @@ class FcmMessageDmRecipient extends FcmMessageRecipient {
     return FcmMessageDmRecipient(allRecipientIds: switch (json) {
       {'pm_users': var pmUsers} => const _IntListConverter().fromJson(pmUsers),
       {'sender_id': var senderId, 'user_id': var userId} =>
-        _pairSet(const _IntConverter().fromJson(senderId),
-                 const _IntConverter().fromJson(userId)),
+        _pairSet(_parseInt(senderId), _parseInt(userId)),
       _ => throw Exception("bad recipient"),
     });
   }
@@ -177,23 +176,24 @@ class RemoveFcmMessage extends FcmMessageWithIdentity {
   Map<String, dynamic> toJson() => _$RemoveFcmMessageToJson(this);
 }
 
+class _IntListConverter extends JsonConverter<List<int>, String> {
+  const _IntListConverter();
+
+  @override
+  List<int> fromJson(String json) => json.split(',').map(_parseInt).toList();
+
+  @override
+  String toJson(List<int> value) => value.join(',');
+}
+
 class _IntConverter extends JsonConverter<int, String> {
   const _IntConverter();
 
   @override
-  int fromJson(String json) => int.parse(json, radix: 10);
+  int fromJson(String json) => _parseInt(json);
 
   @override
   String toJson(int value) => value.toString();
 }
 
-class _IntListConverter extends JsonConverter<List<int>, String> {
-  const _IntListConverter();
-
-  @override
-  List<int> fromJson(String json) =>
-    json.split(',').map((s) => int.parse(s, radix: 10)).toList();
-
-  @override
-  String toJson(List<int> value) => value.join(',');
-}
+int _parseInt(String string) => int.parse(string, radix: 10);
