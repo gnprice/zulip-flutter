@@ -440,7 +440,7 @@ packages:
     source: hosted
     version: "4.0.0+1"
   flutter_local_notifications_platform_interface:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_local_notifications_platform_interface
       sha256: "7cf643d6d5022f3baed0be777b0662cce5919c0a7b86e700299f22dc4ae660ef"
