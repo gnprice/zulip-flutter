@@ -48,7 +48,7 @@ class NotificationService {
     //   (in order to avoid calling for permissions)
 
     ZulipBinding.instance.firebaseMessagingOnMessage.listen(_onRemoteMessage);
-    FlutterLocalNotificationsPlugin().initialize(
+    ZulipBinding.instance.notifications.initialize(
       const InitializationSettings(
         android: AndroidInitializationSettings('zulip_notification'),
       ),
@@ -128,7 +128,7 @@ class NotificationChannelManager {
   static final _kVibrationPattern = Int64List.fromList([0, 125, 100, 450]);
 
   static void _ensureChannel() async { // TODO "ensure"
-    final plugin = FlutterLocalNotificationsPlugin();
+    final plugin = ZulipBinding.instance.notifications;
     await plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(AndroidNotificationChannel(
         _kChannelId,
@@ -159,7 +159,7 @@ class NotificationDisplayManager {
       FcmMessageDmRecipient() =>
         data.senderFullName,
     };
-    FlutterLocalNotificationsPlugin().show(
+    ZulipBinding.instance.notifications.show(
       _kNotificationId,
       title,
       data.content, // TODO
