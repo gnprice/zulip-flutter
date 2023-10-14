@@ -188,7 +188,7 @@ class TestZulipBinding extends ZulipBinding {
 }
 
 class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
-  String _initialToken = '0123456789abcdef';
+  String? _initialToken;
 
   /// Set the token to a new value, as if it were newly generated.
   ///
@@ -208,9 +208,14 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
   Future<String?> getToken({String? vapidKey}) async {
     assert(vapidKey == null);
     if (_token == null) {
+      assert(_initialToken != null,
+        'Tests that call [NotificationService.start], or otherwise cause'
+        ' a call to `ZulipBinding.instance.firebaseMessaging.getToken`,'
+        ' must set `testBinding.firebaseMessagingInitialToken` first.');
+
       // This causes [onTokenRefresh] to fire, just like the real [getToken]
       // does when no token exists (e.g., on first run after install).
-      setToken(_initialToken);
+      setToken(_initialToken!);
     }
     return _token;
   }
