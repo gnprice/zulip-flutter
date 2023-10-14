@@ -9,13 +9,25 @@ class NotificationService {
 
   NotificationService._();
 
+  /// The FCM registration token for this install of the app.
+  ///
+  /// This is unique to the (app, device) pair, but not permanent.
+  /// Most often it's the same from one run of the app to the next,
+  /// but it can change either during a run or between them.
+  ///
+  /// See also:
+  ///  * Upstream docs on FCM registration tokens in general:
+  ///    <https://firebase.google.com/docs/cloud-messaging/manage-tokens>
+  ValueNotifier<String?> token = ValueNotifier(null);
+
   void start() async {
     await ZulipBinding.instance.firebaseInitializeApp();
+
+    // Get the FCM registration token, now and upon changes.  See FCM API docs:
+    //   https://firebase.google.com/docs/cloud-messaging/android/client#sample-register
     ZulipBinding.instance.firebaseMessaging.onTokenRefresh.listen(_onTokenRefresh);
     _getToken();
   }
-
-  ValueNotifier<String?> token = ValueNotifier(null);
 
   Future<void> _getToken() async {
     final value = await ZulipBinding.instance.firebaseMessaging.getToken(); // TODO(log) if null
