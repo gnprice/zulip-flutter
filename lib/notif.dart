@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+import 'log.dart';
 import 'model/binding.dart';
 
 class NotificationService {
@@ -19,12 +20,12 @@ class NotificationService {
 
   Future<void> _getToken() async {
     final result = await ZulipBinding.instance.firebaseMessaging.getToken(); // TODO(log) if null
-    print("notif token: $result");
+    assert(debugLog("notif token: $result"));
     token.value = result;
   }
 
   void _onTokenRefresh(String value) {
-    print("refreshed token: $value");
+    assert(debugLog("refreshed token: $value"));
     token.value = value;
   }
 }
