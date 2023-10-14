@@ -9,6 +9,15 @@ class NotificationService {
 
   NotificationService._();
 
+  /// Reset the state of the [NotificationService], for testing.
+  ///
+  /// TODO refactor this better, perhaps unify with ZulipBinding
+  @visibleForTesting
+  static void debugReset() {
+    instance.token.dispose();
+    instance.token = ValueNotifier(null);
+  }
+
   /// The FCM registration token for this install of the app.
   ///
   /// This is unique to the (app, device) pair, but not permanent.
