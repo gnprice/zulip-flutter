@@ -1,14 +1,20 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:http/http.dart' as http;
 import 'package:test/scaffolding.dart';
 import 'package:zulip/model/store.dart';
+import 'package:zulip/notif.dart';
 
 import '../api/fake_api.dart';
 import '../example_data.dart' as eg;
+import '../stdlib_checks.dart';
+import 'binding.dart';
 import 'test_store.dart';
 
 void main() {
+  TestZulipBinding.ensureInitialized();
+
   final account1 = eg.selfAccount.copyWith(id: 1);
   final account2 = eg.otherAccount.copyWith(id: 2);
 
@@ -99,6 +105,47 @@ void main() {
     check(globalStore.perAccountSync(1)).identicalTo(store1);
     check(await globalStore.perAccount(1)).identicalTo(store1);
     check(completers(1)).length.equals(1);
+  });
+
+  group('PerAccountStore.registerNotificationToken', () {
+    late LivePerAccountStore store;
+    late FakeApiConnection connection;
+
+    void prepare() {
+      store = eg.liveStore();
+      connection = store.connection as FakeApiConnection;
+    }
+
+    void checkLastRequest({
+      required String token,
+    }) {
+      check(connection.lastRequest).isA<http.Request>()
+        ..method.equals('POST')
+        ..url.path.equals('/api/v1/users/me/android_gcm_reg_id')
+        ..bodyFields.deepEquals({
+          'token': token,
+        });
+    }
+
+    test('token already known', () async {
+      // This tests the case where [NotificationService.start] has already
+      // learned the token before the store is created.
+      // (This is probably the common case.)
+      testBinding.firebaseMessagingInitialToken = '012abc';
+      await NotificationService.instance.start();
+
+      // On store startup, send the token.
+      prepare();
+      connection.prepare(json: {});
+      await store.registerNotificationToken();
+      checkLastRequest(token: '012abc');
+
+      // If the token changes, send it again.
+      testBinding.firebaseMessaging.setToken('456def');
+      connection.prepare(json: {});
+      await null; // Run microtasks.  TODO use FakeAsync for these tests.
+      checkLastRequest(token: '456def');
+    });
   });
 }
 

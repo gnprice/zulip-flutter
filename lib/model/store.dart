@@ -484,10 +484,10 @@ class LivePerAccountStore extends PerAccountStore {
   // TODO don't save just acked token but also *timestamp*, and resend monthly:
   //   https://firebase.google.com/docs/cloud-messaging/manage-tokens#ensuring-registration-token-freshness
   //   Then server can treat as stale after two months.
-  void registerNotificationToken() {
+  Future<void> registerNotificationToken() async {
     // TODO call removeListener on [dispose]
     NotificationService.instance.token.addListener(_registerNotificationToken);
-    _registerNotificationToken();
+    await _registerNotificationToken();
   }
 
   Future<void> _registerNotificationToken() async {

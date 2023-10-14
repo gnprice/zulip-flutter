@@ -173,6 +173,10 @@ class TestZulipBinding extends ZulipBinding {
     _firebaseInitialized = true;
   }
 
+  set firebaseMessagingInitialToken(String value) {
+    (_firebaseMessaging ??= FakeFirebaseMessaging()).initialToken = value;
+  }
+
   @override
   FakeFirebaseMessaging get firebaseMessaging {
     assert(_firebaseInitialized);
@@ -182,9 +186,14 @@ class TestZulipBinding extends ZulipBinding {
 
 class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
   /// The value [getToken] will initialize the token to, if not already set.
-  String preparedToken = '0123456789abcdef';
+  ///
+  /// After [getToken] has been called once, this has no effect.
+  String initialToken = '0123456789abcdef';
 
   /// Set the token to a new value, as if it were newly generated.
+  ///
+  /// This will cause listeners of [onTokenRefresh] to be called, but
+  /// in a microtask, not synchronously.
   void setToken(String value) {
     _token = value;
     _tokenController.add(value);
@@ -201,7 +210,7 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
     if (_token == null) {
       // This causes [onTokenRefresh] to fire, just like the real [getToken]
       // does when no token exists (e.g., on first run after install).
-      setToken(preparedToken);
+      setToken(initialToken);
     }
     return _token;
   }

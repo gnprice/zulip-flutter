@@ -20,7 +20,7 @@ class NotificationService {
   ///    https://firebase.google.com/docs/cloud-messaging/manage-tokens
   ValueNotifier<String?> token = ValueNotifier(null);
 
-  void start() async {
+  Future<void> start() async {
     await ZulipBinding.instance.firebaseInitializeApp();
 
     // TODO defer notif setup if user not logged into any accounts
@@ -29,7 +29,7 @@ class NotificationService {
     // Get the FCM registration token, now and upon changes.  See FCM API docs:
     //   https://firebase.google.com/docs/cloud-messaging/android/client#sample-register
     ZulipBinding.instance.firebaseMessaging.onTokenRefresh.listen(_onTokenRefresh);
-    _getToken();
+    await _getToken();
   }
 
   Future<void> _getToken() async {
