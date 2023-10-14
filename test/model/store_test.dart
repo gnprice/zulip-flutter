@@ -146,6 +146,29 @@ void main() {
       await null; // Run microtasks.  TODO use FakeAsync for these tests.
       checkLastRequest(token: '456def');
     });
+
+    test('token initially unknown', () async {
+      // This tests the case where the store is created while our
+      // request for the token is still pending.
+      testBinding.firebaseMessagingInitialToken = '012abc';
+      final startFuture = NotificationService.instance.start();
+
+      // On store startup, send nothing (because we have nothing to send).
+      prepare();
+      await store.registerNotificationToken();
+      check(connection.lastRequest).isNull();
+
+      // When the token later appears, send it.
+      connection.prepare(json: {});
+      await startFuture;
+      checkLastRequest(token: '012abc');
+
+      // If the token subsequently changes, send it again.
+      testBinding.firebaseMessaging.setToken('456def');
+      connection.prepare(json: {});
+      await null; // Run microtasks.  TODO use FakeAsync for these tests.
+      checkLastRequest(token: '456def');
+    });
   });
 }
 
