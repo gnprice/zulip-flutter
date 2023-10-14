@@ -184,11 +184,13 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
   /// The value [getToken] will initialize the token to, if not already set.
   String preparedToken = '0123456789abcdef';
 
-  String? _token;
-  set token(String value) {
+  /// Set the token to a new value, as if it were newly generated.
+  void setToken(String value) {
     _token = value;
     _tokenController.add(value);
   }
+
+  String? _token;
 
   final StreamController<String> _tokenController =
     StreamController<String>.broadcast();
@@ -197,9 +199,9 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
   Future<String?> getToken({String? vapidKey}) async {
     assert(vapidKey == null);
     if (_token == null) {
-      // This causes [onTokenRefresh] to fire,
-      // just like in the real implementation.
-      token = preparedToken;
+      // This causes [onTokenRefresh] to fire, just like the real [getToken]
+      // does when no token exists (e.g., on first run after install).
+      setToken(preparedToken);
     }
     return _token;
   }
