@@ -23,6 +23,9 @@ class NotificationService {
   void start() async {
     await ZulipBinding.instance.firebaseInitializeApp();
 
+    // TODO defer notif setup if user not logged into any accounts
+    //   (in order to avoid calling for permissions)
+
     // Get the FCM registration token, now and upon changes.  See FCM API docs:
     //   https://firebase.google.com/docs/cloud-messaging/android/client#sample-register
     ZulipBinding.instance.firebaseMessaging.onTokenRefresh.listen(_onTokenRefresh);
