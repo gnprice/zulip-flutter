@@ -111,20 +111,16 @@ void main() {
     late LivePerAccountStore store;
     late FakeApiConnection connection;
 
-    void prepare() {
+    void prepareStore() {
       store = eg.liveStore();
       connection = store.connection as FakeApiConnection;
     }
 
-    void checkLastRequest({
-      required String token,
-    }) {
+    void checkLastRequest({required String token}) {
       check(connection.lastRequest).isA<http.Request>()
         ..method.equals('POST')
         ..url.path.equals('/api/v1/users/me/android_gcm_reg_id')
-        ..bodyFields.deepEquals({
-          'token': token,
-        });
+        ..bodyFields.deepEquals({'token': token});
     }
 
     test('token already known', () async {
@@ -137,7 +133,7 @@ void main() {
       await NotificationService.instance.start();
 
       // On store startup, send the token.
-      prepare();
+      prepareStore();
       connection.prepare(json: {});
       await store.registerNotificationToken();
       checkLastRequest(token: '012abc');
@@ -158,7 +154,7 @@ void main() {
       final startFuture = NotificationService.instance.start();
 
       // On store startup, send nothing (because we have nothing to send).
-      prepare();
+      prepareStore();
       await store.registerNotificationToken();
       check(connection.lastRequest).isNull();
 
