@@ -18,11 +18,11 @@ class NotificationService {
   ValueNotifier<String?> token = ValueNotifier(null);
 
   Future<void> _getToken() async {
-    final result = await ZulipBinding.instance.firebaseMessaging.getToken(); // TODO(log) if null
-    assert(debugLog("notif token: $result"));
+    final value = await ZulipBinding.instance.firebaseMessaging.getToken(); // TODO(log) if null
+    assert(debugLog("notif token: $value"));
     // On a typical launch of the app (other than the first one after install),
     // this is the only way we learn the token value; onTokenRefresh never fires.
-    token.value = result;
+    token.value = value;
   }
 
   void _onTokenRefresh(String value) {
