@@ -476,10 +476,15 @@ class LivePerAccountStore extends PerAccountStore {
     }
   }
 
-  void registerNotificationToken() { // TODO retry; TODO save acked to dedupe
-    // TODO don't save just acked but also *timestamp*, and resend monthly:
-    //   https://firebase.google.com/docs/cloud-messaging/manage-tokens#ensuring-registration-token-freshness
-    //   Then server can treat as stale after two months.
+  /// Send this client's notification token to the server, now and if it changes.
+  ///
+  /// TODO handle iOS/APNs; currently only Android/FCM
+  // TODO track the registerFcmToken/etc request, warn if not succeeding
+  // TODO save acked token, to dedupe updating it on the server
+  // TODO don't save just acked token but also *timestamp*, and resend monthly:
+  //   https://firebase.google.com/docs/cloud-messaging/manage-tokens#ensuring-registration-token-freshness
+  //   Then server can treat as stale after two months.
+  void registerNotificationToken() {
     _registerNotificationToken();
     // TODO call removeListener on [dispose]
     NotificationService.instance.token.addListener(_registerNotificationToken);
@@ -488,6 +493,6 @@ class LivePerAccountStore extends PerAccountStore {
   Future<void> _registerNotificationToken() async {
     final token = NotificationService.instance.token.value;
     if (token == null) return;
-    await registerFcmToken(connection, token: token);  // TODO iOS/APNs
+    await registerFcmToken(connection, token: token);
   }
 }
