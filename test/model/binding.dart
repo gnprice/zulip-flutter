@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:test/fake.dart';
@@ -179,11 +181,29 @@ class TestZulipBinding extends ZulipBinding {
 }
 
 class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
-  String? token = '0123456789abcdef';
+  /// The value [getToken] will initialize the token to, if not already set.
+  String preparedToken = '0123456789abcdef';
+
+  String? _token;
+  set token(String value) {
+    _token = value;
+    _tokenController.add(value);
+  }
+
+  final StreamController<String> _tokenController =
+    StreamController<String>.broadcast();
 
   @override
   Future<String?> getToken({String? vapidKey}) async {
     assert(vapidKey == null);
-    return token;
+    if (_token == null) {
+      // This causes [onTokenRefresh] to fire,
+      // just like in the real implementation.
+      token = preparedToken;
+    }
+    return _token;
   }
+
+  @override
+  Stream<String> get onTokenRefresh => _tokenController.stream;
 }

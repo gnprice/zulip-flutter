@@ -11,6 +11,7 @@ class NotificationService {
 
   void start() async {
     await ZulipBinding.instance.firebaseInitializeApp();
+    ZulipBinding.instance.firebaseMessaging.onTokenRefresh.listen(_onTokenRefresh);
     _getToken();
   }
 
@@ -20,5 +21,10 @@ class NotificationService {
     final result = await ZulipBinding.instance.firebaseMessaging.getToken(); // TODO(log) if null
     print("notif token: $result");
     token.value = result;
+  }
+
+  void _onTokenRefresh(String value) {
+    print("refreshed token: $value");
+    token.value = value;
   }
 }
