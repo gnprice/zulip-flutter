@@ -132,6 +132,7 @@ void main() {
       // learned the token before the store is created.
       // (This is probably the common case.)
       testBinding.firebaseMessagingInitialToken = '012abc';
+      addTearDown(testBinding.reset);
       await NotificationService.instance.start();
 
       // On store startup, send the token.
@@ -151,6 +152,7 @@ void main() {
       // This tests the case where the store is created while our
       // request for the token is still pending.
       testBinding.firebaseMessagingInitialToken = '012abc';
+      addTearDown(testBinding.reset);
       final startFuture = NotificationService.instance.start();
 
       // On store startup, send nothing (because we have nothing to send).
