@@ -173,8 +173,11 @@ class TestZulipBinding extends ZulipBinding {
     _firebaseInitialized = true;
   }
 
+  /// The value `firebaseMessaging.getToken` will initialize the token to.
+  ///
+  /// After `firebaseMessaging.getToken` has been called once, this has no effect.
   set firebaseMessagingInitialToken(String value) {
-    (_firebaseMessaging ??= FakeFirebaseMessaging()).initialToken = value;
+    (_firebaseMessaging ??= FakeFirebaseMessaging())._initialToken = value;
   }
 
   @override
@@ -185,10 +188,7 @@ class TestZulipBinding extends ZulipBinding {
 }
 
 class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
-  /// The value [getToken] will initialize the token to, if not already set.
-  ///
-  /// After [getToken] has been called once, this has no effect.
-  String initialToken = '0123456789abcdef';
+  String _initialToken = '0123456789abcdef';
 
   /// Set the token to a new value, as if it were newly generated.
   ///
@@ -210,7 +210,7 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
     if (_token == null) {
       // This causes [onTokenRefresh] to fire, just like the real [getToken]
       // does when no token exists (e.g., on first run after install).
-      setToken(initialToken);
+      setToken(_initialToken);
     }
     return _token;
   }
