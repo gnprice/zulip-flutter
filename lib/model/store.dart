@@ -485,9 +485,9 @@ class LivePerAccountStore extends PerAccountStore {
   //   https://firebase.google.com/docs/cloud-messaging/manage-tokens#ensuring-registration-token-freshness
   //   Then server can treat as stale after two months.
   void registerNotificationToken() {
-    _registerNotificationToken();
     // TODO call removeListener on [dispose]
     NotificationService.instance.token.addListener(_registerNotificationToken);
+    _registerNotificationToken();
   }
 
   Future<void> _registerNotificationToken() async {
