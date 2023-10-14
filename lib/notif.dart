@@ -17,7 +17,7 @@ class NotificationService {
   ///
   /// See also:
   ///  * Upstream docs on FCM registration tokens in general:
-  ///    <https://firebase.google.com/docs/cloud-messaging/manage-tokens>
+  ///    https://firebase.google.com/docs/cloud-messaging/manage-tokens
   ValueNotifier<String?> token = ValueNotifier(null);
 
   void start() async {
