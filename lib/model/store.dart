@@ -14,7 +14,7 @@ import '../api/route/events.dart';
 import '../api/route/messages.dart';
 import '../api/route/notifications.dart';
 import '../log.dart';
-import '../notif.dart';
+import '../notifications.dart';
 import 'autocomplete.dart';
 import 'database.dart';
 import 'message_list.dart';

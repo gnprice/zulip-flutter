@@ -4,7 +4,7 @@ import 'package:checks/checks.dart';
 import 'package:http/http.dart' as http;
 import 'package:test/scaffolding.dart';
 import 'package:zulip/model/store.dart';
-import 'package:zulip/notif.dart';
+import 'package:zulip/notifications.dart';
 
 import '../api/fake_api.dart';
 import '../example_data.dart' as eg;
