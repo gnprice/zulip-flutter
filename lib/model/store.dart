@@ -478,12 +478,9 @@ class LivePerAccountStore extends PerAccountStore {
 
   /// Send this client's notification token to the server, now and if it changes.
   ///
-  /// TODO handle iOS/APNs; currently only Android/FCM
-  // TODO track the registerFcmToken/etc request, warn if not succeeding
-  // TODO save acked token, to dedupe updating it on the server
-  // TODO don't save just acked token but also *timestamp*, and resend monthly:
-  //   https://firebase.google.com/docs/cloud-messaging/manage-tokens#ensuring-registration-token-freshness
-  //   Then server can treat as stale after two months.
+  /// TODO(#321) handle iOS/APNs; currently only Android/FCM
+  // TODO(#322) save acked token, to dedupe updating it on the server
+  // TODO(#323) track the registerFcmToken/etc request, warn if not succeeding
   Future<void> registerNotificationToken() async {
     // TODO call removeListener on [dispose]
     NotificationService.instance.token.addListener(_registerNotificationToken);

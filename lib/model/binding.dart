@@ -167,7 +167,7 @@ class LiveZulipBinding extends ZulipBinding {
         return firebase_core.Firebase.initializeApp(options: kFirebaseOptionsAndroid);
 
       case TargetPlatform.iOS:
-        // TODO(notif): Set up Firebase on iOS.  (Or do something else instead.)
+        // TODO(#321): Set up Firebase on iOS.  (Or do something else instead.)
         return Future.value();
 
       case TargetPlatform.linux:

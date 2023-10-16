@@ -30,11 +30,11 @@ class NotificationService {
   ValueNotifier<String?> token = ValueNotifier(null);
 
   Future<void> start() async {
-    if (defaultTargetPlatform != TargetPlatform.android) return; // TODO(notif)
+    if (defaultTargetPlatform != TargetPlatform.android) return; // TODO(#321)
 
     await ZulipBinding.instance.firebaseInitializeApp();
 
-    // TODO defer notif setup if user not logged into any accounts
+    // TODO(#324) defer notif setup if user not logged into any accounts
     //   (in order to avoid calling for permissions)
 
     // Get the FCM registration token, now and upon changes.  See FCM API docs:
