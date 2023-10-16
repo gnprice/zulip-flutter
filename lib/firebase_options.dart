@@ -1,9 +1,8 @@
 
 import 'package:firebase_core/firebase_core.dart';
 
-// TODO this is for Android
 // TODO copy context comment from zulip-mobile:android/app/src/main/res/values/firebase.xml
-const kFirebaseOptions = FirebaseOptions(
+const kFirebaseOptionsAndroid = FirebaseOptions(
   appId: '1:835904834568:android:6ae61ae43a7c3410',
   messagingSenderId: '835904834568',
   projectId: 'zulip-android',

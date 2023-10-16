@@ -30,6 +30,8 @@ class NotificationService {
   ValueNotifier<String?> token = ValueNotifier(null);
 
   Future<void> start() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return; // TODO(notif)
+
     await ZulipBinding.instance.firebaseInitializeApp();
 
     // TODO defer notif setup if user not logged into any accounts
