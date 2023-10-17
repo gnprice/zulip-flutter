@@ -162,7 +162,64 @@ void main() {
     });
   });
 
-  // TODO adapt remaining test cases from zulip-mobile:android/app/src/test/java/com/zulipmobile/notifications/FcmMessageTest.kt
+  group('RemoveFcmMessage', () {
+    final baseJson = {
+      ...baseBaseJson,
+      'event': 'remove',
+    };
+
+    // This is the redundant form sent since server-2.0, as of 2023.
+    final hybridJson = {
+      ...baseJson,
+      'zulip_message_ids': '234,345',
+      'zulip_message_id': '123',
+    };
+
+    // Some future server may drop the singular, unbatched field.
+    final batchedJson = {
+      ...baseJson,
+      'zulip_message_ids': '234,345',
+    };
+
+    test("'remove' messages parse as RemoveFcmMessage", () {
+      check(FcmMessage.fromJson(batchedJson)).isA<RemoveFcmMessage>();
+    });
+
+    RemoveFcmMessage parse(Map<String, dynamic> json) {
+      return FcmMessage.fromJson(json) as RemoveFcmMessage;
+    }
+
+    test('fields get parsed right in happy path', () {
+      check(parse(hybridJson))
+        ..server.equals(baseJson['server']!)
+        ..realmId.equals(4)
+        ..realmUri.equals(Uri.parse(baseJson['realm_uri']!))
+        ..userId.equals(234)
+        ..zulipMessageIds.deepEquals([123, 234, 345]);
+
+      check(parse(batchedJson))
+        ..server.equals(baseJson['server']!)
+        ..realmId.equals(4)
+        ..realmUri.equals(Uri.parse(baseJson['realm_uri']!))
+        ..userId.equals(234)
+        ..zulipMessageIds.deepEquals([123, 234, 345]);
+    });
+
+    test('parse failures on malformed data', () {
+      checkParseFails({ ...hybridJson }..remove('server'));
+      checkParseFails({ ...hybridJson }..remove('realm_id'));
+      checkParseFails({ ...hybridJson, 'realm_id': 'abc' });
+      checkParseFails({ ...hybridJson, 'realm_id': '12,34' });
+      checkParseFails({ ...hybridJson }..remove('realm_uri'));
+      checkParseFails({ ...hybridJson, 'realm_uri': 'zulip.example.com' });
+      checkParseFails({ ...hybridJson, 'realm_uri': '/examplecorp' });
+
+      for (final badIntList in ["abc,34", "12,abc", "12,", ""]) {
+        checkParseFails({ ...hybridJson, 'zulip_message_ids': badIntList });
+        checkParseFails({ ...batchedJson, 'zulip_message_ids': badIntList });
+      }
+    });
+  });
 }
 
 extension UnexpectedFcmMessageChecks on Subject<UnexpectedFcmMessage> {
