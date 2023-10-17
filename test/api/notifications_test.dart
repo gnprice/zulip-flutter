@@ -94,11 +94,11 @@ void main() {
 
       check(parse(groupDmJson))
         .recipient.isA<FcmMessageDmRecipient>()
-        .allRecipientIds.equals([123, 234, 345]);
+        .allRecipientIds.deepEquals([123, 234, 345]);
 
       check(parse(dmJson))
         .recipient.isA<FcmMessageDmRecipient>()
-        .allRecipientIds.equals([123, 234]);
+        .allRecipientIds.deepEquals([123, 234]);
     });
 
     test('optional fields missing cause no error', () {
