@@ -113,9 +113,18 @@ sealed class FcmMessageRecipient {
 @JsonSerializable(fieldRename: FieldRename.snake, createToJson: false)
 @_IntConverter()
 class FcmMessageStreamRecipient extends FcmMessageRecipient {
-  final int streamId; // TODO optional before server-5
+  // Sending the stream ID in notifications is new in Zulip Server 5.
+  // But handling the lack of it would add complication, and we don't strictly
+  // need to -- we intend (#268) to cut pre-server-5 support before beta release.
+  // TODO(server-5): cut comment
+  final int streamId;
+
+  // Current servers (as of 2023) always send the stream name.  But
+  // future servers might not, once clients get the name from local data.
+  // So might as well be ready.
   @JsonKey(name: 'stream')
   final String? streamName;
+
   final String topic;
 
   FcmMessageStreamRecipient({required this.streamId, required this.streamName, required this.topic});
