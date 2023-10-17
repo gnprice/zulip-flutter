@@ -106,6 +106,17 @@ void main() {
           ..stream.isNull());
     });
 
+    test('toJson round-trips', () {
+      void checkRoundTrip(Map<String, String> json) {
+        check(parse(json).toJson()).deepEquals(json);
+      }
+
+      checkRoundTrip(streamJson);
+      checkRoundTrip(groupDmJson);
+      checkRoundTrip(dmJson);
+      checkRoundTrip({ ...streamJson }..remove('stream'));
+    });
+
     test('obsolete or novel fields have no effect', () {
       final baseline = parse(dmJson);
       check(parse({ ...dmJson, 'user': 'client@example.com' }))
