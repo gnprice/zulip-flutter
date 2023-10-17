@@ -112,8 +112,8 @@ sealed class FcmMessageRecipient {
 @JsonSerializable(fieldRename: FieldRename.snake, createToJson: false)
 @_IntConverter()
 class FcmMessageStreamRecipient extends FcmMessageRecipient {
-  final int streamId;
-  final String? stream;
+  final int streamId; // TODO optional before server-5
+  final String? stream; // TODO rename to streamName
   final String topic;
 
   FcmMessageStreamRecipient({required this.streamId, required this.stream, required this.topic});
