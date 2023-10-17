@@ -150,8 +150,8 @@ class NotificationDisplayManager {
     NotificationChannelManager._ensureChannel();
     assert(debugLog('notif message content: ${data.content}'));
     final title = switch (data.recipient) {
-      FcmMessageStreamRecipient(:var stream?, :var topic) =>
-        '$stream > $topic',
+      FcmMessageStreamRecipient(:var streamName?, :var topic) =>
+        '$streamName > $topic',
       FcmMessageStreamRecipient(:var topic) =>
         '(unknown stream) > $topic', // TODO get stream name from data
       FcmMessageDmRecipient(:var allRecipientIds) when allRecipientIds.length > 2 =>

@@ -92,7 +92,7 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
         result['pm_users'] = const _IntListConverter().toJson(allRecipientIds);
       case FcmMessageStreamRecipient():
         result['stream_id'] = const _IntConverter().toJson(recipient.streamId);
-        if (recipient.stream != null) result['stream'] = recipient.stream;
+        if (recipient.streamName != null) result['stream'] = recipient.streamName;
         result['topic'] = recipient.topic;
     }
     return result;
@@ -114,10 +114,11 @@ sealed class FcmMessageRecipient {
 @_IntConverter()
 class FcmMessageStreamRecipient extends FcmMessageRecipient {
   final int streamId; // TODO optional before server-5
-  final String? stream; // TODO rename to streamName
+  @JsonKey(name: 'stream')
+  final String? streamName;
   final String topic;
 
-  FcmMessageStreamRecipient({required this.streamId, required this.stream, required this.topic});
+  FcmMessageStreamRecipient({required this.streamId, required this.streamName, required this.topic});
 
   factory FcmMessageStreamRecipient.fromJson(Map<String, dynamic> json) =>
     _$FcmMessageStreamRecipientFromJson(json);

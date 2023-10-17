@@ -85,7 +85,7 @@ void main() {
         ..zulipMessageId.equals(12345)
         ..recipient.isA<FcmMessageStreamRecipient>().which(it()
           ..streamId.equals(42)
-          ..stream.equals(streamJson['stream']!)
+          ..streamName.equals(streamJson['stream']!)
           ..topic.equals(streamJson['topic']!))
         ..content.equals(streamJson['content']!)
         ..time.equals(1546300800);
@@ -103,7 +103,7 @@ void main() {
       check(parse({ ...streamJson }..remove('stream')))
         .recipient.isA<FcmMessageStreamRecipient>().which(it()
           ..streamId.equals(42)
-          ..stream.isNull());
+          ..streamName.isNull());
     });
 
     test('toJson round-trips', () {
@@ -250,7 +250,7 @@ extension MessageFcmMessageChecks on Subject<MessageFcmMessage> {
 
 extension FcmMessageStreamRecipientChecks on Subject<FcmMessageStreamRecipient> {
   Subject<int> get streamId => has((x) => x.streamId, 'streamId');
-  Subject<String?> get stream => has((x) => x.stream, 'stream');
+  Subject<String?> get streamName => has((x) => x.streamName, 'streamName');
   Subject<String> get topic => has((x) => x.topic, 'topic');
 }
 

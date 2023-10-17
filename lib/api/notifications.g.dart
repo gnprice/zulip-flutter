@@ -47,7 +47,7 @@ FcmMessageStreamRecipient _$FcmMessageStreamRecipientFromJson(
         Map<String, dynamic> json) =>
     FcmMessageStreamRecipient(
       streamId: const _IntConverter().fromJson(json['stream_id'] as String),
-      stream: json['stream'] as String?,
+      streamName: json['stream'] as String?,
       topic: json['topic'] as String,
     );
 
