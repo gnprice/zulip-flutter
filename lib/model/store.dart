@@ -12,7 +12,9 @@ import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
 import '../api/route/events.dart';
 import '../api/route/messages.dart';
+import '../api/route/notifications.dart';
 import '../log.dart';
+import '../notifications.dart';
 import 'autocomplete.dart';
 import 'database.dart';
 import 'message_list.dart';
@@ -451,6 +453,7 @@ class LivePerAccountStore extends PerAccountStore {
       initialSnapshot: initialSnapshot,
     );
     store.poll();
+    store.registerNotificationToken();
     return store;
   }
 
@@ -471,5 +474,22 @@ class LivePerAccountStore extends PerAccountStore {
         lastEventId = events.last.id;
       }
     }
+  }
+
+  /// Send this client's notification token to the server, now and if it changes.
+  ///
+  /// TODO(#321) handle iOS/APNs; currently only Android/FCM
+  // TODO(#322) save acked token, to dedupe updating it on the server
+  // TODO(#323) track the registerFcmToken/etc request, warn if not succeeding
+  Future<void> registerNotificationToken() async {
+    // TODO call removeListener on [dispose]
+    NotificationService.instance.token.addListener(_registerNotificationToken);
+    await _registerNotificationToken();
+  }
+
+  Future<void> _registerNotificationToken() async {
+    final token = NotificationService.instance.token.value;
+    if (token == null) return;
+    await registerFcmToken(connection, token: token);
   }
 }
