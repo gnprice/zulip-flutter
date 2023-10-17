@@ -103,6 +103,7 @@ sealed class FcmMessageRecipient {
   FcmMessageRecipient();
 
   factory FcmMessageRecipient.fromJson(Map<String, dynamic> json) {
+    // TODO look at recipient_type?
     return json.containsKey('stream_id')
       ? FcmMessageStreamRecipient.fromJson(json)
       : FcmMessageDmRecipient.fromJson(json);
