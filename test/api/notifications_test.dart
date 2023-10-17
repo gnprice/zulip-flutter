@@ -71,14 +71,50 @@ void main() {
     }
 
     test("fields get parsed right in 'message' happy path", () {
-      final streamParsed = parse(streamJson);
-      check(streamParsed.server).equals(baseJson['server']!);
-      check(streamParsed.realmId).equals(4);
-      check(streamParsed.realmUri).equals(Uri.parse(baseJson['realm_uri']!));
-      check(streamParsed.userId).equals(234);
+      check(parse(streamJson))
+        ..server.equals(baseJson['server']!)
+        ..realmId.equals(4)
+        ..realmUri.equals(Uri.parse(baseJson['realm_uri']!))
+        ..userId.equals(234);
       // TODO more here
     });
   });
 
   // TODO adapt remaining test cases from zulip-mobile:android/app/src/test/java/com/zulipmobile/notifications/FcmMessageTest.kt
+}
+
+extension UnexpectedFcmMessageChecks on Subject<UnexpectedFcmMessage> {
+  Subject<Map<String, dynamic>> get json => has((x) => x.json, 'json');
+}
+
+extension FcmMessageWithIdentityChecks on Subject<FcmMessageWithIdentity> {
+  Subject<String> get server => has((x) => x.server, 'server');
+  Subject<int> get realmId => has((x) => x.realmId, 'realmId');
+  Subject<Uri> get realmUri => has((x) => x.realmUri, 'realmUri');
+  Subject<int> get userId => has((x) => x.userId, 'userId');
+}
+
+extension MessageFcmMessageChecks on Subject<MessageFcmMessage> {
+  Subject<int> get senderId => has((x) => x.senderId, 'senderId');
+  Subject<String> get senderEmail => has((x) => x.senderEmail, 'senderEmail');
+  Subject<Uri> get senderAvatarUrl => has((x) => x.senderAvatarUrl, 'senderAvatarUrl');
+  Subject<String> get senderFullName => has((x) => x.senderFullName, 'senderFullName');
+  Subject<FcmMessageRecipient> get recipient => has((x) => x.recipient, 'recipient');
+  Subject<int> get zulipMessageId => has((x) => x.zulipMessageId, 'zulipMessageId');
+  Subject<String> get content => has((x) => x.content, 'content');
+  Subject<int> get time => has((x) => x.time, 'time');
+}
+
+extension FcmMessageStreamRecipientChecks on Subject<FcmMessageStreamRecipient> {
+  Subject<int> get streamId => has((x) => x.streamId, 'streamId');
+  Subject<String?> get stream => has((x) => x.stream, 'stream');
+  Subject<String> get topic => has((x) => x.topic, 'topic');
+}
+
+extension FcmMessageDmRecipientChecks on Subject<FcmMessageDmRecipient> {
+  Subject<List<int>> get allRecipientIds => has((x) => x.allRecipientIds, 'allRecipientIds');
+}
+
+extension RemoveFcmMessageChecks on Subject<RemoveFcmMessage> {
+  Subject<List<int>> get zulipMessageIds => has((x) => x.zulipMessageIds, 'zulipMessageIds');
 }
