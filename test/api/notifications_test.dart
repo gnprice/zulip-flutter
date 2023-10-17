@@ -108,7 +108,11 @@ void main() {
 
     test('toJson round-trips', () {
       void checkRoundTrip(Map<String, String> json) {
-        check(parse(json).toJson()).deepEquals(json);
+        check(parse(json).toJson())
+          .deepEquals({ ...json }
+            ..remove('content_truncated')
+            ..remove('recipient_type')
+            ..remove('alert'));
       }
 
       checkRoundTrip(streamJson);

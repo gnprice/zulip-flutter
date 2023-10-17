@@ -91,7 +91,7 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
       case FcmMessageDmRecipient(:var allRecipientIds):
         result['pm_users'] = const _IntListConverter().toJson(allRecipientIds);
       case FcmMessageStreamRecipient():
-        result['stream_id'] = recipient.streamId;
+        result['stream_id'] = const _IntConverter().toJson(recipient.streamId);
         if (recipient.stream != null) result['stream'] = recipient.stream;
         result['topic'] = recipient.topic;
     }
