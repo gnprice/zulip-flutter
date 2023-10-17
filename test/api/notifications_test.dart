@@ -21,8 +21,6 @@ void main() {
     });
   });
 
-  // TODO adapt RecipientTest
-
   group('MessageFcmMessage', () {
     final baseJson = {
       ...baseBaseJson,
