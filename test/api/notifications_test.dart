@@ -134,40 +134,41 @@ void main() {
             (baseline.recipient as FcmMessageDmRecipient).allRecipientIds);
     });
 
-    test("parse failures on malformed 'message'", () {
-      checkParseFails({ ...dmJson }..remove('server'));
-      checkParseFails({ ...dmJson }..remove('realm_id'));
-      checkParseFails({ ...dmJson, 'realm_id': '12,34' });
-      checkParseFails({ ...dmJson, 'realm_id': 'abc' });
-      checkParseFails({ ...dmJson }..remove('realm_uri'));
-      checkParseFails({ ...dmJson, 'realm_uri': 'zulip.example.com' });
-      checkParseFails({ ...dmJson, 'realm_uri': '/examplecorp' });
+    group("parse failures on malformed 'message'", () {
+      int n = 1;
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('server')));
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('realm_id')));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'realm_id': '12,34' }));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'realm_id': 'abc' }));
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('realm_uri')));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'realm_uri': 'zulip.example.com' }));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'realm_uri': '/examplecorp' }));
 
-      checkParseFails({ ...streamJson }..remove('recipient_type'));
-      checkParseFails({ ...streamJson, 'stream_id': '12,34' });
-      checkParseFails({ ...streamJson, 'stream_id': 'abc' });
-      checkParseFails({ ...streamJson }..remove('stream'));
-      checkParseFails({ ...streamJson }..remove('topic'));
-      checkParseFails({ ...groupDmJson }..remove('recipient_type'));
-      checkParseFails({ ...groupDmJson, 'pm_users': 'abc,34' });
-      checkParseFails({ ...groupDmJson, 'pm_users': '12,abc' });
-      checkParseFails({ ...groupDmJson, 'pm_users': '12,' });
-      checkParseFails({ ...dmJson }..remove('recipient_type'));
-      checkParseFails({ ...dmJson, 'recipient_type': 'nonsense' });
+      test("${n++}", () => checkParseFails({ ...streamJson }..remove('recipient_type')));
+      test("${n++}", () => checkParseFails({ ...streamJson, 'stream_id': '12,34' }));
+      test("${n++}", () => checkParseFails({ ...streamJson, 'stream_id': 'abc' }));
+      test("${n++}", () => checkParseFails({ ...streamJson }..remove('stream')));
+      test("${n++}", () => checkParseFails({ ...streamJson }..remove('topic')));
+      test("${n++}", () => checkParseFails({ ...groupDmJson }..remove('recipient_type')));
+      test("${n++}", () => checkParseFails({ ...groupDmJson, 'pm_users': 'abc,34' }));
+      test("${n++}", () => checkParseFails({ ...groupDmJson, 'pm_users': '12,abc' }));
+      test("${n++}", () => checkParseFails({ ...groupDmJson, 'pm_users': '12,' }));
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('recipient_type')));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'recipient_type': 'nonsense' }));
 
-      checkParseFails({ ...dmJson }..remove('sender_avatar_url'));
-      checkParseFails({ ...dmJson, 'sender_avatar_url': '/avatar/123.jpeg' });
-      checkParseFails({ ...dmJson, 'sender_avatar_url': '' });
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('sender_avatar_url')));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'sender_avatar_url': '/avatar/123.jpeg' }));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'sender_avatar_url': '' }));
 
-      checkParseFails({ ...dmJson }..remove('sender_id'));
-      checkParseFails({ ...dmJson }..remove('sender_email'));
-      checkParseFails({ ...dmJson }..remove('sender_full_name'));
-      checkParseFails({ ...dmJson }..remove('zulip_message_id'));
-      checkParseFails({ ...dmJson, 'zulip_message_id': '12,34' });
-      checkParseFails({ ...dmJson, 'zulip_message_id': 'abc' });
-      checkParseFails({ ...dmJson }..remove('content'));
-      checkParseFails({ ...dmJson }..remove('time'));
-      checkParseFails({ ...dmJson, 'time': '12:34' });
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('sender_id')));
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('sender_email')));
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('sender_full_name')));
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('zulip_message_id')));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'zulip_message_id': '12,34' }));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'zulip_message_id': 'abc' }));
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('content')));
+      test("${n++}", () => checkParseFails({ ...dmJson }..remove('time')));
+      test("${n++}", () => checkParseFails({ ...dmJson, 'time': '12:34' }));
     });
   });
 
@@ -214,18 +215,20 @@ void main() {
         ..zulipMessageIds.deepEquals([123, 234, 345]);
     });
 
-    test('parse failures on malformed data', () {
-      checkParseFails({ ...hybridJson }..remove('server'));
-      checkParseFails({ ...hybridJson }..remove('realm_id'));
-      checkParseFails({ ...hybridJson, 'realm_id': 'abc' });
-      checkParseFails({ ...hybridJson, 'realm_id': '12,34' });
-      checkParseFails({ ...hybridJson }..remove('realm_uri'));
-      checkParseFails({ ...hybridJson, 'realm_uri': 'zulip.example.com' });
-      checkParseFails({ ...hybridJson, 'realm_uri': '/examplecorp' });
+    group('parse failures on malformed data', () {
+      int n = 1;
+
+      test("${n++}", () => checkParseFails({ ...hybridJson }..remove('server')));
+      test("${n++}", () => checkParseFails({ ...hybridJson }..remove('realm_id')));
+      test("${n++}", () => checkParseFails({ ...hybridJson, 'realm_id': 'abc' }));
+      test("${n++}", () => checkParseFails({ ...hybridJson, 'realm_id': '12,34' }));
+      test("${n++}", () => checkParseFails({ ...hybridJson }..remove('realm_uri')));
+      test("${n++}", () => checkParseFails({ ...hybridJson, 'realm_uri': 'zulip.example.com' }));
+      test("${n++}", () => checkParseFails({ ...hybridJson, 'realm_uri': '/examplecorp' }));
 
       for (final badIntList in ["abc,34", "12,abc", "12,", ""]) {
-        checkParseFails({ ...hybridJson, 'zulip_message_ids': badIntList });
-        checkParseFails({ ...batchedJson, 'zulip_message_ids': badIntList });
+        test("${n++}", () => checkParseFails({ ...hybridJson, 'zulip_message_ids': badIntList }));
+        test("${n++}", () => checkParseFails({ ...batchedJson, 'zulip_message_ids': badIntList }));
       }
     });
   });
