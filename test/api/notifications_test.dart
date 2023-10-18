@@ -146,8 +146,10 @@ void main() {
       test("${n++}", () => checkParseFails({ ...dmJson, 'realm_id': '12,34' }));
       test("${n++}", () => checkParseFails({ ...dmJson, 'realm_id': 'abc' }));
       test("${n++}", () => checkParseFails({ ...dmJson }..remove('realm_uri')));
-      // test("${n++}", () => checkParseFails({ ...dmJson, 'realm_uri': 'zulip.example.com' })); // FAILS
-      // test("${n++}", () => checkParseFails({ ...dmJson, 'realm_uri': '/examplecorp' })); // FAILS
+      test(skip: true, // Dart's Uri.parse is lax in what it accepts.
+           "${n++}", () => checkParseFails({ ...dmJson, 'realm_uri': 'zulip.example.com' }));
+      test(skip: true, // Dart's Uri.parse is lax in what it accepts.
+           "${n++}", () => checkParseFails({ ...dmJson, 'realm_uri': '/examplecorp' }));
 
       test("${n++}", () => checkParseFails({ ...streamJson, 'stream_id': '12,34' }));
       test("${n++}", () => checkParseFails({ ...streamJson, 'stream_id': 'abc' }));
@@ -157,8 +159,10 @@ void main() {
       test("${n++}", () => checkParseFails({ ...groupDmJson, 'pm_users': '12,' }));
 
       test("${n++}", () => checkParseFails({ ...dmJson }..remove('sender_avatar_url')));
-      // test("${n++}", () => checkParseFails({ ...dmJson, 'sender_avatar_url': '/avatar/123.jpeg' })); // FAILS
-      // test("${n++}", () => checkParseFails({ ...dmJson, 'sender_avatar_url': '' })); // FAILS
+      test(skip: true, // Dart's Uri.parse is lax in what it accepts.
+           "${n++}", () => checkParseFails({ ...dmJson, 'sender_avatar_url': '/avatar/123.jpeg' }));
+      test(skip: true, // Dart's Uri.parse is lax in what it accepts.
+           "${n++}", () => checkParseFails({ ...dmJson, 'sender_avatar_url': '' }));
 
       test("${n++}", () => checkParseFails({ ...dmJson }..remove('sender_id')));
       test("${n++}", () => checkParseFails({ ...dmJson }..remove('sender_email')));
@@ -213,8 +217,10 @@ void main() {
       test("${n++}", () => checkParseFails({ ...baseJson, 'realm_id': 'abc' }));
       test("${n++}", () => checkParseFails({ ...baseJson, 'realm_id': '12,34' }));
       test("${n++}", () => checkParseFails({ ...baseJson }..remove('realm_uri')));
-      // test("${n++}", () => checkParseFails({ ...baseJson, 'realm_uri': 'zulip.example.com' })); // FAILS
-      // test("${n++}", () => checkParseFails({ ...baseJson, 'realm_uri': '/examplecorp' })); // FAILS
+      test(skip: true, // Dart's Uri.parse is lax in what it accepts.
+           "${n++}", () => checkParseFails({ ...baseJson, 'realm_uri': 'zulip.example.com' }));
+      test(skip: true, // Dart's Uri.parse is lax in what it accepts.
+           "${n++}", () => checkParseFails({ ...baseJson, 'realm_uri': '/examplecorp' }));
 
       for (final badIntList in ["abc,34", "12,abc", "12,", ""]) {
         test("${n++}", () => checkParseFails({ ...baseJson, 'zulip_message_ids': badIntList }));
