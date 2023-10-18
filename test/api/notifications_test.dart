@@ -110,8 +110,10 @@ void main() {
       void checkRoundTrip(Map<String, String> json) {
         check(parse(json).toJson())
           .deepEquals({ ...json }
-            ..remove('content_truncated')
-            ..remove('alert'));
+            ..remove('recipient_type') // Redundant with stream_id.
+            ..remove('content_truncated') // Redundant with content.
+            ..remove('alert') // Redundant with the other data; we make our own UI.
+          );
       }
 
       checkRoundTrip(streamJson);
@@ -147,16 +149,12 @@ void main() {
       // test("${n++}", () => checkParseFails({ ...dmJson, 'realm_uri': 'zulip.example.com' })); // FAILS
       // test("${n++}", () => checkParseFails({ ...dmJson, 'realm_uri': '/examplecorp' })); // FAILS
 
-      test("${n++}", () => checkParseFails({ ...streamJson }..remove('recipient_type')));
       test("${n++}", () => checkParseFails({ ...streamJson, 'stream_id': '12,34' }));
       test("${n++}", () => checkParseFails({ ...streamJson, 'stream_id': 'abc' }));
       test("${n++}", () => checkParseFails({ ...streamJson }..remove('topic')));
-      test("${n++}", () => checkParseFails({ ...groupDmJson }..remove('recipient_type')));
       test("${n++}", () => checkParseFails({ ...groupDmJson, 'pm_users': 'abc,34' }));
       test("${n++}", () => checkParseFails({ ...groupDmJson, 'pm_users': '12,abc' }));
       test("${n++}", () => checkParseFails({ ...groupDmJson, 'pm_users': '12,' }));
-      test("${n++}", () => checkParseFails({ ...dmJson }..remove('recipient_type')));
-      test("${n++}", () => checkParseFails({ ...dmJson, 'recipient_type': 'nonsense' }));
 
       test("${n++}", () => checkParseFails({ ...dmJson }..remove('sender_avatar_url')));
       // test("${n++}", () => checkParseFails({ ...dmJson, 'sender_avatar_url': '/avatar/123.jpeg' })); // FAILS

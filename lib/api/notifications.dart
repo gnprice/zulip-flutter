@@ -87,12 +87,10 @@ class MessageFcmMessage extends FcmMessageWithIdentity {
     final recipient = this.recipient;
     switch (recipient) {
       case FcmMessageDmRecipient(allRecipientIds: [_] || [_, _]):
-        result['recipient_type'] = 'private';
+        break;
       case FcmMessageDmRecipient(:var allRecipientIds):
-        result['recipient_type'] = 'private';
         result['pm_users'] = const _IntListConverter().toJson(allRecipientIds);
       case FcmMessageStreamRecipient():
-        result['recipient_type'] = 'stream';
         result['stream_id'] = const _IntConverter().toJson(recipient.streamId);
         if (recipient.streamName != null) result['stream'] = recipient.streamName;
         result['topic'] = recipient.topic;
@@ -105,21 +103,16 @@ sealed class FcmMessageRecipient {
   FcmMessageRecipient();
 
   factory FcmMessageRecipient.fromJson(Map<String, dynamic> json) {
-    return switch (json['recipient_type']) {
-      'stream' => FcmMessageStreamRecipient.fromJson(json),
-      'private' => FcmMessageDmRecipient.fromJson(json), // TODO accept 'direct'
-      var recipientType => throw Exception(
-        'FcmMessageRecipient.fromJson: unexpected recipient_type: $recipientType'),
-    };
+    // There's also a `recipient_type` field, but we don't really need it.
+    return json.containsKey('stream_id')
+      ? FcmMessageStreamRecipient.fromJson(json)
+      : FcmMessageDmRecipient.fromJson(json);
   }
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake, createToJson: false)
 @_IntConverter()
 class FcmMessageStreamRecipient extends FcmMessageRecipient {
-  @JsonKey(includeToJson: true)
-  String get recipientType => 'stream';
-
   // Sending the stream ID in notifications is new in Zulip Server 5.
   // But handling the lack of it would add complication, and we don't strictly
   // need to -- we intend (#268) to cut pre-server-5 support before beta release.
@@ -141,9 +134,6 @@ class FcmMessageStreamRecipient extends FcmMessageRecipient {
 }
 
 class FcmMessageDmRecipient extends FcmMessageRecipient {
-  @JsonKey(includeToJson: true)
-  String get recipientType => 'private';
-
   final List<int> allRecipientIds;
 
   FcmMessageDmRecipient({required this.allRecipientIds});
