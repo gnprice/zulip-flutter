@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'api/core.dart';
 import 'api/notifications.dart';
@@ -142,7 +143,7 @@ class NotificationService {
         await registerFcmToken(connection, token: token);
 
       case TargetPlatform.iOS:
-        const appBundleId = 'com.zulip.flutter'; // TODO(#407) find actual value live
+        final appBundleId = (await PackageInfo.fromPlatform()).packageName;
         await registerApnsToken(connection, token: token, appid: appBundleId);
 
       case TargetPlatform.linux:
