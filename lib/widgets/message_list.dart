@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../api/model/model.dart';
 import '../api/model/narrow.dart';
 import '../api/route/messages.dart';
+import '../log.dart';
 import '../model/message_list.dart';
 import '../model/narrow.dart';
 import '../model/store.dart';
@@ -55,6 +56,7 @@ class _MessageListPageState extends State<MessageListPage> {
   @override
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
+    debugLog('build MessageListPage, store: $store');
 
     final Color backgroundColor;
     switch(widget.narrow) {

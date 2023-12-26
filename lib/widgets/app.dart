@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 
+import '../log.dart';
 import '../model/localizations.dart';
 import '../model/narrow.dart';
 import 'about_zulip.dart';
@@ -215,6 +216,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
+    debugLog('build HomePage, store: $store');
     final zulipLocalizations = ZulipLocalizations.of(context);
 
     InlineSpan bold(String text) => TextSpan(
