@@ -9,6 +9,7 @@ part 'events.g.dart';
 /// https://zulip.com/api/register-queue
 Future<InitialSnapshot> registerQueue(ApiConnection connection) {
   return connection.post('registerQueue', InitialSnapshot.fromJson, 'register', {
+    'queue_lifespan_secs': 1,
     'apply_markdown': true,
     'slim_presence': true,
     'client_gravatar': false, // TODO(#255): turn on
