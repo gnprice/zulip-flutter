@@ -231,9 +231,11 @@ void main() {
       await null;
       await Future.delayed(Duration.zero);
 
-      // The global store has a new store.
+      // The old store is marked stale.  The global store has a new store.
+      check(store.isStale).isTrue();
       check(globalStore.perAccountSync(store.account.id)).not(it()..identicalTo(store));
       updateFromGlobalStore();
+      check(store.isStale).isFalse();
 
       // The new UpdateMachine updates the new store.
       updateMachine.debugPauseLoop();

@@ -219,6 +219,16 @@ class PerAccountStore extends ChangeNotifier with StreamStore {
   final Account account;
   final ApiConnection connection; // TODO(#135): update zulipFeatureLevel with events
 
+  /// True if an associated [UpdateMachine] has lost its event queue so that
+  /// this [PerAccountStore] is no longer getting updates from the server.
+  bool get isStale => _isStale;
+  bool _isStale = false;
+  void _setStale() {
+    if (_isStale) return;
+    _isStale = true;
+    notifyListeners();
+  }
+
   // TODO(#135): Keep all this data updated by handling Zulip events from the server.
 
   // Data attached to the realm or the server.
@@ -590,6 +600,7 @@ class UpdateMachine {
         switch (e) {
           case ZulipApiException(code: 'BAD_EVENT_QUEUE_ID'):
             assert(debugLog('Lost event queue for $store.  Replacing…'));
+            store._setStale();
             await store._globalStore._reloadPerAccount(store.account);
             dispose();
             debugLog('… Event queue replaced.');
