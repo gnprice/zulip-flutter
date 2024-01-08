@@ -70,7 +70,7 @@ void main() {
           '<annotation encoding="application/x-tex">\\lambda</annotation></semantics></math></span>'
         '<span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">λ</span></span></span></span></span></p>',
     ).nodes)));
-    tester.widget(find.text(r'\lambda'));
+    tester.widget(find.text(r'\[ \lambda \]'));
   });
 
   Future<void> tapText(WidgetTester tester, Finder textFinder) async {
@@ -259,7 +259,7 @@ void main() {
           '<annotation encoding="application/x-tex"> \\lambda </annotation></semantics></math></span>'
         '<span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">λ</span></span></span></span></p>',
     ).nodes)));
-    tester.widget(find.text(r'\lambda'));
+    tester.widget(find.text(r'$\lambda$'));
   });
 
   group('RealmContentNetworkImage', () {

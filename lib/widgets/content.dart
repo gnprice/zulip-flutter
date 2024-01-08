@@ -267,13 +267,9 @@ class CodeBlock extends StatelessWidget {
 
   final CodeBlockNode node;
 
-  static final _borderColor = const HSLColor.fromAHSL(0.15, 0, 0, 0).toColor();
-
   @override
   Widget build(BuildContext context) {
-    return _CodeBlockContainer(
-      borderColor: _borderColor,
-      child: Text.rich(_buildNodes(node.spans)));
+    return _CodeBlockContainer(child: Text.rich(_buildNodes(node.spans)));
   }
 
   InlineSpan _buildNodes(List<CodeBlockSpanNode> nodes) {
@@ -288,9 +284,8 @@ class CodeBlock extends StatelessWidget {
 }
 
 class _CodeBlockContainer extends StatelessWidget {
-  const _CodeBlockContainer({required this.borderColor, required this.child});
+  const _CodeBlockContainer({required this.child});
 
-  final Color borderColor;
   final Widget child;
 
   @override
@@ -300,7 +295,7 @@ class _CodeBlockContainer extends StatelessWidget {
         color: Colors.white,
         border: Border.all(
           width: 1,
-          color: borderColor),
+          color: const HSLColor.fromAHSL(0.15, 0, 0, 0).toColor()),
         borderRadius: BorderRadius.circular(4)),
       child: SingleChildScrollViewWithScrollbar(
         scrollDirection: Axis.horizontal,
@@ -342,15 +337,16 @@ class MathBlock extends StatelessWidget {
 
   final MathBlockNode node;
 
-  static final _borderColor = const HSLColor.fromAHSL(0.15, 240, 0.8, 0.5).toColor();
+  static final _markerStyle = TextStyle(color: Colors.black.withOpacity(0.4));
 
   @override
   Widget build(BuildContext context) {
     return _CodeBlockContainer(
-      borderColor: _borderColor,
-      child: Text.rich(TextSpan(
-        style: _kCodeBlockStyle,
-        children: [TextSpan(text: node.texSource)])));
+      child: Text.rich(TextSpan(style: _kCodeBlockStyle, children: [
+        TextSpan(text: r'\[ ', style: _markerStyle),
+        TextSpan(text: node.texSource.replaceAll("\n", "\n   ")),
+        TextSpan(text: r' \]', style: _markerStyle),
+      ])));
   }
 }
 
@@ -511,8 +507,11 @@ class _InlineContentBuilder {
       return WidgetSpan(alignment: PlaceholderAlignment.middle,
         child: MessageImageEmoji(node: node));
     } else if (node is MathInlineNode) {
-      return TextSpan(style: _kInlineMathStyle,
-        children: [TextSpan(text: node.texSource)]);
+      return TextSpan(style: _kInlineCodeStyle, children: [
+        TextSpan(text: r'$', style: MathBlock._markerStyle),
+        TextSpan(text: node.texSource),
+        TextSpan(text: r'$', style: MathBlock._markerStyle),
+      ]);
     } else if (node is UnimplementedInlineContentNode) {
       return _errorUnimplemented(node);
     } else {
@@ -581,9 +580,6 @@ class _InlineContentBuilder {
     // ]);
   }
 }
-
-final _kInlineMathStyle = _kInlineCodeStyle.merge(TextStyle(
-  backgroundColor: const HSLColor.fromAHSL(1, 240, 0.4, 0.93).toColor()));
 
 final _kInlineCodeStyle = kMonospaceTextStyle
   .merge(const TextStyle(
