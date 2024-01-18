@@ -286,7 +286,10 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
   }
 
   Widget _buildListView(context) {
+    const bottomSize = 10;
     final length = model!.items.length;
+    final bottomLength = length <= bottomSize ? length : bottomSize;
+    final topLength = length - bottomLength;
     const centerSliverKey = ValueKey('center sliver');
     return FirstSliverTopScrollView(
       // TODO: Offer `ScrollViewKeyboardDismissBehavior.interactive` (or
@@ -302,11 +305,12 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
 
       controller: scrollController,
       semanticChildCount: length + 2,
-      anchor: 1.0,
+      anchor: 0.5,
       center: centerSliverKey,
 
       slivers: [
         SliverStickyHeaderList(
+          // TODO reverse
           headerPlacement: HeaderPlacement.scrollingStart,
           delegate: SliverChildBuilderDelegate(
             // To preserve state across rebuilds for individual [MessageItem]
@@ -324,29 +328,57 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
             // Non-message items (e.g., start and end markers) that do not
             // have state that needs to be preserved have not been given keys
             // and will not trigger this callback.
-            findChildIndexCallback: (Key key) {
-              final valueKey = key as ValueKey;
-              final index = model!.findItemWithMessageId(valueKey.value);
-              if (index == -1) return null;
-              return length - 1 - (index - 2);
-            },
-            childCount: length + 2,
+            // findChildIndexCallback: (Key key) {
+            //   final valueKey = key as ValueKey;
+            //   final index = model!.findItemWithMessageId(valueKey.value);
+            //   if (index == -1) return null;
+            //   return length - 1 - (index - 2); // TODO fix
+            // },
+            childCount: topLength,
+            (context, i) {
+              final data = model!.items[length - 1 - (i + bottomLength)];
+              final item = _buildItem(data, i);
+              return item;
+            })),
+
+        SliverStickyHeaderList(
+          key: centerSliverKey,
+          headerPlacement: HeaderPlacement.scrollingStart,
+          delegate: SliverChildBuilderDelegate(
+            // To preserve state across rebuilds for individual [MessageItem]
+            // widgets as the size of [MessageListView.items] changes we need
+            // to match old widgets by their key to their new position in
+            // the list.
+            //
+            // The keys are of type [ValueKey] with a value of [Message.id]
+            // and here we use a O(log n) binary search method. This could
+            // be improved but for now it only triggers for materialized
+            // widgets. As a simple test, flinging through All Messages in
+            // CZO on a Pixel 5, this only runs about 10 times per rebuild
+            // and the timing for each call is <100 microseconds.
+            //
+            // Non-message items (e.g., start and end markers) that do not
+            // have state that needs to be preserved have not been given keys
+            // and will not trigger this callback.
+            // findChildIndexCallback: (Key key) {
+            //   final valueKey = key as ValueKey;
+            //   final index = model!.findItemWithMessageId(valueKey.value);
+            //   if (index == -1) return null;
+            //   return length - 1 - (index - 2); // TODO fix
+            // },
+            childCount: bottomLength + 2,
             (context, i) {
               // To reinforce that the end of the feed has been reached:
               //   https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/flutter.3A.20Mark-as-read/near/1680603
-              if (i == 0) return const SizedBox(height: 36);
+              if (i == bottomLength + 1) return const SizedBox(height: 36);
 
-              if (i == 1) return MarkAsReadWidget(narrow: widget.narrow);
+              if (i == bottomLength) return MarkAsReadWidget(narrow: widget.narrow);
 
-              final data = model!.items[length - 1 - (i - 2)];
+              final data = model!.items[topLength + i];
               return _buildItem(data, i);
             })),
-
-        // This is a trivial placeholder that occupies no space.  Its purpose is
-        // to have the key that's passed to [ScrollView.center], and so to cause
-        // the above [SliverStickyHeaderList] to run from bottom to top.
-        const SliverToBoxAdapter(key: centerSliverKey),
-      ]);
+      ]
+    );
   }
 
   Widget _buildItem(MessageListItem data, int i) {
@@ -375,7 +407,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
         return MessageItem(
           key: ValueKey(data.message.id),
           header: header,
-          trailingWhitespace: i == 1 ? 8 : 11,
+          trailingWhitespace: i == 1 ? 8 : 11, // TODO fix
           item: data);
     }
   }
