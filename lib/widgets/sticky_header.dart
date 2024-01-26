@@ -740,7 +740,15 @@ class _RenderSliverStickyHeaderListInner extends RenderSliverList {
       case _HeaderGrowthPlacement.growthEnd:
         child = _findChildAtEnd();
       case _HeaderGrowthPlacement.growthStart:
-        child = _findChildAtStart();
+        if (constraints.remainingPaintExtent < constraints.viewportMainAxisExtent) {
+          // Part of the viewport is occupied already by other slivers.  The way
+          // a RenderViewport does layout means that the already-occupied part is
+          // the part that's before this sliver in the growth direction.
+          // Which means that's the place where the header would go.
+          child = null;
+        } else {
+          child = _findChildAtStart();
+        }
     }
 
     (parent! as _RenderSliverStickyHeaderList)._rebuildHeader(child);
