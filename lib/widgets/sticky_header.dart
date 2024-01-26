@@ -562,20 +562,25 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
       final headerExtent = header!.size.onAxis(constraints.axis);
       final double headerOffset;
       if (_headerEndBound == null) {
-        final paintedHeaderSize = calculatePaintOffset(constraints, from: 0, to: headerExtent);
-        final cacheExtent = calculateCacheOffset(constraints, from: 0, to: headerExtent);
+        assert(0 <= headerExtent && headerExtent.isFinite);
 
-        assert(0 <= paintedHeaderSize && paintedHeaderSize.isFinite);
+        final headerGrowthPlacement =
+          _widget.headerPlacement._byGrowth(constraints.growthDirection);
 
         geometry = SliverGeometry( // TODO review interaction with other slivers
           scrollExtent: geometry.scrollExtent,
           layoutExtent: geometry.layoutExtent,
-          paintExtent: math.max(geometry.paintExtent, paintedHeaderSize),
-          cacheExtent: math.max(geometry.cacheExtent, cacheExtent),
+          paintExtent: math.max(geometry.paintExtent, headerExtent),
+          paintOrigin: switch (headerGrowthPlacement) {
+            _HeaderGrowthPlacement.growthStart => 0,
+            _HeaderGrowthPlacement.growthEnd =>
+              math.min(0.0, geometry.layoutExtent - headerExtent),
+          },
           maxPaintExtent: math.max(geometry.maxPaintExtent, headerExtent),
-          hitTestExtent: math.max(geometry.hitTestExtent, paintedHeaderSize),
+          hitTestExtent: math.max(geometry.hitTestExtent, headerExtent),
           hasVisualOverflow: geometry.hasVisualOverflow
             || headerExtent > constraints.remainingPaintExtent,
+          cacheExtent: math.max(geometry.cacheExtent, headerExtent),
         );
 
         headerOffset = _headerAtCoordinateEnd()
