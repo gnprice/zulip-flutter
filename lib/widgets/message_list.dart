@@ -19,6 +19,7 @@ import 'emoji_reaction.dart';
 import 'icons.dart';
 import 'page.dart';
 import 'profile.dart';
+import 'scrolling.dart';
 import 'sticky_header.dart';
 import 'store.dart';
 import 'text.dart';
@@ -287,7 +288,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
   Widget _buildListView(context) {
     final length = model!.items.length;
     const centerSliverKey = ValueKey('center sliver');
-    return CustomScrollView(
+    return FirstSliverTopScrollView(
       // TODO: Offer `ScrollViewKeyboardDismissBehavior.interactive` (or
       //   similar) if that is ever offered:
       //     https://github.com/flutter/flutter/issues/57609#issuecomment-1355340849
