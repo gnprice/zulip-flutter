@@ -578,46 +578,38 @@ class _ZulipContentParser {
     final dom.Element katexElement;
     if (!block) {
       assert(element.localName == 'span' && element.className == 'katex');
-
       katexElement = element;
     } else {
       assert(element.localName == 'span' && element.className == 'katex-display');
-
-      if (element.nodes.length != 1) return null;
-      final child = element.nodes.single;
-      if (child is! dom.Element) return null;
-      if (child.localName != 'span') return null;
-      if (child.className != 'katex') return null;
-      katexElement = child;
+      if (element case dom.Element(nodes: [
+          dom.Element(localName: 'span', className: 'katex') && var child])) {
+        katexElement = child;
+      } else {
+        return null;
+      }
     }
 
-    // Expect two children span.katex-mathml, span.katex-html .
-    // For now we only care about the .katex-mathml .
-    if (katexElement.nodes.isEmpty) return null;
-    final child = katexElement.nodes.first;
-    if (child is! dom.Element) return null;
-    if (child.localName != 'span') return null;
-    if (child.className != 'katex-mathml') return null;
-
-    if (child.nodes.length != 1) return null;
-    final grandchild = child.nodes.single;
-    if (grandchild is! dom.Element) return null;
-    if (grandchild.localName != 'math') return null;
-    if (grandchild.attributes['display'] != (block ? 'block' : null)) return null;
-    if (grandchild.namespaceUri != 'http://www.w3.org/1998/Math/MathML') return null;
-
-    if (grandchild.nodes.length != 1) return null;
-    final greatgrand = grandchild.nodes.single;
-    if (greatgrand is! dom.Element) return null;
-    if (greatgrand.localName != 'semantics') return null;
-
-    if (greatgrand.nodes.isEmpty) return null;
-    final descendant4 = greatgrand.nodes.last;
-    if (descendant4 is! dom.Element) return null;
-    if (descendant4.localName != 'annotation') return null;
-    if (descendant4.attributes['encoding'] != 'application/x-tex') return null;
-
-    return descendant4.text.trim();
+    if (katexElement case dom.Element(nodes: [
+      dom.Element(localName: 'span', className: 'katex-mathml', nodes: [
+        dom.Element(localName: 'math',
+          attributes: var mathElementAttributes,
+          namespaceUri: 'http://www.w3.org/1998/Math/MathML',
+          nodes: [
+            dom.Element(localName: 'semantics', nodes: [
+              ...,
+              dom.Element(localName: 'annotation',
+                attributes: {'encoding': 'application/x-tex'},
+                text: var texSource),
+            ])])]),
+      _, // A span.katex-html, which for now (until #46) we don't care about.
+    ])) {
+      // TODO(upstream): This would be cleaner with optional entries in map patterns:
+      //     https://github.com/dart-lang/language/issues/2496
+      //   as we could then say the 'display' part up in the pattern.
+      if (mathElementAttributes['display'] != (block ? 'block' : null)) return null;
+      return texSource.trim();
+    }
+    return null;
   }
 
   /// The links found so far in the current block inline container.
