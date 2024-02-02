@@ -759,24 +759,16 @@ class _ZulipContentParser {
     final mainElement = () {
       assert(divElement.localName == 'div'
           && divElement.className == "codehilite");
-
-      if (divElement.nodes.length != 1) return null;
-      final child = divElement.nodes[0];
-      if (child is! dom.Element) return null;
-      if (child.localName != 'pre') return null;
-
-      if (child.nodes.length > 2) return null;
-      if (child.nodes.length == 2) {
-        final first = child.nodes[0];
-        if (first is! dom.Element
-            || first.localName != 'span'
-            || first.nodes.isNotEmpty) return null;
+      if (divElement case dom.Element(nodes: [
+        dom.Element(localName: 'pre',
+          nodes: [dom.Element(localName: 'span', nodes: []), var grandchild]
+              || [                                           var grandchild]),
+      ])) {
+        if (grandchild case dom.Element(localName: 'code')) {
+          return grandchild;
+        }
       }
-      final grandchild = child.nodes[child.nodes.length - 1];
-      if (grandchild is! dom.Element) return null;
-      if (grandchild.localName != 'code') return null;
-
-      return grandchild;
+      return null;
     }();
 
     final debugHtmlNode = kDebugMode ? divElement : null;
