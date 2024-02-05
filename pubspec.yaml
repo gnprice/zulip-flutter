@@ -73,6 +73,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
+  analyzer: ^6.4.1
   build_runner: ^2.3.3
   checks: ^0.3.0
   clock: ^1.1.1
