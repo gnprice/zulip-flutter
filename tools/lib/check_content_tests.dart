@@ -41,7 +41,6 @@ List<String> findTestedExamples(CompilationUnit unit) {
 
 void _findTestedExamplesInBlock(List<String> results, Block block) {
   for (final statement in block.statements) {
-    // TODO recurse/visit
     if (statement case ExpressionStatement(expression: MethodInvocation(
           methodName: SimpleIdentifier(name: 'testParseExample'),
           argumentList: ArgumentList(arguments: [
@@ -50,6 +49,13 @@ void _findTestedExamplesInBlock(List<String> results, Block block) {
               identifier: SimpleIdentifier(:final name)),
           ])))) {
       results.add(name);
+    } else if (statement case ExpressionStatement(expression: MethodInvocation(
+          methodName: SimpleIdentifier(name: 'group'),
+          argumentList: ArgumentList(arguments: [
+            StringLiteral(),
+            FunctionExpression(body: BlockFunctionBody(block: final groupBlock)),
+          ])))) {
+      _findTestedExamplesInBlock(results, groupBlock);
     }
   }
 }
