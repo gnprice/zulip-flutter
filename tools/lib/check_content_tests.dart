@@ -23,12 +23,24 @@ void main() {
     }
   }
 
-  final testedExamples = [];
-  final mainFunction = parsed.unit.declarations.firstWhere(
+  final testedExamples = findTestedExamples(parsed.unit);
+
+  print(examples);
+  print(testedExamples);
+}
+
+List<String> findTestedExamples(CompilationUnit unit) {
+  final examples = <String>[];
+  final mainFunction = unit.declarations.firstWhere(
     (decl) => decl is FunctionDeclaration && decl.name.value() == 'main'
   ) as FunctionDeclaration;
   final mainBody = mainFunction.functionExpression.body as BlockFunctionBody;
-  for (final statement in mainBody.block.statements) {
+  _findTestedExamplesInBlock(examples, mainBody.block);
+  return examples;
+}
+
+void _findTestedExamplesInBlock(List<String> results, Block block) {
+  for (final statement in block.statements) {
     // TODO recurse/visit
     if (statement case ExpressionStatement(expression: MethodInvocation(
           methodName: SimpleIdentifier(name: 'testParseExample'),
@@ -37,10 +49,7 @@ void main() {
               prefix: SimpleIdentifier(name: 'ContentExample'),
               identifier: SimpleIdentifier(:final name)),
           ])))) {
-      testedExamples.add(name);
+      results.add(name);
     }
   }
-
-  print(examples);
-  print(testedExamples);
 }
