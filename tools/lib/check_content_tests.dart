@@ -2,14 +2,23 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:checks/checks.dart';
+import 'package:test/test.dart';
 
 void main() {
-  final file = File('test/model/content_test.dart'); // TODO
-  final text = file.readAsStringSync();
-  final parsed = parseString(content: text);
+  test('all content examples are tested', () {
+    final file = File('test/model/content_test.dart'); // TODO
+    final text = file.readAsStringSync();
+    final parsed = parseString(content: text);
+    final examples = findDeclaredExamples(parsed.unit);
+    final testedExamples = findTestedExamples(parsed.unit);
+    check(testedExamples).unorderedEquals(examples);
+  });
+}
 
-  final examples = [];
-  final contentExampleClass = parsed.unit.declarations.firstWhere(
+List<String> findDeclaredExamples(CompilationUnit unit) {
+  final examples = <String>[];
+  final contentExampleClass = unit.declarations.firstWhere(
     (decl) => decl is ClassDeclaration && decl.name.value() == 'ContentExample'
   ) as ClassDeclaration;
   for (final member in contentExampleClass.members) {
@@ -18,15 +27,11 @@ void main() {
     for (final decl in member.fields.variables) {
       if (decl.initializer case MethodInvocation(
             methodName: SimpleIdentifier(name: 'ContentExample'))) {
-        examples.add(decl.name.value());
+        examples.add(decl.name.value() as String);
       }
     }
   }
-
-  final testedExamples = findTestedExamples(parsed.unit);
-
-  print(examples);
-  print(testedExamples);
+  return examples;
 }
 
 List<String> findTestedExamples(CompilationUnit unit) {
