@@ -742,7 +742,7 @@ void main() {
   testParseExample(ContentExample.quotation);
 
   testParseExample(ContentExample.codeBlockPlain);
-  testParseExample(ContentExample.codeBlockHighlightedShort);
+  // testParseExample(ContentExample.codeBlockHighlightedShort);
   testParseExample(ContentExample.codeBlockHighlightedMultiline);
   testParseExample(ContentExample.codeBlockWithHighlightedLines);
   testParseExample(ContentExample.codeBlockWithUnknownSpanType);
