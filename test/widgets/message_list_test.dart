@@ -74,14 +74,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  ScrollView findScrollView(WidgetTester tester) =>
+    tester.widget<ScrollView>(find.byWidgetPredicate((w) => w is ScrollView));
+
   ScrollController? findMessageListScrollController(WidgetTester tester) {
-    final scrollView = tester.widget<CustomScrollView>(find.byType(CustomScrollView));
-    return scrollView.controller;
+    return findScrollView(tester).controller;
   }
 
   group('fetch older messages on scroll', () {
     int? itemCount(WidgetTester tester) =>
-      tester.widget<CustomScrollView>(find.byType(CustomScrollView)).semanticChildCount;
+      findScrollView(tester).semanticChildCount;
 
     testWidgets('basic', (tester) async {
       await setupMessageListPage(tester, foundOldest: false,
