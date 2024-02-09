@@ -595,6 +595,10 @@ class UpdateMachine {
             debugLog('… Event queue replaced.');
             return;
 
+          case Server5xxException() || NetworkException():
+            assert(debugLog('Transient error on poll, retrying.  Error: $e'));
+            rethrow; // WORK HERE
+
           default:
             assert(debugLog('Error polling event queue for $store: $e'));
             // TODO(#184) handle errors on get-events; retry with backoff
