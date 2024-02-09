@@ -1025,16 +1025,19 @@ class _ZulipContentParser {
         nodes: parsed.nodes));
       currentParagraph.clear();
     }
+    void consumeImages() {
+      result.add(ImageNodeList(imageNodes));
+      imageNodes = [];
+    }
 
     for (final node in nodes) {
       if (node is dom.Text && (node.text == '\n')) continue;
 
       if (_isPossibleInlineNode(node)) {
         if (imageNodes.isNotEmpty) {
-          result.add(ImageNodeList(imageNodes));
-          imageNodes = [];
           // In a context where paragraphs are implicit it should be impossible
           // to have more paragraph content after image previews.
+          consumeImages();
           result.add(UnimplementedBlockContentNode(htmlNode: node));
           continue;
         }
@@ -1047,14 +1050,11 @@ class _ZulipContentParser {
         imageNodes.add(block);
         continue;
       }
-      if (imageNodes.isNotEmpty) {
-        result.add(ImageNodeList(imageNodes));
-        imageNodes = [];
-      }
+      if (imageNodes.isNotEmpty) consumeImages();
       result.add(block);
     }
     if (currentParagraph.isNotEmpty) consumeParagraph();
-    if (imageNodes.isNotEmpty) result.add(ImageNodeList(imageNodes));
+    if (imageNodes.isNotEmpty) consumeImages();
 
     return result;
   }
