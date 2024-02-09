@@ -1032,7 +1032,6 @@ class _ZulipContentParser {
 
     for (final node in nodes) {
       if (node is dom.Text && (node.text == '\n')) continue;
-
       if (_isPossibleInlineNode(node)) {
         if (imageNodes.isNotEmpty) {
           // In a context where paragraphs are implicit it should be impossible
@@ -1042,16 +1041,16 @@ class _ZulipContentParser {
           continue;
         }
         currentParagraph.add(node);
-        continue;
+      } else {
+        if (currentParagraph.isNotEmpty) consumeParagraph();
+        final block = parseBlockContent(node);
+        if (block is ImageNode) {
+          imageNodes.add(block);
+        } else {
+          if (imageNodes.isNotEmpty) consumeImages();
+          result.add(block);
+        }
       }
-      if (currentParagraph.isNotEmpty) consumeParagraph();
-      final block = parseBlockContent(node);
-      if (block is ImageNode) {
-        imageNodes.add(block);
-        continue;
-      }
-      if (imageNodes.isNotEmpty) consumeImages();
-      result.add(block);
     }
     if (currentParagraph.isNotEmpty) consumeParagraph();
     if (imageNodes.isNotEmpty) consumeImages();
