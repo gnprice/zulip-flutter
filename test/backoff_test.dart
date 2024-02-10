@@ -53,18 +53,16 @@ T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
     {DateTime? initialTime}) {
   // cf dantup's https://stackoverflow.com/a/62676919
 
-  final async = FakeAsync(initialTime: initialTime);
-
   Result<T>? result;
-  async.run((async) async {
-    try {
-      result = SuccessResult(await callback(async));
-    } catch (e) {
-      result = ErrorResult(e);
-    }
-  });
-
-  async.flushTimers();
+  FakeAsync(initialTime: initialTime)
+    ..run((async) async {
+      try {
+        result = SuccessResult(await callback(async));
+      } catch (e) {
+        result = ErrorResult(e);
+      }
+    })
+    ..flushTimers();
 
   switch (result) {
     case SuccessResult(:var value): return value;
