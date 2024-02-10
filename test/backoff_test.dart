@@ -30,21 +30,21 @@ class ErrorResult<T> extends Result<T> {
 /// TODO write more
 ///
 /// See [fakeAsync] for details.
-T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback,
+T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
     {DateTime? initialTime}) {
   // cf dantup's https://stackoverflow.com/a/62676919
-  return fakeAsync(initialTime: initialTime, (binding) {
+  return fakeAsync(initialTime: initialTime, (async) {
     Result<T>? result;
     (() async {
       try {
-        final value = await callback(binding);
+        final value = await callback(async);
         result = SuccessResult(value);
       } catch (e) {
         result = ErrorResult(e);
       }
     })();
 
-    binding.flushTimers();
+    async.flushTimers();
 
     switch (result) {
       case SuccessResult(:var value): return value;
@@ -66,13 +66,13 @@ void main() {
   group('fakeAsyncBetter', () {
     test('basic success', () {
       const duration = Duration(milliseconds: 100);
-      check(fakeAsyncBetter((binding) async {
+      check(fakeAsyncBetter((async) async {
         return await measureWait(Future.delayed(duration));
       })).equals(duration);
     });
 
     test('TimeoutException on deadlocked callback', () {
-      check(() => fakeAsyncBetter((binding) async {
+      check(() => fakeAsyncBetter((async) async {
         await Completer().future;
       })).throws().isA<TimeoutException>();
     });
@@ -90,7 +90,7 @@ void main() {
     final trialResults = <List<Duration>>[];
     for (int i = 0; i < numTrials; i++) {
       final resultsForThisTrial = <Duration>[];
-      fakeAsyncBetter((binding) async {
+      fakeAsyncBetter((async) async {
         final backoffMachine = BackoffMachine();
         for (int j = 0; j < expectedMaxDurations.length; j++) {
           final duration = await measureWait(backoffMachine.wait());
