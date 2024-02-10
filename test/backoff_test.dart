@@ -20,35 +20,18 @@ class ErrorResult<T> extends Result<T> {
   final Object error;
 }
 
-Future<T> fakeAsyncFlushing<T>(Future<T> Function(FakeAsync async) callback,
-    {DateTime? initialTime}) {
-  // cf dantup's https://stackoverflow.com/a/62676919
-  return fakeAsync(initialTime: initialTime, (async) {
-    final result = callback(async);
-    async.flushTimers();
-    return result;
-  });
-}
-
-Future<T> Function(FakeAsync async) flushing<T>(
-    Future<T> Function(FakeAsync async) callback) {
-  return (async) {
-    final result = callback(async);
-    async.flushTimers();
-    return result;
-  };
-}
-
 /// Run [callback] to completion in a [Zone] where all asynchrony is controlled
 /// by an instance of [FakeAsync].
 ///
-/// This differs from [fakeAsync] in that the [Future] returned by [callback]
-/// will be awaited, while [FakeAsync.flushTimers] is used to advance the
-/// computation so that that [Future] completes.
+/// See [fakeAsync] for details on what it means that asynchrony is controlled
+/// in that way.
 ///
-/// TODO write more
+/// This function differs from [fakeAsync] in that the [Future] returned by
+/// [callback] will be awaited, while [FakeAsync.flushTimers] is used
+/// to advance the computation so that that [Future] completes.
 ///
-/// See [fakeAsync] for details.
+/// If the [Future] returned by [callback] fails to complete even when timers
+/// are flushed, a [TimeoutException] will be thrown.
 T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
     {DateTime? initialTime}) {
   // cf dantup's https://stackoverflow.com/a/62676919
