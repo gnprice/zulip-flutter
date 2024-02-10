@@ -37,27 +37,24 @@ class ErrorResult<T> extends Result<T> {
 T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
   // cf https://stackoverflow.com/a/62676919
   return fakeAsync((binding) {
-    bool active = true;
     print('${clock.now()} outer');
-    late final Result<T> result;
+    Result<T>? result;
     (() async {
       try {
         final value = await callback(binding);
         result = SuccessResult(value);
       } catch (e) {
         result = ErrorResult(e);
-      } finally {
-        active = false;
       }
     })();
     print('${clock.now()} outer: called');
-    while (active) {
+    while (result == null) {
       binding.flushTimers();
       print('${clock.now()} outer: flushed');
     }
     print('${clock.now()} outer: done');
     // binding.flushMicrotasks();
-    switch (result) {
+    switch (result!) {
       case SuccessResult(:var value): return value;
       case ErrorResult(:var error): throw error;
     }
