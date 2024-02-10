@@ -20,9 +20,20 @@ class ErrorResult<T> extends Result<T> {
   final Object error;
 }
 
-T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
-  // cf https://stackoverflow.com/a/62676919
-  return fakeAsync((binding) {
+/// Run [callback] to completion in a [Zone] where all asynchrony is controlled
+/// by an instance of [FakeAsync].
+///
+/// This differs from [fakeAsync] in that the [Future] returned by [callback]
+/// will be awaited, while [FakeAsync.flushTimers] is used to advance the
+/// computation so that that [Future] completes.
+///
+/// TODO write more
+///
+/// See [fakeAsync] for details.
+T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback,
+    {DateTime? initialTime}) {
+  // cf dantup's https://stackoverflow.com/a/62676919
+  return fakeAsync(initialTime: initialTime, (binding) {
     Result<T>? result;
     (() async {
       try {
