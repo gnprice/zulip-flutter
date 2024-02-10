@@ -45,6 +45,44 @@ void main() {
       })).throws().isA<TimeoutException>();
     });
   });
+
+  group('runFakeAsync', () {
+    test('basic success', () async {
+      const duration = Duration(milliseconds: 100);
+      await check(runFakeAsync((async) async {
+        final start = clock.now();
+        await Future.delayed(duration);
+        return clock.now().difference(start);
+      })).completes((it) => it.equals(duration));
+    });
+
+    test('exceptions propagate', () async {
+      Object? error;
+      try {
+        await runFakeAsync((async) async {
+          throw StateError('something wrong');
+        });
+      } catch (e) {
+        error = e;
+      }
+      check(error).isA<StateError>();
+
+      // await check(runFakeAsync((async) async {
+      //   // await null;
+      //   throw StateError('something wrong');
+      // })).throws((it) => it.isA<StateError>());
+
+      // await check(runFakeAsync((async) async {
+      //   throw StateError('something wrong');
+      // })).throws((it) => it.isA<StateError>());
+    });
+
+    test('deadlocked callback never completes', () {
+      check(runFakeAsync((async) async {
+        await Completer().future;
+      })).doesNotComplete();
+    });
+  });
 }
 
 class _TestException {}
