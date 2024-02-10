@@ -111,7 +111,7 @@ void main() {
     });
   });
 
-  test('BackoffMachine timeouts are random from zero to 100ms, 200ms, 400ms, ...', () async {
+  test('BackoffMachine timeouts are random from zero to 100ms, 200ms, 400ms, ...', () {
     // This is a randomized test.  [numTrials] is chosen so that the failure
     // probability < 1e-9.  There are 2 * 11 assertions, and each one has a
     // failure probability < 1e-12; see below.
@@ -123,7 +123,7 @@ void main() {
     final trialResults = <List<Duration>>[];
     for (int i = 0; i < numTrials; i++) {
       final resultsForThisTrial = <Duration>[];
-      await fakeAsync((binding) async {
+      fakeAsyncBetter((binding) async {
         print('start $i');
         final backoffMachine = BackoffMachine();
         print('have backoffMachine');
