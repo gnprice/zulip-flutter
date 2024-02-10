@@ -2,20 +2,6 @@ import 'dart:async';
 
 import 'package:fake_async/fake_async.dart';
 
-sealed class Result<T> {
-  const Result();
-}
-
-class SuccessResult<T> extends Result<T> {
-  const SuccessResult(this.value);
-  final T value;
-}
-
-class ErrorResult<T> extends Result<T> {
-  const ErrorResult(this.error);
-  final Object error;
-}
-
 /// Run [callback] to completion in a [Zone] where all asynchrony is
 /// controlled by an instance of [FakeAsync].
 ///
@@ -31,22 +17,25 @@ class ErrorResult<T> extends Result<T> {
 /// If it hasn't completed, a [TimeoutException] is thrown.
 T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
     {DateTime? initialTime}) {
-  // cf dantup's https://stackoverflow.com/a/62676919
-
-  Result<T>? result;
+  late final T value;
+  Object? error;
+  bool completed = false;
   FakeAsync(initialTime: initialTime)
     ..run((async) {
         callback(async)
-          .then<void>((value) => result = SuccessResult(value))
-          .catchError((error) => result = ErrorResult(error));
+          .then<void>((v) => value = v)
+          .catchError((e) => error = e)
+          .whenComplete(() => completed = true);
       })
     ..flushTimers();
 
-  switch (result) {
-    case SuccessResult(:var value): return value;
-    case ErrorResult(:var error): throw error;
-    case null: throw TimeoutException(
+  if (!completed) {
+    throw TimeoutException(
       'A callback passed to awaitFakeAsync returned a Future that '
       'did not complete even after calling FakeAsync.flushTimers.');
+  } else if (error != null) {
+    throw error!;
+  } else {
+    return value;
   }
 }
