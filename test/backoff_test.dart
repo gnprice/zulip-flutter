@@ -56,27 +56,12 @@ T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
 
 void main() {
   test('FakeAsync scratch', () {
-    final result = fakeAsyncBetter((binding) async {
-      print('${clock.now()} hi');
-
-      final delay = delayed(Duration(milliseconds: 100));
-      // final delay = Future.delayed(Duration(milliseconds: 100));
-      print('${clock.now()} future made');
-      print(binding.pendingTimers);
-
-      // binding.flushTimers();
-      // print('${clock.now()} flushed');
-      // print(binding.pendingTimersDebugString);
-
-      print(await measureWait(delay));
-      // await delay;
-      print('${clock.now()} awaited');
-
-      return 1 + 1;
+    const duration = Duration(milliseconds: 100);
+    final actual = fakeAsyncBetter((binding) async {
+      final delay = delayed(duration);
+      return await measureWait(delay);
     });
-    print(result);
-
-    return;
+    check(actual).equals(duration);
   });
 
   test('BackoffMachine timeouts are random from zero to 100ms, 200ms, 400ms, ...', () {
