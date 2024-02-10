@@ -1,31 +1,71 @@
 import 'package:checks/checks.dart';
+import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
 import 'package:zulip/backoff.dart';
 
 Future<Duration> measureWait(Future<void> future) async {
-  final start = DateTime.now();
+  final start = clock.now();
   print('    measure: started $start');
   await future;
   print('    measure: done');
-  return DateTime.now().difference(start);
+  return clock.now().difference(start);
+}
+
+Future<T> fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
+  // cf https://stackoverflow.com/a/62676919
+  return fakeAsync((binding) {
+    bool active = true;
+    final future = callback(binding).whenComplete(() => active = false);
+    while (active) {
+      binding.flushMicrotasks();
+    }
+    return future;
+  });
 }
 
 void main() {
   test('FakeAsync scratch', () async {
-    await fakeAsync((binding) async {
-      print('${DateTime.now()} ${} hi');
+    await fakeAsyncBetter((binding) async {
+      print('${clock.now()} hi');
 
       final delay = Future.delayed(Duration(milliseconds: 100));
-      print('${DateTime.now()} future made');
+      print('${clock.now()} future made');
       print(binding.pendingTimersDebugString);
 
       binding.flushTimers();
-      print('${DateTime.now()} flushed');
+      print('${clock.now()} flushed');
       print(binding.pendingTimersDebugString);
 
       await delay;
-      print('${DateTime.now()} awaited');
+      print('${clock.now()} awaited');
+    });
+
+    return;
+    await fakeAsync((binding) async {
+      print('${clock.now()} hi');
+
+      final delay = Future.delayed(Duration(milliseconds: 100));
+      print('${clock.now()} future made');
+      print(binding.pendingTimersDebugString);
+
+      bool active = true;
+      final after = delay.whenComplete(() => active = false);
+      print('${clock.now()} set whenComplete');
+      print(binding.pendingTimersDebugString);
+
+      binding.flushTimers();
+      print('${clock.now()} flushed');
+      print(binding.pendingTimersDebugString);
+
+      while (active) {
+        binding.flushMicrotasks();
+        print('${clock.now()} flushed microtasks');
+        print(binding.pendingTimersDebugString);
+      }
+
+      await after;
+      print('${clock.now()} awaited');
     });
   });
 
