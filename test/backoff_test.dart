@@ -37,8 +37,7 @@ T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
     Result<T>? result;
     (() async {
       try {
-        final value = await callback(async);
-        result = SuccessResult(value);
+        result = SuccessResult(await callback(async));
       } catch (e) {
         result = ErrorResult(e);
       }
