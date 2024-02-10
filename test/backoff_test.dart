@@ -56,10 +56,10 @@ T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
   Result<T>? result;
   FakeAsync(initialTime: initialTime)
     ..run((async) {
-      callback(async).then(
-        (value) =>      result = SuccessResult(value),
-        onError: (e) => result = ErrorResult(e));
-    })
+        callback(async)
+          .then<void>((value) => result = SuccessResult(value))
+          .catchError((error) => result = ErrorResult(error));
+      })
     ..flushTimers();
 
   switch (result) {
