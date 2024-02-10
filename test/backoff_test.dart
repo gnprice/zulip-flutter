@@ -6,22 +6,18 @@ import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
 import 'package:zulip/backoff.dart';
 
-Future<Duration> measureWait(Future<void> future) async {
-  final start = clock.now();
-  await future;
-  return clock.now().difference(start);
+sealed class Result<T> {
+  const Result();
 }
 
-sealed class Result<T> {}
-
 class SuccessResult<T> extends Result<T> {
+  const SuccessResult(this.value);
   final T value;
-  SuccessResult(this.value);
 }
 
 class ErrorResult<T> extends Result<T> {
-  Object error;
-  ErrorResult(this.error);
+  const ErrorResult(this.error);
+  final Object error;
 }
 
 T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
@@ -36,14 +32,22 @@ T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
         result = ErrorResult(e);
       }
     })();
+
     while (result == null) {
       binding.flushTimers();
     }
+
     switch (result!) {
       case SuccessResult(:var value): return value;
       case ErrorResult(:var error): throw error;
     }
   });
+}
+
+Future<Duration> measureWait(Future<void> future) async {
+  final start = clock.now();
+  await future;
+  return clock.now().difference(start);
 }
 
 void main() {
