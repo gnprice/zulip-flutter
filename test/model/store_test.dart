@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:test/scaffolding.dart';
@@ -12,6 +13,7 @@ import 'package:zulip/model/store.dart';
 import 'package:zulip/notifications.dart';
 
 import '../api/fake_api.dart';
+import '../backoff_test.dart';
 import '../example_data.dart' as eg;
 import '../stdlib_checks.dart';
 import 'binding.dart';
@@ -273,7 +275,7 @@ void main() {
         ..bodyFields.deepEquals({'token': token});
     }
 
-    testAndroidIos('token already known', () async {
+    testAndroidIos('token already known', () => awaitFakeAsync((async) async {
       // This tests the case where [NotificationService.start] has already
       // learned the token before the store is created.
       // (This is probably the common case.)
@@ -296,10 +298,10 @@ void main() {
         // If the token changes, send it again.
         testBinding.firebaseMessaging.setToken('456def');
         connection.prepare(json: {});
-        await null; // Run microtasks.  TODO use FakeAsync for these tests.
+        async.flushMicrotasks();
         checkLastRequestFcm(token: '456def');
       }
-    });
+    }));
 
     testAndroidIos('token initially unknown', () async {
       // This tests the case where the store is created while our
