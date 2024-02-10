@@ -30,11 +30,11 @@ Future<T> fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
     final future = callback(binding).whenComplete(() => active = false);
     print('${clock.now()} outer: called');
     while (active) {
-      binding.flushMicrotasks();
-      print('${clock.now()} outer: flushed microtasks');
+      binding.flushTimers();
+      print('${clock.now()} outer: flushed');
     }
     print('${clock.now()} outer: done');
-    binding.flushMicrotasks();
+    // binding.flushMicrotasks();
     return future;
   });
 }
@@ -49,9 +49,9 @@ void main() {
       print('${clock.now()} future made');
       print(binding.pendingTimersDebugString);
 
-      binding.flushTimers();
-      print('${clock.now()} flushed');
-      print(binding.pendingTimersDebugString);
+      // binding.flushTimers();
+      // print('${clock.now()} flushed');
+      // print(binding.pendingTimersDebugString);
 
       await delay;
       print('${clock.now()} awaited');
