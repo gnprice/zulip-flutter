@@ -85,7 +85,7 @@ void main() {
     // failure probability < 1e-12; see below.
     const numTrials = 100;
     final expectedMaxDurations = [
-      100, // 200, 400, 800, 1600, 3200, 6400, 10000, 10000, 10000, 10000,
+      100, 200, 400, 800, 1600, 3200, 6400, 10000, 10000, 10000, 10000,
     ].map((ms) => Duration(milliseconds: ms)).toList();
 
     final trialResults = <List<Duration>>[];
@@ -100,7 +100,6 @@ void main() {
       });
       trialResults.add(resultsForThisTrial);
     }
-    print(trialResults.map((r) => r[0].inMilliseconds).toList()..sort());
 
     for (int j = 0; j < expectedMaxDurations.length; j++) {
       Duration maxFromAllTrials = trialResults[0][j];
