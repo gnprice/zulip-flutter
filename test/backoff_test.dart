@@ -16,17 +16,21 @@ Future<T> fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
   // cf https://stackoverflow.com/a/62676919
   return fakeAsync((binding) {
     bool active = true;
+    print('${clock.now()} outer');
     final future = callback(binding).whenComplete(() => active = false);
+    print('${clock.now()} outer: called');
     while (active) {
       binding.flushMicrotasks();
+      print('${clock.now()} outer: flushed microtasks');
     }
+    print('${clock.now()} outer: done');
     return future;
   });
 }
 
 void main() {
-  test('FakeAsync scratch', () async {
-    await fakeAsyncBetter((binding) async {
+  test('FakeAsync scratch', () {
+    return fakeAsyncBetter((binding) async {
       print('${clock.now()} hi');
 
       final delay = Future.delayed(Duration(milliseconds: 100));
@@ -41,8 +45,8 @@ void main() {
       print('${clock.now()} awaited');
     });
 
-    return;
-    await fakeAsync((binding) async {
+    // return;
+    fakeAsync((binding) async {
       print('${clock.now()} hi');
 
       final delay = Future.delayed(Duration(milliseconds: 100));
