@@ -44,13 +44,14 @@ T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback,
       }
     })();
 
-    while (result == null) {
-      binding.flushTimers();
-    }
+    binding.flushTimers();
 
-    switch (result!) {
+    switch (result) {
       case SuccessResult(:var value): return value;
       case ErrorResult(:var error): throw error;
+      case null: throw TimeoutException(
+        'A callback passed to fakeAsyncBetter returned a Future that '
+        'did not complete even after calling FakeAsync.flushTimers.');
     }
   });
 }
@@ -62,12 +63,19 @@ Future<Duration> measureWait(Future<void> future) async {
 }
 
 void main() {
-  test('FakeAsync scratch', () {
-    const duration = Duration(milliseconds: 100);
-    final actual = fakeAsyncBetter((binding) async {
-      return await measureWait(Future.delayed(duration));
+  group('fakeAsyncBetter', () {
+    test('basic success', () {
+      const duration = Duration(milliseconds: 100);
+      check(fakeAsyncBetter((binding) async {
+        return await measureWait(Future.delayed(duration));
+      })).equals(duration);
     });
-    check(actual).equals(duration);
+
+    test('TimeoutException on deadlocked callback', () {
+      check(() => fakeAsyncBetter((binding) async {
+        await Completer().future;
+      })).throws().isA<TimeoutException>();
+    });
   });
 
   test('BackoffMachine timeouts are random from zero to 100ms, 200ms, 400ms, ...', () {
