@@ -37,3 +37,23 @@ T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
     return value;
   }
 }
+
+Future<T> runFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
+    {DateTime? initialTime}) {
+  final async = FakeAsync(initialTime: initialTime);
+
+  // late final Future<T> resultFakeFuture;
+  // async.run((async) => resultFakeFuture = callback(async));
+  final resultFakeFuture = async.run(callback);
+  print(resultFakeFuture);
+
+  return Future.microtask(() async {
+    final resultFuture = resultFakeFuture.then((v) => v);
+    // resultFakeFuture.then((v) {}, onError: (e) {});
+    // resultFuture.then((v) {}, onError: (e) {}); // TODO but why is this needed?
+    print('runFakeAsync flushing');
+    async.flushTimers();
+    print('runFakeAsync returning');
+    return resultFuture;
+  });
+}
