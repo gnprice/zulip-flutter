@@ -47,13 +47,14 @@ void main() {
       final delay = delayed(Duration(milliseconds: 100));
       // final delay = Future.delayed(Duration(milliseconds: 100));
       print('${clock.now()} future made');
-      print(binding.pendingTimersDebugString);
+      print(binding.pendingTimers);
 
       // binding.flushTimers();
       // print('${clock.now()} flushed');
       // print(binding.pendingTimersDebugString);
 
-      await delay;
+      print(await measureWait(delay));
+      // await delay;
       print('${clock.now()} awaited');
     });
 
