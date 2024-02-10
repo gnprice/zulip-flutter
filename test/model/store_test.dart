@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
-import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:test/scaffolding.dart';
@@ -13,8 +12,8 @@ import 'package:zulip/model/store.dart';
 import 'package:zulip/notifications.dart';
 
 import '../api/fake_api.dart';
-import '../backoff_test.dart';
 import '../example_data.dart' as eg;
+import '../fake_async.dart';
 import '../stdlib_checks.dart';
 import 'binding.dart';
 import 'test_store.dart';

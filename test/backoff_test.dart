@@ -2,58 +2,10 @@ import 'dart:async';
 
 import 'package:checks/checks.dart';
 import 'package:clock/clock.dart';
-import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
 import 'package:zulip/backoff.dart';
 
-sealed class Result<T> {
-  const Result();
-}
-
-class SuccessResult<T> extends Result<T> {
-  const SuccessResult(this.value);
-  final T value;
-}
-
-class ErrorResult<T> extends Result<T> {
-  const ErrorResult(this.error);
-  final Object error;
-}
-
-/// Run [callback] to completion in a [Zone] where all asynchrony is
-/// controlled by an instance of [FakeAsync].
-///
-/// See [FakeAsync.run] for details on what it means that all asynchrony is
-/// controlled by an instance of [FakeAsync].
-///
-/// After calling [callback], this function uses [FakeAsync.flushTimers] to
-/// advance the computation started by [callback], and then expects the
-/// [Future] that was returned by [callback] to have completed.
-///
-/// If that future completed with a value, that value is returned.
-/// If it completed with an error, that error is thrown.
-/// If it hasn't completed, a [TimeoutException] is thrown.
-T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
-    {DateTime? initialTime}) {
-  // cf dantup's https://stackoverflow.com/a/62676919
-
-  Result<T>? result;
-  FakeAsync(initialTime: initialTime)
-    ..run((async) {
-        callback(async)
-          .then<void>((value) => result = SuccessResult(value))
-          .catchError((error) => result = ErrorResult(error));
-      })
-    ..flushTimers();
-
-  switch (result) {
-    case SuccessResult(:var value): return value;
-    case ErrorResult(:var error): throw error;
-    case null: throw TimeoutException(
-      'A callback passed to awaitFakeAsync returned a Future that '
-      'did not complete even after calling FakeAsync.flushTimers.');
-  }
-}
+import 'fake_async.dart';
 
 Future<Duration> measureWait(Future<void> future) async {
   final start = clock.now();
@@ -62,21 +14,6 @@ Future<Duration> measureWait(Future<void> future) async {
 }
 
 void main() {
-  group('awaitFakeAsync', () {
-    test('basic success', () {
-      const duration = Duration(milliseconds: 100);
-      check(awaitFakeAsync((async) async {
-        return await measureWait(Future.delayed(duration));
-      })).equals(duration);
-    });
-
-    test('TimeoutException on deadlocked callback', () {
-      check(() => awaitFakeAsync((async) async {
-        await Completer().future;
-      })).throws().isA<TimeoutException>();
-    });
-  });
-
   test('BackoffMachine timeouts are random from zero to 100ms, 200ms, 400ms, ...', () {
     // This is a randomized test.  [numTrials] is chosen so that the failure
     // probability < 1e-9.  There are 2 * 11 assertions, and each one has a
