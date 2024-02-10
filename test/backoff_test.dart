@@ -52,26 +52,27 @@ Future<T> Function(FakeAsync async) flushing<T>(
 T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
     {DateTime? initialTime}) {
   // cf dantup's https://stackoverflow.com/a/62676919
-  return fakeAsync(initialTime: initialTime, (async) {
-    Result<T>? result;
-    (() async {
-      try {
-        result = SuccessResult(await callback(async));
-      } catch (e) {
-        result = ErrorResult(e);
-      }
-    })();
 
-    async.flushTimers();
+  final async = FakeAsync(initialTime: initialTime);
 
-    switch (result) {
-      case SuccessResult(:var value): return value;
-      case ErrorResult(:var error): throw error;
-      case null: throw TimeoutException(
-        'A callback passed to fakeAsyncBetter returned a Future that '
-        'did not complete even after calling FakeAsync.flushTimers.');
+  Result<T>? result;
+  async.run((async) async {
+    try {
+      result = SuccessResult(await callback(async));
+    } catch (e) {
+      result = ErrorResult(e);
     }
   });
+
+  async.flushTimers();
+
+  switch (result) {
+    case SuccessResult(:var value): return value;
+    case ErrorResult(:var error): throw error;
+    case null: throw TimeoutException(
+      'A callback passed to fakeAsyncBetter returned a Future that '
+      'did not complete even after calling FakeAsync.flushTimers.');
+  }
 }
 
 Future<Duration> measureWait(Future<void> future) async {
