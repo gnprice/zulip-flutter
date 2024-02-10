@@ -41,7 +41,7 @@ Future<T> fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
 
 void main() {
   test('FakeAsync scratch', () {
-    return fakeAsyncBetter((binding) async {
+    fakeAsyncBetter((binding) async {
       print('${clock.now()} hi');
 
       final delay = delayed(Duration(milliseconds: 100));
@@ -57,7 +57,7 @@ void main() {
       print('${clock.now()} awaited');
     });
 
-    // return;
+    return;
     fakeAsync((binding) async {
       print('${clock.now()} hi');
 
