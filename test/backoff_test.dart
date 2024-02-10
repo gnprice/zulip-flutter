@@ -12,14 +12,6 @@ Future<Duration> measureWait(Future<void> future) async {
   return clock.now().difference(start);
 }
 
-Future<void> delayed(Duration duration) {
-  final completer = Completer<void>();
-  Timer(duration, () {
-    completer.complete();
-  });
-  return completer.future;
-}
-
 sealed class Result<T> {}
 
 class SuccessResult<T> extends Result<T> {
@@ -58,8 +50,7 @@ void main() {
   test('FakeAsync scratch', () {
     const duration = Duration(milliseconds: 100);
     final actual = fakeAsyncBetter((binding) async {
-      final delay = delayed(duration);
-      return await measureWait(delay);
+      return await measureWait(Future.delayed(duration));
     });
     check(actual).equals(duration);
   });
