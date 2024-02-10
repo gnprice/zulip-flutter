@@ -32,7 +32,7 @@ class ErrorResult<T> extends Result<T> {
 ///
 /// If the [Future] returned by [callback] fails to complete even when timers
 /// are flushed, a [TimeoutException] will be thrown.
-T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
+T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
     {DateTime? initialTime}) {
   // cf dantup's https://stackoverflow.com/a/62676919
 
@@ -49,7 +49,7 @@ T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
     case SuccessResult(:var value): return value;
     case ErrorResult(:var error): throw error;
     case null: throw TimeoutException(
-      'A callback passed to fakeAsyncBetter returned a Future that '
+      'A callback passed to awaitFakeAsync returned a Future that '
       'did not complete even after calling FakeAsync.flushTimers.');
   }
 }
@@ -61,16 +61,16 @@ Future<Duration> measureWait(Future<void> future) async {
 }
 
 void main() {
-  group('fakeAsyncBetter', () {
+  group('awaitFakeAsync', () {
     test('basic success', () {
       const duration = Duration(milliseconds: 100);
-      check(fakeAsyncBetter((async) async {
+      check(awaitFakeAsync((async) async {
         return await measureWait(Future.delayed(duration));
       })).equals(duration);
     });
 
     test('TimeoutException on deadlocked callback', () {
-      check(() => fakeAsyncBetter((async) async {
+      check(() => awaitFakeAsync((async) async {
         await Completer().future;
       })).throws().isA<TimeoutException>();
     });
@@ -86,7 +86,7 @@ void main() {
     ].map((ms) => Duration(milliseconds: ms)).toList();
 
     final trialResults = List.generate(numTrials, (_) =>
-      fakeAsyncBetter((async) async {
+      awaitFakeAsync((async) async {
         final backoffMachine = BackoffMachine();
         final results = <Duration>[];
         for (int i = 0; i < expectedMaxDurations.length; i++) {
