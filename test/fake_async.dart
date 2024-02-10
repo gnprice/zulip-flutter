@@ -22,10 +22,8 @@ T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
   bool completed = false;
   FakeAsync(initialTime: initialTime)
     ..run((async) {
-        callback(async)
-          .then<void>((v) => value = v)
-          .catchError((e) => error = e)
-          .whenComplete(() => completed = true);
+        callback(async).then<void>((v) { value = v; completed = true; })
+                       .catchError((e) { error = e; completed = true; });
       })
     ..flushTimers();
 
