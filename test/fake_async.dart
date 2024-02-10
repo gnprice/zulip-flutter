@@ -47,6 +47,7 @@ Future<T> runFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
   final resultFakeFuture = async.run(callback);
   print(resultFakeFuture);
 
+  // cf [AutomatedTestWidgetsFlutterBinding.runTest]
   return Future.microtask(() async {
     final resultFuture = resultFakeFuture.then((v) => v);
     // resultFakeFuture.then((v) {}, onError: (e) {});
@@ -57,3 +58,24 @@ Future<T> runFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
     return resultFuture;
   });
 }
+
+/*
+Draft new answer for https://stackoverflow.com/questions/62656200 :
+
+The problem is that because the `await a` runs inside the zone set up by `FakeAsync.run`, the microtask that would run the rest of the function after that point is only a "fake" microtask belonging to the `FakeAsync` object, and the only way that those get run is by calling a method like `async.flushMicrotasks` or `async.elapse`.
+
+Effectively I think this means that a callback passed to `FakeAsync().run(…)` (or, equivalently, to `fakeAsync`) should never use `await`.  When any function is going to call `await` in a `FakeAsync` context, there needs to be some other code that has a reference to that `FakeAsync` object and can call methods on it to get it to run its microtasks so that those `await`s can ever finish.
+
+(And this isn't specific to the `await` syntax; similarly a `FakeAsync().run(…)` callback should never say `return foo.then(…)`, which is what a simple `await` desugars into, because the microtask set up by the `then` would never get run.)
+
+
+
+
+Instead, any `await`s should happen inside some nested function, so that the outer callback can call methods on the `FakeAsync` to cause it to run its microtasks so that those `await`s can ever finish.  (And this isn't specific to the `await` syntax; similarly the outer callback should never say `return foo.then(…)`, which is what a simple `await` desugars into, because the microtask set up by the `then` would never get run.)
+
+
+
+
+ — it's an element in the `Queue<void Function()>` data structure that is  _microtasks` on the `FakeAsync` object
+
+ */
