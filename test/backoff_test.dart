@@ -22,12 +22,34 @@ Future<void> delayed(Duration duration) {
   return completer.future;
 }
 
-Future<T> fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
+sealed class Result<T> {}
+
+class SuccessResult<T> extends Result<T> {
+  final T value;
+  SuccessResult(this.value);
+}
+
+class ErrorResult<T> extends Result<T> {
+  Object error;
+  ErrorResult(this.error);
+}
+
+T fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
   // cf https://stackoverflow.com/a/62676919
   return fakeAsync((binding) {
     bool active = true;
     print('${clock.now()} outer');
-    final future = callback(binding).whenComplete(() => active = false);
+    late final Result<T> result;
+    (() async {
+      try {
+        final value = await callback(binding);
+        result = SuccessResult(value);
+      } catch (e) {
+        result = ErrorResult(e);
+      } finally {
+        active = false;
+      }
+    })();
     print('${clock.now()} outer: called');
     while (active) {
       binding.flushTimers();
@@ -35,13 +57,16 @@ Future<T> fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
     }
     print('${clock.now()} outer: done');
     // binding.flushMicrotasks();
-    return future;
+    switch (result) {
+      case SuccessResult(:var value): return value;
+      case ErrorResult(:var error): throw error;
+    }
   });
 }
 
 void main() {
   test('FakeAsync scratch', () {
-    fakeAsyncBetter((binding) async {
+    final result = fakeAsyncBetter((binding) async {
       print('${clock.now()} hi');
 
       final delay = delayed(Duration(milliseconds: 100));
@@ -56,7 +81,10 @@ void main() {
       print(await measureWait(delay));
       // await delay;
       print('${clock.now()} awaited');
+
+      return 1 + 1;
     });
+    print(result);
 
     return;
     fakeAsync((binding) async {
