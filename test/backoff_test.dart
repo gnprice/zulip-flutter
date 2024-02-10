@@ -20,6 +20,25 @@ class ErrorResult<T> extends Result<T> {
   final Object error;
 }
 
+Future<T> fakeAsyncFlushing<T>(Future<T> Function(FakeAsync async) callback,
+    {DateTime? initialTime}) {
+  // cf dantup's https://stackoverflow.com/a/62676919
+  return fakeAsync(initialTime: initialTime, (async) {
+    final result = callback(async);
+    async.flushTimers();
+    return result;
+  });
+}
+
+Future<T> Function(FakeAsync async) flushing<T>(
+    Future<T> Function(FakeAsync async) callback) {
+  return (async) {
+    final result = callback(async);
+    async.flushTimers();
+    return result;
+  };
+}
+
 /// Run [callback] to completion in a [Zone] where all asynchrony is controlled
 /// by an instance of [FakeAsync].
 ///
