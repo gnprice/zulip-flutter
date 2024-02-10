@@ -55,12 +55,14 @@ T fakeAsyncBetter<T>(Future<T> Function(FakeAsync async) callback,
 
   Result<T>? result;
   FakeAsync(initialTime: initialTime)
-    ..run((async) async {
-      try {
-        result = SuccessResult(await callback(async));
-      } catch (e) {
-        result = ErrorResult(e);
-      }
+    ..run((async) {
+      (() async {
+        try {
+          result = SuccessResult(await callback(async));
+        } catch (e) {
+          result = ErrorResult(e);
+        }
+      })();
     })
     ..flushTimers();
 
