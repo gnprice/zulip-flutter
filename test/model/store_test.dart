@@ -302,7 +302,7 @@ void main() {
       }
     }));
 
-    testAndroidIos('token initially unknown', () async {
+    testAndroidIos('token initially unknown', () => awaitFakeAsync((async) async {
       // This tests the case where the store is created while our
       // request for the token is still pending.
       addTearDown(testBinding.reset);
@@ -336,10 +336,10 @@ void main() {
         // If the token subsequently changes, send it again.
         testBinding.firebaseMessaging.setToken('456def');
         connection.prepare(json: {});
-        await null; // Run microtasks.  TODO use FakeAsync for these tests.
+        async.flushMicrotasks();
         checkLastRequestFcm(token: '456def');
       }
-    });
+    }));
   });
 }
 
