@@ -20,18 +20,19 @@ class ErrorResult<T> extends Result<T> {
   final Object error;
 }
 
-/// Run [callback] to completion in a [Zone] where all asynchrony is controlled
-/// by an instance of [FakeAsync].
+/// Run [callback] to completion in a [Zone] where all asynchrony is
+/// controlled by an instance of [FakeAsync].
 ///
-/// See [fakeAsync] for details on what it means that asynchrony is controlled
-/// in that way.
+/// See [FakeAsync.run] for details on what it means that all asynchrony is
+/// controlled by an instance of [FakeAsync].
 ///
-/// This function differs from [fakeAsync] in that the [Future] returned by
-/// [callback] will be awaited, while [FakeAsync.flushTimers] is used
-/// to advance the computation so that that [Future] completes.
+/// After calling [callback], this function uses [FakeAsync.flushTimers] to
+/// advance the computation started by [callback], and then expects the
+/// [Future] that was returned by [callback] to have completed.
 ///
-/// If the [Future] returned by [callback] fails to complete even when timers
-/// are flushed, a [TimeoutException] will be thrown.
+/// If that future completed with a value, that value is returned.
+/// If it completed with an error, that error is thrown.
+/// If it hasn't completed, a [TimeoutException] is thrown.
 T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
     {DateTime? initialTime}) {
   // cf dantup's https://stackoverflow.com/a/62676919
