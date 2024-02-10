@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
@@ -12,6 +14,14 @@ Future<Duration> measureWait(Future<void> future) async {
   return clock.now().difference(start);
 }
 
+Future<void> delayed(Duration duration) {
+  final completer = Completer<void>();
+  Timer(duration, () {
+    completer.complete();
+  });
+  return completer.future;
+}
+
 Future<T> fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
   // cf https://stackoverflow.com/a/62676919
   return fakeAsync((binding) {
@@ -24,6 +34,7 @@ Future<T> fakeAsyncBetter<T>(Future<T> Function(FakeAsync) callback) {
       print('${clock.now()} outer: flushed microtasks');
     }
     print('${clock.now()} outer: done');
+    binding.flushMicrotasks();
     return future;
   });
 }
@@ -33,7 +44,8 @@ void main() {
     return fakeAsyncBetter((binding) async {
       print('${clock.now()} hi');
 
-      final delay = Future.delayed(Duration(milliseconds: 100));
+      final delay = delayed(Duration(milliseconds: 100));
+      // final delay = Future.delayed(Duration(milliseconds: 100));
       print('${clock.now()} future made');
       print(binding.pendingTimersDebugString);
 
