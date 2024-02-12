@@ -342,9 +342,9 @@ void main() {
 
       if (defaultTargetPlatform == TargetPlatform.android) {
         // If the token changes, send it again.
-        testBinding.firebaseMessaging.setToken('456def');
         connection.prepare(json: {});
-        async.flushMicrotasks();
+        testBinding.firebaseMessaging.setToken('456def');
+        async.flushTimers(); // to let the request complete
         checkLastRequestFcm(token: '456def');
       }
     }));
@@ -373,6 +373,7 @@ void main() {
       // When the token later appears, send it.
       connection.prepare(json: {});
       await startFuture;
+      async.flushTimers(); // to let the request complete
       if (defaultTargetPlatform == TargetPlatform.android) {
         checkLastRequestFcm(token: '012abc');
       } else {
@@ -381,9 +382,9 @@ void main() {
 
       if (defaultTargetPlatform == TargetPlatform.android) {
         // If the token subsequently changes, send it again.
-        testBinding.firebaseMessaging.setToken('456def');
         connection.prepare(json: {});
-        async.flushMicrotasks();
+        testBinding.firebaseMessaging.setToken('456def');
+        async.flushTimers(); // to let the request complete
         checkLastRequestFcm(token: '456def');
       }
     }));
