@@ -185,7 +185,7 @@ void main() {
       updateMachine.debugAdvanceLoop();
       async.flushMicrotasks();
       checkLastRequest(lastEventId: 1);
-      await Future.delayed(Duration.zero);
+      async.flushTimers();
       check(updateMachine.lastEventId).equals(2);
 
       // Loop makes second request, and processes result.
@@ -195,7 +195,7 @@ void main() {
       updateMachine.debugAdvanceLoop();
       async.flushMicrotasks();
       checkLastRequest(lastEventId: 2);
-      await Future.delayed(Duration.zero);
+      async.flushTimers();
       check(updateMachine.lastEventId).equals(3);
     }));
 
@@ -211,8 +211,7 @@ void main() {
           property: UserSettingName.twentyFourHourTime, value: true),
       ], queueId: null).toJson());
       updateMachine.debugAdvanceLoop();
-      async.flushMicrotasks();
-      await Future.delayed(Duration.zero);
+      async.flushTimers();
       check(store.userSettings!.twentyFourHourTime).isTrue();
     }));
 
@@ -229,8 +228,7 @@ void main() {
         'msg': 'Bad event queue ID: ${updateMachine.queueId}',
       });
       updateMachine.debugAdvanceLoop();
-      async.flushMicrotasks();
-      await Future.delayed(Duration.zero);
+      async.flushTimers();
 
       // The global store has a new store.
       check(globalStore.perAccountSync(store.account.id)).not((it) => it.identicalTo(store));
@@ -245,8 +243,7 @@ void main() {
           property: UserSettingName.twentyFourHourTime, value: true),
       ], queueId: null).toJson());
       updateMachine.debugAdvanceLoop();
-      async.flushMicrotasks();
-      await Future.delayed(Duration.zero);
+      async.flushTimers();
       check(store.userSettings!.twentyFourHourTime).isTrue();
     }));
 
