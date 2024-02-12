@@ -22,9 +22,15 @@ T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
   StackTrace? stackTrace;
   bool completed = false;
   FakeAsync(initialTime: initialTime)
-    ..run((async) {
-        callback(async).then<void>((v) { value = v; completed = true; },
-          onError: (e, s) { error = e; stackTrace = s; completed = true; });
+    ..run((async) async {
+        try {
+          value = await callback(async);
+          completed = true;
+        } catch (e, s) {
+          error = e;
+          stackTrace = s;
+          completed = true;
+        }
       })
     ..flushTimers();
 
