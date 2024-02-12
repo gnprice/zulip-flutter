@@ -24,7 +24,14 @@ T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
   FakeAsync(initialTime: initialTime)
     ..run((async) async {
         try {
-          value = await callback(async);
+          final result = await callback(async);
+          if (async.pendingTimers.isNotEmpty) {
+            throw StateError(
+              'Some timers remained pending after the Future returned '
+              'by a callback to awaitFakeAsync completed.  Details:\n'
+              '${async.pendingTimersDebugString}');
+          }
+          value = result;
           completed = true;
         } catch (e, s) {
           error = e;
