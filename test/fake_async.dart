@@ -73,6 +73,14 @@ Future<T> runFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
   });
 }
 
+// More notes:
+// Issue about fake_async being confusing, closely related to that SO answer:
+//   https://github.com/dart-lang/fake_async/issues/38
+// And issue by natebosch that seems like the core of it:
+//   https://github.com/dart-lang/fake_async/issues/24
+// and another related issue:
+//   https://github.com/dart-lang/fake_async/issues/43
+
 /*
 Draft new answer for https://stackoverflow.com/questions/62656200 :
 
