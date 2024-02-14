@@ -380,11 +380,10 @@ packages:
   firebase_messaging:
     dependency: "direct main"
     description:
-      name: firebase_messaging
-      sha256: "9c97b20c012542252a8853f11334efd833ddae83551fe37d27f87d885c655038"
-      url: "https://pub.dev"
-    source: hosted
-    version: "14.7.15"
+      path: "../firebase-flutter/packages/firebase_messaging/firebase_messaging"
+      relative: true
+    source: path
+    version: "14.7.10"
   firebase_messaging_platform_interface:
     dependency: transitive
     description:
