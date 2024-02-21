@@ -1,0 +1,3 @@
+dependency_overrides:
+  drift:
+    path: ../drift/drift
