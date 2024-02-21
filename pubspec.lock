@@ -281,18 +281,16 @@ packages:
   drift:
     dependency: "direct main"
     description:
-      name: drift
-      sha256: "6acedc562ffeed308049f78fb1906abad3d65714580b6745441ee6d50ec564cd"
-      url: "https://pub.dev"
-    source: hosted
+      path: "../drift/drift"
+      relative: true
+    source: path
     version: "2.18.0"
   drift_dev:
     dependency: "direct dev"
     description:
-      name: drift_dev
-      sha256: d9b020736ea85fff1568699ce18b89fabb3f0f042e8a7a05e84a3ec20d39acde
-      url: "https://pub.dev"
-    source: hosted
+      path: "../drift/drift_dev"
+      relative: true
+    source: path
     version: "2.18.0"
   fake_async:
     dependency: "direct dev"
