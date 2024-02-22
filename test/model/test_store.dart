@@ -100,14 +100,7 @@ class TestGlobalStore extends GlobalStore {
   }
 
   @override
-  Future<void> doUpdateAccount(int accountId, {
-    String? email,
-    String? apiKey,
-    String? zulipVersion,
-    Value<String?> zulipMergeBase = const Value.absent(),
-    int? zulipFeatureLevel,
-    Value<String?> ackedPushToken = const Value.absent(),
-  }) async {
+  Future<void> doUpdateAccount(int accountId, AccountsCompanion data) async {
     // Nothing to do.
   }
 

@@ -184,14 +184,14 @@ abstract class GlobalStore extends ChangeNotifier {
     Value<String?> ackedPushToken = const Value.absent(),
   }) async {
     assert(_accounts.containsKey(accountId));
-    await doUpdateAccount(accountId,
-      email: email,
-      apiKey: apiKey,
-      zulipVersion: zulipVersion,
+    await doUpdateAccount(accountId, AccountsCompanion(
+      email: Value.absentIfNull(email),
+      apiKey: Value.absentIfNull(apiKey),
+      zulipVersion: Value.absentIfNull(zulipVersion),
       zulipMergeBase: zulipMergeBase,
-      zulipFeatureLevel: zulipFeatureLevel,
+      zulipFeatureLevel: Value.absentIfNull(zulipFeatureLevel),
       ackedPushToken: ackedPushToken,
-    );
+    ));
     final result = _accounts.update(accountId, (value) => value.copyWith(
       email: email,
       apiKey: apiKey,
@@ -205,14 +205,7 @@ abstract class GlobalStore extends ChangeNotifier {
   }
 
   /// Update an account in the underlying data store.
-  Future<void> doUpdateAccount(int accountId, {
-    String? email,
-    String? apiKey,
-    String? zulipVersion,
-    Value<String?> zulipMergeBase = const Value.absent(),
-    int? zulipFeatureLevel,
-    Value<String?> ackedPushToken = const Value.absent(),
-  });
+  Future<void> doUpdateAccount(int accountId, AccountsCompanion data);
 
   @override
   String toString() => '${objectRuntimeType(this, 'GlobalStore')}#${shortHash(this)}';
@@ -651,24 +644,10 @@ class LiveGlobalStore extends GlobalStore {
   }
 
   @override
-  Future<void> doUpdateAccount(int accountId, {
-    String? email,
-    String? apiKey,
-    String? zulipVersion,
-    Value<String?> zulipMergeBase = const Value.absent(),
-    int? zulipFeatureLevel,
-    Value<String?> ackedPushToken = const Value.absent(),
-  }) async {
+  Future<void> doUpdateAccount(int accountId, AccountsCompanion data) async {
     final rowsAffected = await (_db.update(_db.accounts)
       ..where((a) => a.id.equals(accountId))
-    ).write(AccountsCompanion(
-      email: Value.absentIfNull(email),
-      apiKey: Value.absentIfNull(apiKey),
-      zulipVersion: Value.absentIfNull(zulipVersion),
-      zulipMergeBase: zulipMergeBase,
-      zulipFeatureLevel: Value.absentIfNull(zulipFeatureLevel),
-      ackedPushToken: ackedPushToken,
-    ));
+    ).write(data);
     assert(rowsAffected == 1);
   }
 
