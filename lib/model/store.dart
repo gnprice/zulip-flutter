@@ -880,7 +880,7 @@ class PerAccountStore extends PerAccountStoreBase with
           // TODO(#135): replace event queue, if zulipFeatureLevel makes it necessary
           await _globalStore.updateAccount(accountId, AccountsCompanion(
             zulipVersion: Value(event.zulipVersion),
-            zulipMergeBase: Value.absentIfNull(event.zulipMergeBase),
+            zulipMergeBase: Value(event.zulipMergeBase),
             zulipFeatureLevel: Value(event.zulipFeatureLevel),
           ));
           connection.zulipFeatureLevel = event.zulipFeatureLevel;
