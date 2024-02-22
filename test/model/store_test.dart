@@ -20,6 +20,7 @@ import 'package:zulip/model/presence.dart';
 import 'package:zulip/model/server_support.dart';
 import 'package:zulip/model/store.dart';
 
+import '../api/core_checks.dart';
 import '../api/fake_api.dart';
 import '../api/model/model_checks.dart';
 import '../example_data.dart' as eg;
@@ -465,6 +466,42 @@ void main() {
     // Mostly this method just dispatches to ChannelStore and MessageStore etc.,
     // and so its tests generally live in the test files for those
     // (but they call the handleEvent method because it's the entry point).
+
+    test('RestartEvent updates versions', () async {
+      final account = eg.account(user: eg.selfUser,
+        zulipFeatureLevel: 123,
+        zulipMergeBase: '6.0',
+        zulipVersion: '6.0+gabcd',
+      );
+      final globalStore = eg.globalStore();
+      await globalStore.add(account, eg.initialSnapshot(
+        zulipFeatureLevel: 123,
+        zulipMergeBase: '6.0',
+        zulipVersion: '6.0+gabcd',
+      ));
+      final store = await globalStore.perAccount(account.id);
+
+      int globalUpdateCount = 0;
+      globalStore.addListener(() => globalUpdateCount++);
+      int updateCount = 0;
+      store.addListener(() => updateCount++);
+
+      await store.handleEvent(RestartEvent(
+        id: 1,
+        zulipVersion: '8.0+g9876',
+        zulipMergeBase: '8.0',
+        zulipFeatureLevel: 234,
+        serverGeneration: 1708639638,
+      ));
+      check(globalUpdateCount).isGreaterThan(0);
+      check(updateCount).isGreaterThan(0);
+      check(store)
+        ..account.which((account) => account
+          ..zulipVersion.equals('8.0+g9876')
+          ..zulipMergeBase.equals('8.0')
+          ..zulipFeatureLevel.equals(234))
+        ..connection.zulipFeatureLevel.equals(234);
+    });
   });
 
   group('UpdateMachine.load', () {
