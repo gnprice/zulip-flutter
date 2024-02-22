@@ -11,6 +11,7 @@ import 'package:zulip/api/route/messages.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/notifications/receive.dart';
 
+import '../api/core_checks.dart';
 import '../api/fake_api.dart';
 import '../api/model/model_checks.dart';
 import '../example_data.dart' as eg;
@@ -160,6 +161,44 @@ void main() {
     });
 
     // TODO test database gets updated correctly (an integration test with sqlite?)
+  });
+
+  group('PerAccountStore.handleEvent', () {
+    test('RestartEvent updates versions', () async {
+      final account = eg.account(user: eg.selfUser,
+        zulipFeatureLevel: 123,
+        zulipMergeBase: '6.0',
+        zulipVersion: '6.0+gabcd',
+      );
+      final globalStore = eg.globalStore();
+      await globalStore.add(account, eg.initialSnapshot(
+        zulipFeatureLevel: 123,
+        zulipMergeBase: '6.0',
+        zulipVersion: '6.0+gabcd',
+      ));
+      final store = await globalStore.perAccount(account.id);
+
+      int globalUpdateCount = 0;
+      globalStore.addListener(() => globalUpdateCount++);
+      int updateCount = 0;
+      store.addListener(() => updateCount++);
+
+      await store.handleEvent(RestartEvent(
+        id: 1,
+        zulipVersion: '8.0+g9876',
+        zulipMergeBase: '8.0',
+        zulipFeatureLevel: 234,
+        serverGeneration: 1708639638,
+      ));
+      check(globalUpdateCount).isGreaterThan(0);
+      check(updateCount).isGreaterThan(0);
+      check(store)
+        ..account.which((account) => account
+          ..zulipVersion.equals('8.0+g9876')
+          ..zulipMergeBase.equals('8.0')
+          ..zulipFeatureLevel.equals(234))
+        ..connection.zulipFeatureLevel.equals(234);
+    });
   });
 
   group('PerAccountStore.sendMessage', () {

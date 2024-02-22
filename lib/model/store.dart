@@ -492,9 +492,18 @@ class PerAccountStore extends ChangeNotifier with StreamStore {
       }
     } else if (event is RestartEvent) {
       assert(debugLog("server event: restart"));
-      // TODO(#135): update connection.zulipFeatureLevel
-      // TODO(#135): update account with zulipVersion and zulipFeatureLevel
-      // TODO(#135): replace event queue, if needed
+      if (event.zulipVersion != account.zulipVersion
+          || event.zulipMergeBase != account.zulipMergeBase
+          || event.zulipFeatureLevel != account.zulipFeatureLevel) {
+        // TODO(#135): replace event queue, if zulipFeatureLevel makes it necessary
+        await _globalStore.updateAccount(accountId, AccountsCompanion(
+          zulipVersion: Value(event.zulipVersion),
+          zulipMergeBase: Value.absentIfNull(event.zulipMergeBase),
+          zulipFeatureLevel: Value(event.zulipFeatureLevel),
+        ));
+        connection.zulipFeatureLevel = event.zulipFeatureLevel;
+        notifyListeners();
+      }
     } else if (event is UnexpectedEvent) {
       assert(debugLog("server event: ${jsonEncode(event.toJson())}")); // TODO log better
     } else {
