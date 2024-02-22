@@ -256,6 +256,27 @@ class Account extends DataClass implements Insertable<Account> {
     );
   }
 
+  Account copyWithCompanion(AccountsCompanion data) {
+    return Account(
+      id: data.id.present ? data.id.value : id,
+      realmUrl: data.realmUrl.present ? data.realmUrl.value : realmUrl,
+      userId: data.userId.present ? data.userId.value : userId,
+      email: data.email.present ? data.email.value : email,
+      apiKey: data.apiKey.present ? data.apiKey.value : apiKey,
+      zulipVersion:
+          data.zulipVersion.present ? data.zulipVersion.value : zulipVersion,
+      zulipMergeBase: data.zulipMergeBase.present
+          ? data.zulipMergeBase.value
+          : zulipMergeBase,
+      zulipFeatureLevel: data.zulipFeatureLevel.present
+          ? data.zulipFeatureLevel.value
+          : zulipFeatureLevel,
+      ackedPushToken: data.ackedPushToken.present
+          ? data.ackedPushToken.value
+          : ackedPushToken,
+    );
+  }
+
   factory Account.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
