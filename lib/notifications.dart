@@ -171,7 +171,7 @@ class NotificationService {
 
   @pragma('vm:entry-point')
   static void _onForegroundMessage(FirebaseRemoteMessage message) {
-    assert(debugLog("notif message: ${message.data}"));
+    print("notif message: ${message.data}");
     _onRemoteMessage(message);
   }
 
@@ -284,7 +284,7 @@ class NotificationDisplayManager {
   }
 
   static void _onMessageFcmMessage(MessageFcmMessage data, Map<String, dynamic> dataJson) {
-    assert(debugLog('notif message content: ${data.content}'));
+    print('notif message content: ${data.content}');
     final title = switch (data.recipient) {
       FcmMessageStreamRecipient(:var streamName?, :var topic) =>
         '$streamName > $topic',

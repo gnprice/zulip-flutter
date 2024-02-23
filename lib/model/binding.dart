@@ -184,9 +184,16 @@ class LiveZulipBinding extends ZulipBinding {
     return firebase_messaging.FirebaseMessaging.instance;
   }
 
+  Stream<firebase_messaging.RemoteMessage>? _firebaseMessagingOnMessage;
+
   @override
   Stream<firebase_messaging.RemoteMessage> get firebaseMessagingOnMessage {
-    return firebase_messaging.FirebaseMessaging.onMessage;
+    print('getting firebaseMessagingOnMessage');
+    return (_firebaseMessagingOnMessage ??=
+      firebase_messaging.FirebaseMessaging.onMessage.map((event) {
+        print('onMessage stream got event: ${event.data}');
+        return event;
+      }));
   }
 
   @override
