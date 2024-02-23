@@ -50,7 +50,8 @@ dependencies:
   firebase_messaging:
     path: ../firebase-flutter/packages/firebase_messaging/firebase_messaging
   flutter_color_models: ^1.3.3+2
-  flutter_local_notifications: ^16.1.0
+  flutter_local_notifications:
+    path: ../local-notifications/flutter_local_notifications
   flutter_local_notifications_platform_interface: ^7.0.0+1
   html: ^0.15.1
   http: ^1.0.0
