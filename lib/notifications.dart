@@ -169,6 +169,7 @@ class NotificationService {
     }
   }
 
+  @pragma('vm:entry-point')
   static void _onForegroundMessage(FirebaseRemoteMessage message) {
     assert(debugLog("notif message: ${message.data}"));
     _onRemoteMessage(message);
