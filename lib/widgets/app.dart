@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 
+import '../log.dart';
 import '../model/localizations.dart';
 import '../model/narrow.dart';
 import 'about_zulip.dart';
@@ -90,9 +91,14 @@ class ZulipApp extends StatelessWidget {
   /// Useful in tests.
   final List<NavigatorObserver>? navigatorObservers;
 
+  static void _reportErrorToUserBriefly(String message) {
+    scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _declareReady() {
     assert(navigatorKey.currentContext != null);
     _ready.value = true;
+    reportErrorToUserBriefly = _reportErrorToUserBriefly;
   }
 
   @override

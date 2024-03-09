@@ -30,3 +30,13 @@ bool debugLog(String message) {
   }());
   return true;
 }
+
+void Function(String message) reportErrorToUserBriefly = _defaultReportErrorToUserBriefly;
+
+void _defaultReportErrorToUserBriefly(String message) {
+  // If this callback is still in place, then the app's widget tree
+  // hasn't mounted yet even as far as the [Navigator].
+  // So there's not much we can do to tell the user;
+  // just log, in case the user is actually a developer watching the console.
+  assert(debugLog(message));
+}
