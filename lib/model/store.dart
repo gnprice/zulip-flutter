@@ -667,68 +667,80 @@ class UpdateMachine {
   }
 
   void poll() async {
-    final backoffMachine = BackoffMachine();
+    try {
+      final backoffMachine = BackoffMachine();
 
-    while (true) {
-      if (_debugLoopSignal != null) {
-        await _debugLoopSignal!.future;
-        assert(() {
-          _debugLoopSignal = Completer();
-          return true;
-        }());
-      }
+      while (true) {
+        if (_debugLoopSignal != null) {
+          await _debugLoopSignal!.future;
+          assert(() {
+            _debugLoopSignal = Completer();
+            return true;
+          }());
+        }
 
-      final GetEventsResult result;
-      try {
-        result = await getEvents(store.connection,
-          queueId: queueId, lastEventId: lastEventId);
-      } catch (e) {
-        switch (e) {
-          case ZulipApiException(code: 'BAD_EVENT_QUEUE_ID'):
-            assert(debugLog('Lost event queue for $store.  Replacing…'));
+        final GetEventsResult result;
+        try {
+          result = await getEvents(store.connection,
+              queueId: queueId, lastEventId: lastEventId);
+        } catch (e) {
+          switch (e) {
+            case ZulipApiException(code: 'BAD_EVENT_QUEUE_ID'):
+              assert(debugLog('Lost event queue for $store.  Replacing…'));
+              await store._globalStore._reloadPerAccount(store.accountId);
+              dispose();
+              debugLog('… Event queue replaced.');
+              return;
+
+            case Server5xxException() || NetworkException():
+              assert(debugLog(
+                'Transient error polling event queue for $store: $e\n'
+                'Backing off, then will retry…'));
+              // TODO tell user if transient polling errors persist
+              // TODO reset to short backoff eventually
+              await backoffMachine.wait();
+              assert(debugLog('… Backoff wait complete, retrying poll.'));
+              continue;
+
+            default:
+              assert(debugLog('Error polling event queue for $store: $e\n'
+                  'Backing off and retrying even though may be hopeless…'));
+              // TODO tell user on non-transient error in polling
+              await backoffMachine.wait();
+              assert(debugLog('… Backoff wait complete, retrying poll.'));
+              continue;
+          }
+        }
+        final events = result.events;
+
+        for (final event in events) {
+          try {
+            store.handleEvent(event);
+          } catch (e) {
+            assert(debugLog('BUG: Error handling an event: $e\n' // TODO(log)
+              '  event: $event\n'
+              'Replacing event queue…'));
+            // TODO maybe tell user (in beta) that event handling threw error
+            // TODO dedupe this with the other _reloadPerAccount sites?
             await store._globalStore._reloadPerAccount(store.accountId);
             dispose();
             debugLog('… Event queue replaced.');
             return;
-
-          case Server5xxException() || NetworkException():
-            assert(debugLog('Transient error polling event queue for $store: $e\n'
-                'Backing off, then will retry…'));
-            // TODO tell user if transient polling errors persist
-            // TODO reset to short backoff eventually
-            await backoffMachine.wait();
-            assert(debugLog('… Backoff wait complete, retrying poll.'));
-            continue;
-
-          default:
-            assert(debugLog('Error polling event queue for $store: $e\n'
-                'Backing off and retrying even though may be hopeless…'));
-            // TODO tell user on non-transient error in polling
-            await backoffMachine.wait();
-            assert(debugLog('… Backoff wait complete, retrying poll.'));
-            continue;
+          }
+        }
+        if (events.isNotEmpty) {
+          lastEventId = events.last.id;
         }
       }
-      final events = result.events;
-
-      for (final event in events) {
-        try {
-          store.handleEvent(event);
-        } catch (e) {
-          assert(debugLog('BUG: Error handling an event: $e\n' // TODO(log)
-            '  event: $event\n'
-            'Replacing event queue…'));
-          // TODO maybe tell user (in beta) that event handling threw error
-          // TODO dedupe this with the other _reloadPerAccount site above?
-          await store._globalStore._reloadPerAccount(store.accountId);
-          dispose();
-          debugLog('… Event queue replaced.');
-          return;
-        }
-      }
-      if (events.isNotEmpty) {
-        lastEventId = events.last.id;
-      }
+    } catch (e) {
+      assert(debugLog('BUG: Unexpected error in event polling: $e\n' // TODO(log)
+        'Replacing event queue…'));
+      // TODO maybe tell user (in beta) that event poll loop threw error
+      // TODO dedupe this with the other _reloadPerAccount sites above?
+      await store._globalStore._reloadPerAccount(store.accountId);
+      dispose();
+      debugLog('… Event queue replaced.');
+      return;
     }
   }
 
