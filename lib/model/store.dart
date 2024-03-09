@@ -685,13 +685,6 @@ class UpdateMachine {
               queueId: queueId, lastEventId: lastEventId);
         } catch (e) {
           switch (e) {
-            case ZulipApiException(code: 'BAD_EVENT_QUEUE_ID'):
-              assert(debugLog('Lost event queue for $store.  Replacing…'));
-              await store._globalStore._reloadPerAccount(store.accountId);
-              dispose();
-              debugLog('… Event queue replaced.');
-              return;
-
             case Server5xxException() || NetworkException():
               assert(debugLog(
                 'Transient error polling event queue for $store: $e\n'
@@ -703,12 +696,7 @@ class UpdateMachine {
               continue;
 
             default:
-              assert(debugLog('Error polling event queue for $store: $e\n'
-                  'Backing off and retrying even though may be hopeless…'));
-              // TODO tell user on non-transient error in polling
-              await backoffMachine.wait();
-              assert(debugLog('… Backoff wait complete, retrying poll.'));
-              continue;
+              rethrow;
           }
         }
         final events = result.events;
@@ -716,16 +704,10 @@ class UpdateMachine {
         for (final event in events) {
           try {
             store.handleEvent(event);
-          } catch (e) {
-            assert(debugLog('BUG: Error handling an event: $e\n' // TODO(log)
-              '  event: $event\n'
-              'Replacing event queue…'));
-            // TODO maybe tell user (in beta) that event handling threw error
-            // TODO dedupe this with the other _reloadPerAccount sites?
-            await store._globalStore._reloadPerAccount(store.accountId);
-            dispose();
-            debugLog('… Event queue replaced.');
-            return;
+          } catch (e, stackTrace) {
+            Error.throwWithStackTrace(
+              _EventHandlingException(cause: e, event: event),
+              stackTrace);
           }
         }
         if (events.isNotEmpty) {
@@ -733,10 +715,41 @@ class UpdateMachine {
         }
       }
     } catch (e) {
-      assert(debugLog('BUG: Unexpected error in event polling: $e\n' // TODO(log)
-        'Replacing event queue…'));
-      // TODO maybe tell user (in beta) that event poll loop threw error
-      // TODO dedupe this with the other _reloadPerAccount sites above?
+      // An error occurred, other than the transient request errors we retry on.
+      // This means either a lost/expired event queue on the server (which is
+      // normal after the app is offline for a period like 10 minutes),
+      // or an unexpected exception representing a bug in our code or the server.
+      // Either way, the show must go on.  So reload server data from scratch.
+
+      // First, log what happened.
+      switch (e) {
+        case ZulipApiException(code: 'BAD_EVENT_QUEUE_ID'):
+          assert(debugLog('Lost event queue for $store.  Replacing…'));
+          // The old event queue is gone, so we need a new one.  This is normal.
+
+        case _EventHandlingException(:final cause, :final event):
+          assert(debugLog('BUG: Error handling an event: $cause\n' // TODO(log)
+            '  event: $event\n'
+            'Replacing event queue…'));
+          // TODO maybe tell user (in beta) that event handling threw error
+          // We can't just continue with the next event, because our state
+          // may be garbled due to failing to apply this one (and worse,
+          // any invariants that were left in a broken state from where
+          // the exception was thrown.)  So reload from scratch.
+          // Hopefully (probably?) the bug only affects our implementation of
+          // the *change* in state represented by the event, and when we get the
+          // new state in a fresh InitialSnapshot we'll handle that just fine.
+
+        default:
+          assert(debugLog('BUG: Unexpected error in event polling: $e\n' // TODO(log)
+            'Replacing event queue…'));
+          // TODO maybe tell user (in beta) that event poll loop threw error
+          // Similar story to the _EventHandlingException case;
+          // separate only so that one can print more context.
+          // The bug here could be in the server if it's an ApiRequestException,
+          // but our remedy is the same either way.
+      }
+
       await store._globalStore._reloadPerAccount(store.accountId);
       dispose();
       debugLog('… Event queue replaced.');
@@ -791,4 +804,11 @@ class UpdateMachine {
 
   @override
   String toString() => '${objectRuntimeType(this, 'UpdateMachine')}#${shortHash(this)}';
+}
+
+class _EventHandlingException implements Exception {
+  final Object cause;
+  final Event event;
+
+  _EventHandlingException({required this.cause, required this.event});
 }
