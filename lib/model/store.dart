@@ -709,10 +709,22 @@ class UpdateMachine {
             continue;
         }
       }
-
       final events = result.events;
+
       for (final event in events) {
-        store.handleEvent(event);
+        try {
+          store.handleEvent(event);
+        } catch (e) {
+          assert(debugLog('BUG: Error handling an event: $e\n' // TODO(log)
+            '  event: $event\n'
+            'Replacing event queue…'));
+          // TODO maybe tell user (in beta) that event handling threw error
+          // TODO dedupe this with the other _reloadPerAccount site above?
+          await store._globalStore._reloadPerAccount(store.accountId);
+          dispose();
+          debugLog('… Event queue replaced.');
+          return;
+        }
       }
       if (events.isNotEmpty) {
         lastEventId = events.last.id;
