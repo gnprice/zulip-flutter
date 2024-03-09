@@ -637,7 +637,8 @@ class UpdateMachine {
       } catch (e) {
         assert(debugLog('Error fetching initial snapshot: $e\n'
           'Backing off, then will retry…'));
-        // TODO tell user if initial-fetch errors persist, or look non-transient
+        // TODO perhaps suppress this message if error transient
+        reportErrorToUserBriefly('Error loading server data, will retry: $e');
         await (backoffMachine ??= BackoffMachine()).wait();
         assert(debugLog('… Backoff wait complete, retrying initial fetch.'));
       }
