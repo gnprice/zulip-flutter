@@ -40,3 +40,10 @@ void _defaultReportErrorToUserBriefly(String message) {
   // just log, in case the user is actually a developer watching the console.
   assert(debugLog(message));
 }
+
+// for use as [PlatformDispatcher.onError]
+// cf https://docs.flutter.dev/testing/errors#errors-not-caught-by-flutter
+bool zulipPlatformDispatcherOnError(Object error, StackTrace stackTrace) {
+  reportErrorToUserBriefly("BUG, please report: $error");
+  return false;
+}

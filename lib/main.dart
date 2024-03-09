@@ -12,6 +12,7 @@ void main() {
     debugLogEnabled = true;
     return true;
   }());
+  PlatformDispatcher.instance.onError = zulipPlatformDispatcherOnError;
   LicenseRegistry.addLicense(additionalLicenses);
   LiveZulipBinding.ensureInitialized();
   WidgetsFlutterBinding.ensureInitialized();
