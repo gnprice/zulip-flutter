@@ -27,7 +27,7 @@ Future<GetEventsResult> getEvents(ApiConnection connection, {
   required String queueId, int? lastEventId, bool? dontBlock,
 }) {
   return connection.get('getEvents', GetEventsResult.fromJson, 'events', {
-    'queue_id': RawParameter('wrong' + queueId),
+    'queue_id': RawParameter(queueId),
     if (lastEventId != null) 'last_event_id': lastEventId,
     if (dontBlock != null) 'dont_block': dontBlock,
   });
