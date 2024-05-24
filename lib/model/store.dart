@@ -170,22 +170,49 @@ abstract class GlobalStore extends ChangeNotifier {
   /// The account with the given account ID will be updated.
   /// It must already exist in the store.
   ///
-  /// Fields that are present in `data` will be updated,
-  /// and fields not present will be left unmodified.
+  /// Fields that are given will be updated,
+  /// and fields not given will be left unmodified.
   ///
-  /// Some fields should never change on an account,
-  /// and must not be present in `data`: namely `id`, `realmUrl`, `userId`.
-  Future<Account> updateAccount(int accountId, AccountsCompanion data) async {
-    assert(!data.id.present && !data.realmUrl.present && !data.userId.present);
+  /// The `realmUrl` and `userId` fields should never change on an account,
+  /// and therefore are not accepted as parameters.
+  Future<Account> updateAccount(int accountId, {
+    String? email,
+    String? apiKey,
+    String? zulipVersion,
+    Value<String?> zulipMergeBase = const Value.absent(),
+    int? zulipFeatureLevel,
+    Value<String?> ackedPushToken = const Value.absent(),
+  }) async {
     assert(_accounts.containsKey(accountId));
-    await doUpdateAccount(accountId, data);
-    final result = _accounts.update(accountId, (value) => value.copyWithCompanion(data));
+    await doUpdateAccount(accountId,
+      email: email,
+      apiKey: apiKey,
+      zulipVersion: zulipVersion,
+      zulipMergeBase: zulipMergeBase,
+      zulipFeatureLevel: zulipFeatureLevel,
+      ackedPushToken: ackedPushToken,
+    );
+    final result = _accounts.update(accountId, (value) => value.copyWith(
+      email: email,
+      apiKey: apiKey,
+      zulipVersion: zulipVersion,
+      zulipMergeBase: zulipMergeBase,
+      zulipFeatureLevel: zulipFeatureLevel,
+      ackedPushToken: ackedPushToken,
+    ));
     notifyListeners();
     return result;
   }
 
   /// Update an account in the underlying data store.
-  Future<void> doUpdateAccount(int accountId, AccountsCompanion data);
+  Future<void> doUpdateAccount(int accountId, {
+    String? email,
+    String? apiKey,
+    String? zulipVersion,
+    Value<String?> zulipMergeBase = const Value.absent(),
+    int? zulipFeatureLevel,
+    Value<String?> ackedPushToken = const Value.absent(),
+  });
 
   @override
   String toString() => '${objectRuntimeType(this, 'GlobalStore')}#${shortHash(this)}';
@@ -496,11 +523,11 @@ class PerAccountStore extends ChangeNotifier with StreamStore {
           || event.zulipMergeBase != account.zulipMergeBase
           || event.zulipFeatureLevel != account.zulipFeatureLevel) {
         // TODO(#135): replace event queue, if zulipFeatureLevel makes it necessary
-        await _globalStore.updateAccount(accountId, AccountsCompanion(
-          zulipVersion: Value(event.zulipVersion),
+        await _globalStore.updateAccount(accountId,
+          zulipVersion: event.zulipVersion,
           zulipMergeBase: Value(event.zulipMergeBase),
-          zulipFeatureLevel: Value(event.zulipFeatureLevel),
-        ));
+          zulipFeatureLevel: event.zulipFeatureLevel,
+        );
         connection.zulipFeatureLevel = event.zulipFeatureLevel;
         notifyListeners();
       }
@@ -624,10 +651,24 @@ class LiveGlobalStore extends GlobalStore {
   }
 
   @override
-  Future<void> doUpdateAccount(int accountId, AccountsCompanion data) async {
+  Future<void> doUpdateAccount(int accountId, {
+    String? email,
+    String? apiKey,
+    String? zulipVersion,
+    Value<String?> zulipMergeBase = const Value.absent(),
+    int? zulipFeatureLevel,
+    Value<String?> ackedPushToken = const Value.absent(),
+  }) async {
     final rowsAffected = await (_db.update(_db.accounts)
       ..where((a) => a.id.equals(accountId))
-    ).write(data);
+    ).write(AccountsCompanion(
+      email: Value.absentIfNull(email),
+      apiKey: Value.absentIfNull(apiKey),
+      zulipVersion: Value.absentIfNull(zulipVersion),
+      zulipMergeBase: zulipMergeBase,
+      zulipFeatureLevel: Value.absentIfNull(zulipFeatureLevel),
+      ackedPushToken: ackedPushToken,
+    ));
     assert(rowsAffected == 1);
   }
 
@@ -662,11 +703,11 @@ class UpdateMachine {
     if (initialSnapshot.zulipVersion != account.zulipVersion
         || initialSnapshot.zulipMergeBase != account.zulipMergeBase
         || initialSnapshot.zulipFeatureLevel != account.zulipFeatureLevel) {
-      account = await globalStore.updateAccount(accountId, AccountsCompanion(
-        zulipVersion: Value(initialSnapshot.zulipVersion),
+      account = await globalStore.updateAccount(accountId,
+        zulipVersion: initialSnapshot.zulipVersion,
         zulipMergeBase: Value(initialSnapshot.zulipMergeBase),
-        zulipFeatureLevel: Value(initialSnapshot.zulipFeatureLevel),
-      ));
+        zulipFeatureLevel: initialSnapshot.zulipFeatureLevel,
+      );
       connection.zulipFeatureLevel = initialSnapshot.zulipFeatureLevel;
     }
 
