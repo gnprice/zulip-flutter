@@ -146,7 +146,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
     final url = _parseResult.url;
     final error = _parseResult.error;
     if (error != null) {
-      showErrorDialog(context: context,
+      await showErrorDialog(context: context,
         title: zulipLocalizations.errorLoginInvalidInputTitle,
         message: error.message(zulipLocalizations));
       return;
@@ -172,7 +172,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
         }
         // TODO(#105) give more helpful feedback; see `fetchServerSettings`
         //   in zulip-mobile's src/message/fetchActions.js.
-        showErrorDialog(context: context,
+        await showErrorDialog(context: context,
           title: zulipLocalizations.errorLoginCouldNotConnectTitle,
           message: zulipLocalizations.errorLoginCouldNotConnect(url.toString()));
         return;
@@ -183,7 +183,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
         return;
       }
 
-      Navigator.push(context,
+      await Navigator.push(context,
         LoginPage.buildRoute(serverSettings: serverSettings));
     } finally {
       setState(() {
@@ -380,7 +380,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       final zulipLocalizations = ZulipLocalizations.of(context);
-      showErrorDialog(
+      await showErrorDialog(
         context: context,
         title: zulipLocalizations.errorAccountLoggedInTitle,
         message: zulipLocalizations.errorAccountLoggedIn(
@@ -392,7 +392,7 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    Navigator.of(context).pushAndRemoveUntil(
+    await Navigator.of(context).pushAndRemoveUntil(
       HomePage.buildRoute(accountId: accountId),
       (route) => (route is! _LoginSequenceRoute),
     );
@@ -478,7 +478,7 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
     });
   }
 
-  void _submit() async {
+  Future<void> _submit() async {
     final serverSettings = widget.loginPageState.widget.serverSettings;
 
     final context = _usernameKey.currentContext!;
@@ -517,7 +517,7 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
         final message = (e is ZulipApiException)
           ? zulipLocalizations.errorServerMessage(e.message)
           : e.message;
-        showErrorDialog(context: context,
+        await showErrorDialog(context: context,
           title: zulipLocalizations.errorLoginFailedTitle,
           message: message);
         return;

@@ -18,3 +18,4 @@ linter:
   rules:
     no_literal_bool_comparisons: true
     prefer_relative_imports: true
+    unawaited_futures: true

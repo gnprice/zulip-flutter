@@ -452,7 +452,7 @@ Future<void> _uploadFiles({
     final listMessage = tooLargeFiles
       .map((file) => '${file.filename}: ${(file.length / (1 << 20)).toStringAsFixed(1)} MiB')
       .join('\n');
-    showErrorDialog(
+    await showErrorDialog(
       context: context,
       title: zulipLocalizations.errorFilesTooLargeTitle(tooLargeFiles.length),
       message: zulipLocalizations.errorFilesTooLarge(
@@ -482,7 +482,7 @@ Future<void> _uploadFiles({
       if (!context.mounted) return;
       // TODO(#37): Specifically handle `413 Payload Too Large`
       // TODO(#37): On API errors, quote `msg` from server, with "The server said:"
-      showErrorDialog(context: context,
+      await showErrorDialog(context: context,
         title: zulipLocalizations.errorFailedToUploadFileTitle(filename),
         message: e.toString());
     } finally {
@@ -561,7 +561,7 @@ Future<Iterable<_File>> _getFilePickerFiles(BuildContext context, FileType type)
           AppSettings.openAppSettings();
         });
     } else {
-      showErrorDialog(context: context,
+      await showErrorDialog(context: context,
         title: zulipLocalizations.errorDialogTitle,
         message: e.toString());
     }
@@ -647,7 +647,7 @@ class _AttachFromCameraButton extends _AttachUploadsButton {
             AppSettings.openAppSettings();
           });
       } else {
-        showErrorDialog(context: context,
+        await showErrorDialog(context: context,
           title: zulipLocalizations.errorDialogTitle,
           message: e.toString());
       }

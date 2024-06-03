@@ -1069,7 +1069,7 @@ class GlobalTime extends StatelessWidget {
   }
 }
 
-void _launchUrl(BuildContext context, String urlString) async {
+Future<void> _launchUrl(BuildContext context, String urlString) async {
   Future<void> showError(BuildContext context, String? message) {
     return showErrorDialog(context: context,
       title: 'Unable to open link',
@@ -1088,7 +1088,7 @@ void _launchUrl(BuildContext context, String urlString) async {
 
   final internalNarrow = parseInternalLink(url, store);
   if (internalNarrow != null) {
-    Navigator.push(context,
+    await Navigator.push(context,
       MessageListPage.buildRoute(context: context,
         narrow: internalNarrow));
     return;

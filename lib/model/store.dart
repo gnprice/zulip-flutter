@@ -116,7 +116,8 @@ abstract class GlobalStore extends ChangeNotifier {
     _perAccountStoresLoading[accountId] = future;
     store = await future;
     _setPerAccount(accountId, store);
-    _perAccountStoresLoading.remove(accountId);
+    final removed = _perAccountStoresLoading.remove(accountId);
+    assert(identical(removed, future));
     return store;
   }
 
@@ -667,7 +668,7 @@ class UpdateMachine {
     updateMachine.poll();
     // TODO do registerNotificationToken before registerQueue:
     //   https://github.com/zulip/zulip-flutter/pull/325#discussion_r1365982807
-    updateMachine.registerNotificationToken();
+    unawaited(updateMachine.registerNotificationToken());
     return updateMachine;
   }
 

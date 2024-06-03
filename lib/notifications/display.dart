@@ -172,22 +172,22 @@ class NotificationDisplayManager {
     return "${data.realmUri}|${data.userId}";
   }
 
-  static void _onNotificationOpened(NotificationResponse response) async {
+  static Future<void> _onNotificationOpened(NotificationResponse response) async {
     final data = MessageFcmMessage.fromJson(jsonDecode(response.payload!));
     assert(debugLog('opened notif: message ${data.zulipMessageId}, content ${data.content}'));
-    _navigateForNotification(data);
+    await _navigateForNotification(data);
   }
 
-  static void _handleNotificationAppLaunch(NotificationResponse? response) async {
+  static Future<void> _handleNotificationAppLaunch(NotificationResponse? response) async {
     assert(response != null);
     if (response == null) return; // TODO(log) seems like a bug in flutter_local_notifications if this can happen
 
     final data = MessageFcmMessage.fromJson(jsonDecode(response.payload!));
     assert(debugLog('launched from notif: message ${data.zulipMessageId}, content ${data.content}'));
-    _navigateForNotification(data);
+    await _navigateForNotification(data);
   }
 
-  static void _navigateForNotification(MessageFcmMessage data) async {
+  static Future<void> _navigateForNotification(MessageFcmMessage data) async {
     NavigatorState navigator = await ZulipApp.navigator;
     final context = navigator.context;
     assert(context.mounted);
@@ -207,7 +207,7 @@ class NotificationDisplayManager {
 
     assert(debugLog('  account: $account, narrow: $narrow'));
     // TODO(nav): Better interact with existing nav stack on notif open
-    navigator.push(MaterialAccountWidgetRoute(accountId: account.id,
+    await navigator.push(MaterialAccountWidgetRoute(accountId: account.id,
       // TODO(#82): Open at specific message, not just conversation
       page: MessageListPage(narrow: narrow)));
     return;

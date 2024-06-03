@@ -30,19 +30,19 @@ void main() {
       });
     }
 
-    checkRequest(null,             '/api/v1/example/route');
-    checkRequest({},               '/api/v1/example/route?');
-    checkRequest({'x': 3},         '/api/v1/example/route?x=3');
-    checkRequest({'x': 3, 'y': 4}, '/api/v1/example/route?x=3&y=4');
-    checkRequest({'x': null},      '/api/v1/example/route?x=null');
-    checkRequest({'x': true},      '/api/v1/example/route?x=true');
-    checkRequest({'x': 'foo'},     '/api/v1/example/route?x=%22foo%22');
-    checkRequest({'x': [1, 2]},    '/api/v1/example/route?x=%5B1%2C2%5D');
-    checkRequest({'x': {'y': 1}},  '/api/v1/example/route?x=%7B%22y%22%3A1%7D');
-    checkRequest({'x': RawParameter('foo')},
-                                   '/api/v1/example/route?x=foo');
-    checkRequest({'x': RawParameter('foo'), 'y': 'bar'},
-                                   '/api/v1/example/route?x=foo&y=%22bar%22');
+    await checkRequest(null,             '/api/v1/example/route');
+    await checkRequest({},               '/api/v1/example/route?');
+    await checkRequest({'x': 3},         '/api/v1/example/route?x=3');
+    await checkRequest({'x': 3, 'y': 4}, '/api/v1/example/route?x=3&y=4');
+    await checkRequest({'x': null},      '/api/v1/example/route?x=null');
+    await checkRequest({'x': true},      '/api/v1/example/route?x=true');
+    await checkRequest({'x': 'foo'},     '/api/v1/example/route?x=%22foo%22');
+    await checkRequest({'x': [1, 2]},    '/api/v1/example/route?x=%5B1%2C2%5D');
+    await checkRequest({'x': {'y': 1}},  '/api/v1/example/route?x=%7B%22y%22%3A1%7D');
+    await checkRequest({'x': RawParameter('foo')},
+                                         '/api/v1/example/route?x=foo');
+    await checkRequest({'x': RawParameter('foo'), 'y': 'bar'},
+                                         '/api/v1/example/route?x=foo&y=%22bar%22');
   });
 
   test('ApiConnection.post', () async {
@@ -63,17 +63,17 @@ void main() {
       });
     }
 
-    checkRequest(null,                                   '', expectContentType: false);
-    checkRequest({},                                     '');
-    checkRequest({'x': 3},                               'x=3');
-    checkRequest({'x': 3, 'y': 4},                       'x=3&y=4');
-    checkRequest({'x': null},                            'x=null');
-    checkRequest({'x': true},                            'x=true');
-    checkRequest({'x': 'foo'},                           'x=%22foo%22');
-    checkRequest({'x': [1, 2]},                          'x=%5B1%2C2%5D');
-    checkRequest({'x': {'y': 1}},                        'x=%7B%22y%22%3A1%7D');
-    checkRequest({'x': RawParameter('foo')},             'x=foo');
-    checkRequest({'x': RawParameter('foo'), 'y': 'bar'}, 'x=foo&y=%22bar%22');
+    await checkRequest(null,                                   '', expectContentType: false);
+    await checkRequest({},                                     '');
+    await checkRequest({'x': 3},                               'x=3');
+    await checkRequest({'x': 3, 'y': 4},                       'x=3&y=4');
+    await checkRequest({'x': null},                            'x=null');
+    await checkRequest({'x': true},                            'x=true');
+    await checkRequest({'x': 'foo'},                           'x=%22foo%22');
+    await checkRequest({'x': [1, 2]},                          'x=%5B1%2C2%5D');
+    await checkRequest({'x': {'y': 1}},                        'x=%7B%22y%22%3A1%7D');
+    await checkRequest({'x': RawParameter('foo')},             'x=foo');
+    await checkRequest({'x': RawParameter('foo'), 'y': 'bar'}, 'x=foo&y=%22bar%22');
   });
 
   test('ApiConnection.postFileFromStream', () async {
