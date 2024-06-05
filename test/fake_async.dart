@@ -21,30 +21,25 @@ T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
   Object? error;
   StackTrace? stackTrace;
   bool completed = false;
-  FakeAsync(initialTime: initialTime)
-    ..run((async) {
-        callback(async).then<void>((v) { value = v; completed = true; },
-          onError: (Object? e, StackTrace? s) { error = e; stackTrace = s; completed = true; });
-      })
-    ..flushTimers();
 
-  // TODO: if the future returned by [callback] completes with an error,
-  //   it would be good to throw that error immediately rather than finish
-  //   flushing timers.  (This probably requires [FakeAsync] to have a richer
-  //   API, like a `fireNextTimer` that does one iteration of `flushTimers`.)
-  //
-  //   In particular, if flushing timers later causes an uncaught exception, the
-  //   current behavior is that that uncaught exception gets printed first
-  //   (while `flushTimers` is running), and then only later (after
-  //   `flushTimers` has returned control to this function) do we throw the
-  //   error that the [callback] future completed with.  That's confusing
-  //   because it causes the exceptions to appear in test output in an order
-  //   that's misleading about what actually happened.
+  final async = FakeAsync(initialTime: initialTime);
+  async.run((async) {
+    callback(async).then<void>((v) { value = v; completed = true; },
+      onError: (Object? e, StackTrace? s) { error = e; stackTrace = s; completed = true; });
+  });
+
+  const timeout = Duration(hours: 1);
+  final absoluteTimeout = async.elapsed + timeout;
+  while (async.runNextTimer(timeout: absoluteTimeout - async.elapsed)) {
+    if (error != null) {
+      Error.throwWithStackTrace(error!, stackTrace!);
+    }
+  }
 
   if (!completed) {
     throw TimeoutException(
       'A callback passed to awaitFakeAsync returned a Future that '
-      'did not complete even after calling FakeAsync.flushTimers.');
+      'did not complete within timeout $timeout.');
   } else if (error != null) {
     Error.throwWithStackTrace(error!, stackTrace!);
   } else {
