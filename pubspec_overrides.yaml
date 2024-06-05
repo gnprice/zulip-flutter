@@ -1,0 +1,3 @@
+dependency_overrides:
+  fake_async:
+    path: ../fake_async
