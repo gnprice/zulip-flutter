@@ -46,13 +46,13 @@ class BackoffMachine {
   Future<void> wait() async {
     _startTime ??= DateTime.now();
 
-    final durationMs =
+    final durationMs = _waitsCompleted == 0 ? 0 :
       Random().nextDouble() // "Jitter"
       * min(_durationCeilingMs,
             _firstDurationMs * pow(_base, _waitsCompleted));
 
     await Future<void>.delayed(Duration(
-      microseconds: max(1, (1000 * durationMs).round())));
+      microseconds: max(0, (1000 * durationMs).round())));
 
     _waitsCompleted++;
   }
