@@ -30,7 +30,7 @@ T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
 
   const timeout = Duration(hours: 1);
   final absoluteTimeout = async.elapsed + timeout;
-  while (async.runNextTimer(timeout: absoluteTimeout - async.elapsed)) {
+  while (async.runNextTimer(until: absoluteTimeout)) {
     if (error != null) {
       Error.throwWithStackTrace(error!, stackTrace!);
     }
