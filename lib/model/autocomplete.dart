@@ -393,7 +393,7 @@ class MentionAutocompleteView extends AutocompleteView<MentionAutocompleteQuery,
   @override
   MentionAutocompleteResult? testItem(MentionAutocompleteQuery query, User item) {
     if (query.testUser(item, store.autocompleteViewManager.autocompleteDataCache)) {
-      return UserMentionAutocompleteResult(userId: item.userId);
+      return UserMentionAutocompleteResult(user: item);
     }
     return null;
   }
@@ -547,9 +547,9 @@ class AutocompleteResult {}
 sealed class MentionAutocompleteResult extends AutocompleteResult {}
 
 class UserMentionAutocompleteResult extends MentionAutocompleteResult {
-  UserMentionAutocompleteResult({required this.userId});
+  UserMentionAutocompleteResult({required this.user});
 
-  final int userId;
+  final User user;
 }
 
 // TODO(#233): // class UserGroupMentionAutocompleteResult extends MentionAutocompleteResult {

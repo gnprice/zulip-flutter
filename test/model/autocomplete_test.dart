@@ -14,6 +14,7 @@ import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/compose_box.dart';
 
 import '../api/fake_api.dart';
+import '../api/model/model_checks.dart';
 import '../example_data.dart' as eg;
 import 'test_store.dart';
 import 'autocomplete_checks.dart';
@@ -185,7 +186,7 @@ void main() {
     check(done).isTrue();
     check(view.results).single
       .isA<UserMentionAutocompleteResult>()
-      .userId.equals(eg.thirdUser.userId);
+      .user.userId.equals(eg.thirdUser.userId);
   });
 
   test('MentionAutocompleteView not starve timers', () {
@@ -220,7 +221,7 @@ void main() {
       check(searchDone).isTrue();
       check(view.results).single
         .isA<UserMentionAutocompleteResult>()
-        .userId.equals(eg.thirdUser.userId);
+        .user.userId.equals(eg.thirdUser.userId);
     });
   });
 
@@ -244,7 +245,7 @@ void main() {
     check(done).isTrue();
     check(view.results).single
       .isA<UserMentionAutocompleteResult>()
-      .userId.equals(2222);
+      .user.userId.equals(2222);
   });
 
   test('MentionAutocompleteView new query during computation replaces old', () async {
@@ -270,14 +271,14 @@ void main() {
     check(done).isTrue(); // new result is set
     check(view.results).single
       .isA<UserMentionAutocompleteResult>()
-      .userId.equals(234);
+      .user.userId.equals(234);
 
     // new result sticks; it isn't clobbered with old query's result
     for (int i = 0; i < 10; i++) { // for good measure
       await Future(() {});
       check(view.results).single
         .isA<UserMentionAutocompleteResult>()
-        .userId.equals(234);
+        .user.userId.equals(234);
     }
   });
 
@@ -305,7 +306,7 @@ void main() {
     }
     check(done).isTrue();
     final results = view.results
-      .map((e) => (e as UserMentionAutocompleteResult).userId);
+      .map((e) => (e as UserMentionAutocompleteResult).user.userId);
     check(results)
       ..contains(110)
       ..contains(1100)
@@ -691,7 +692,7 @@ void main() {
         await Future(() {});
         check(done).isTrue();
         final results = view.results
-          .map((e) => (e as UserMentionAutocompleteResult).userId);
+          .map((e) => (e as UserMentionAutocompleteResult).user.userId);
         view.dispose();
         return results;
       }

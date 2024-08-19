@@ -180,10 +180,10 @@ class ComposeAutocomplete extends AutocompleteField<MentionAutocompleteQuery, Me
     final store = PerAccountStoreWidget.of(context);
     final String replacementString;
     switch (option) {
-      case UserMentionAutocompleteResult(:var userId):
+      case UserMentionAutocompleteResult(:var user):
         // TODO(i18n) language-appropriate space character; check active keyboard?
         //   (maybe handle centrally in `controller`)
-        replacementString = '${mention(store.users[userId]!, silent: intent.query.silent, users: store.users)} ';
+        replacementString = '${mention(user, silent: intent.query.silent, users: store.users)} ';
     }
 
     controller.value = intent.textEditingValue.replaced(
@@ -199,9 +199,9 @@ class ComposeAutocomplete extends AutocompleteField<MentionAutocompleteQuery, Me
     Widget avatar;
     String label;
     switch (option) {
-      case UserMentionAutocompleteResult(:var userId):
-        avatar = Avatar(userId: userId, size: 32, borderRadius: 3);
-        label = PerAccountStoreWidget.of(context).users[userId]!.fullName;
+      case UserMentionAutocompleteResult(:var user):
+        avatar = Avatar(userId: user.userId, size: 32, borderRadius: 3);
+        label = user.fullName;
     }
     return InkWell(
       onTap: () {
