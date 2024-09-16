@@ -140,7 +140,7 @@ mixin EmojiStore {
     required String emojiName,
   });
 
-  Iterable<EmojiCandidate>? get emojiCandidates;
+  Iterable<EmojiCandidate> emojiCandidatesMatching(String query);
 
   void setServerEmojiData(ServerEmojiData data);
 }
@@ -212,18 +212,36 @@ class EmojiStoreImpl with EmojiStore {
     );
   }
 
-  @override
-  List<EmojiCandidate>? emojiCandidates;
-
   // (Note this may be out of date; [UpdateMachine.fetchEmojiData]
   // sets it only after the store has been created.)
-  // ignore: unused_field
   Map<String, List<String>> _serverEmojiData;
+
+  List<EmojiCandidate>? _allEmojiCandidates;
+
+  @override
+  Iterable<EmojiCandidate> emojiCandidatesMatching(String query) {
+    if (query.isEmpty) {
+      return (_allEmojiCandidates ??= [
+        // TODO fix this logic for when realm emoji overrides Unicode emoji
+        for (final entry in _serverEmojiData.entries)
+          UnicodeEmojiCandidate(
+            emojiCode: entry.key,
+            emojiName: entry.value.first,
+            aliases: entry.value.length > 1 ? entry.value.sublist(1) : null,
+            emojiUnicode: tryParseEmojiCodeToUnicode(entry.key)!,
+          ),
+        for (final entry in realmEmoji.entries)
+          RealmEmojiCandidate(emojiCode: entry.key, emojiName: entry.value.name),
+        const ZulipExtraEmojiCandidate(),
+      ]);
+    }
+    throw UnimplementedError(); // TODO filter emoji candidates
+  }
 
   @override
   void setServerEmojiData(ServerEmojiData data) {
     _serverEmojiData = data.codeToNames;
-    emojiCandidates = null;
+    _allEmojiCandidates = null;
   }
 
   void handleRealmEmojiUpdateEvent(RealmEmojiUpdateEvent event) {
