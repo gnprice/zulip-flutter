@@ -51,6 +51,23 @@ class TextEmojiDisplay extends EmojiDisplay {
   TextEmojiDisplay({required super.emojiName});
 }
 
+/// Data describing a Unicode emoji that a given Zulip server knows about.
+final class UnicodeEmojiItem {
+  /// The Zulip "emoji code" for this emoji.
+  ///
+  /// This is the value that would appear in [Reaction.emojiCode]
+  /// or be passed to [tryParseEmojiCodeToUnicode].
+  final String emojiCode;
+
+  /// The actual Unicode text representing this emoji.
+  ///
+  /// For example when [emojiCode] is "1f642",
+  /// this will be "\u{1f642}" aka "🙂".
+  final String emojiUnicode;
+
+  UnicodeEmojiItem({required this.emojiCode, required this.emojiUnicode});
+}
+
 /// The portion of [PerAccountStore] describing what emoji exist.
 mixin EmojiStore {
   /// The realm's custom emoji (for [ReactionType.realmEmoji],
