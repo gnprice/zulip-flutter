@@ -53,8 +53,7 @@ class TextEmojiDisplay extends EmojiDisplay {
 
 /// An emoji that might be offered in an emoji picker UI.
 sealed class EmojiCandidate {
-  final String emojiName;
-
+  /// The Zulip "emoji type" for this emoji.
   ReactionType get emojiType;
 
   /// The Zulip "emoji code" for this emoji.
@@ -62,7 +61,19 @@ sealed class EmojiCandidate {
   /// This is the value that would appear in [Reaction.emojiCode].
   final String emojiCode;
 
-  const EmojiCandidate({required this.emojiName, required this.emojiCode});
+  /// The Zulip "emoji name" to use for this emoji.
+  ///
+  /// This might not be the only name this emoji has; see [aliases].
+  final String emojiName;
+
+  /// Additional Zulip "emoji name" values for this emoji,
+  /// to show in the emoji picker UI.
+  List<String> get aliases;
+
+  const EmojiCandidate({
+    required this.emojiCode,
+    required this.emojiName,
+  });
 }
 
 /// An [EmojiCandidate] that represents a Unicode emoji.
@@ -72,31 +83,49 @@ class UnicodeEmojiCandidate extends EmojiCandidate {
   @override
   ReactionType get emojiType => ReactionType.unicodeEmoji;
 
+  @override
+  List<String> get aliases => _aliases ?? const [];
+
+  List<String>? _aliases;
+
+  void addAlias(String alias) => (_aliases ??= []).add(alias);
+
   /// The actual Unicode text representing this emoji.
   ///
   /// For example when [emojiCode] is "1f642",
   /// this will be "\u{1f642}" aka "🙂".
   final String emojiUnicode;
 
-  const UnicodeEmojiCandidate({
-    required super.emojiName,
+  UnicodeEmojiCandidate({
     required super.emojiCode,
+    required super.emojiName,
+    required List<String>? aliases,
     required this.emojiUnicode,
-  });
+  }) : _aliases = aliases;
 }
 
 class RealmEmojiCandidate extends EmojiCandidate {
   @override
   ReactionType get emojiType => ReactionType.realmEmoji;
 
-  RealmEmojiCandidate({required super.emojiName, required super.emojiCode});
+  @override
+  List<String> get aliases => const [];
+
+  RealmEmojiCandidate({
+    required super.emojiCode,
+    required super.emojiName,
+  });
 }
 
 class ZulipExtraEmojiCandidate extends EmojiCandidate {
   @override
   ReactionType get emojiType => ReactionType.zulipExtraEmoji;
 
-  const ZulipExtraEmojiCandidate() : super(emojiName: 'zulip', emojiCode: 'zulip');
+  @override
+  List<String> get aliases => const [];
+
+  const ZulipExtraEmojiCandidate()
+    : super(emojiName: 'zulip', emojiCode: 'zulip');
 }
 
 /// The portion of [PerAccountStore] describing what emoji exist.
