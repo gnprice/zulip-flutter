@@ -51,13 +51,26 @@ class TextEmojiDisplay extends EmojiDisplay {
   TextEmojiDisplay({required super.emojiName});
 }
 
-/// Data describing a Unicode emoji that a given Zulip server knows about.
-final class UnicodeEmojiItem {
+/// An emoji that might be offered in an emoji picker UI.
+sealed class EmojiCandidate {
+  final String emojiName;
+
+  ReactionType get emojiType;
+
   /// The Zulip "emoji code" for this emoji.
   ///
-  /// This is the value that would appear in [Reaction.emojiCode]
-  /// or be passed to [tryParseEmojiCodeToUnicode].
+  /// This is the value that would appear in [Reaction.emojiCode].
   final String emojiCode;
+
+  const EmojiCandidate({required this.emojiName, required this.emojiCode});
+}
+
+/// An [EmojiCandidate] that represents a Unicode emoji.
+///
+/// Data describing a Unicode emoji that a given Zulip server knows about.
+class UnicodeEmojiCandidate extends EmojiCandidate {
+  @override
+  ReactionType get emojiType => ReactionType.unicodeEmoji;
 
   /// The actual Unicode text representing this emoji.
   ///
@@ -65,7 +78,25 @@ final class UnicodeEmojiItem {
   /// this will be "\u{1f642}" aka "🙂".
   final String emojiUnicode;
 
-  UnicodeEmojiItem({required this.emojiCode, required this.emojiUnicode});
+  const UnicodeEmojiCandidate({
+    required super.emojiName,
+    required super.emojiCode,
+    required this.emojiUnicode,
+  });
+}
+
+class RealmEmojiCandidate extends EmojiCandidate {
+  @override
+  ReactionType get emojiType => ReactionType.realmEmoji;
+
+  RealmEmojiCandidate({required super.emojiName, required super.emojiCode});
+}
+
+class ZulipExtraEmojiCandidate extends EmojiCandidate {
+  @override
+  ReactionType get emojiType => ReactionType.zulipExtraEmoji;
+
+  const ZulipExtraEmojiCandidate() : super(emojiName: 'zulip', emojiCode: 'zulip');
 }
 
 /// The portion of [PerAccountStore] describing what emoji exist.
@@ -79,6 +110,8 @@ mixin EmojiStore {
     required String emojiCode,
     required String emojiName,
   });
+
+  Iterable<EmojiCandidate>? get emojiCandidates;
 
   void setServerEmojiData(ServerEmojiData data);
 }
@@ -150,6 +183,9 @@ class EmojiStoreImpl with EmojiStore {
     );
   }
 
+  @override
+  List<EmojiCandidate>? emojiCandidates;
+
   // (Note this may be out of date; [UpdateMachine.fetchEmojiData]
   // sets it only after the store has been created.)
   // ignore: unused_field
@@ -158,6 +194,7 @@ class EmojiStoreImpl with EmojiStore {
   @override
   void setServerEmojiData(ServerEmojiData data) {
     _serverEmojiData = data.codeToNames;
+    emojiCandidates = null;
   }
 
   void handleRealmEmojiUpdateEvent(RealmEmojiUpdateEvent event) {
