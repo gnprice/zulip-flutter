@@ -18,6 +18,44 @@ import '../example_data.dart' as eg;
 void main() {
   TestZulipBinding.ensureInitialized();
 
+  test('ApiConnection.send rejects off-realm URL', () async {
+    Future<http.BaseRequest> tryRequest(String realmUrl, String requestUrl) {
+      final account = eg.account(user: eg.selfUser, realmUrl: Uri.parse(realmUrl));
+      return FakeApiConnection.with_(account: account, (connection) async {
+        connection.prepare(json: {});
+        await connection.send(kExampleRouteName, (json) => json,
+          http.Request('GET', Uri.parse(requestUrl)));
+        return connection.lastRequest!;
+      });
+    }
+
+    Future<void> checkAllow(String realmUrl, String requestUrl) async {
+      check(await tryRequest(realmUrl, requestUrl))
+        .isA<http.Request>()
+        .url.asString.equals(requestUrl);
+    }
+
+    Future<void> checkDeny(String realmUrl, String requestUrl) async {
+      await check(tryRequest(realmUrl, requestUrl))
+        .throws<StateError>();
+    }
+
+    // Baseline: normal requests are allowed.
+    checkAllow('https://chat.example', 'https://chat.example/api/v1/example/route');
+    checkAllow('https://chat.example', 'https://chat.example/path');
+
+    // Mismatched origins are not allowed.
+    checkDeny ('https://chat.example', 'https://chat.example.evil/path');
+    checkDeny ('https://chat.example', 'https://evil.chat.example/path');
+    checkDeny ('https://chat.example', 'https://chat.example:444/path');
+    checkDeny ('https://chat.example', 'http://chat.example/path');
+
+    // Less-expected scenarios that do have matching origins are also allowed.
+    checkAllow('https://chat.example', 'https://chat.example/');
+    checkAllow('https://chat.example/', 'https://chat.example/path');
+    checkAllow(r'https:/\chat.example', 'https://chat.example/path');
+  });
+
   test('ApiConnection.get', () async {
     Future<void> checkRequest(Map<String, dynamic>? params, String expectedRelativeUrl) {
       return FakeApiConnection.with_(account: eg.selfAccount, (connection) async {
