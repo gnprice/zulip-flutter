@@ -1,6 +1,7 @@
 import '../api/model/events.dart';
 import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
+import '../api/route/realm.dart';
 
 /// An emoji, described by how to display it in the UI.
 sealed class EmojiDisplay {
@@ -61,6 +62,8 @@ mixin EmojiStore {
     required String emojiCode,
     required String emojiName,
   });
+
+  void setServerEmojiData(ServerEmojiData data);
 }
 
 /// The implementation of [EmojiStore] that does the work.
@@ -72,7 +75,7 @@ class EmojiStoreImpl with EmojiStore {
   EmojiStoreImpl({
     required this.realmUrl,
     required this.realmEmoji,
-  });
+  }) : _serverEmojiData = {}; // TODO start with a built-in list; TODO fetch to update
 
   /// The same as [PerAccountStore.realmUrl].
   final Uri realmUrl;
@@ -128,6 +131,16 @@ class EmojiStoreImpl with EmojiStore {
       resolvedUrl: realmUrl.resolveUri(source),
       resolvedStillUrl: still == null ? null : realmUrl.resolveUri(still),
     );
+  }
+
+  // (Note this may be out of date; [UpdateMachine.fetchEmojiData]
+  // sets it only after the store has been created.)
+  // ignore: unused_field
+  Map<String, List<String>> _serverEmojiData;
+
+  @override
+  void setServerEmojiData(ServerEmojiData data) {
+    _serverEmojiData = data.codeToNames;
   }
 
   void handleRealmEmojiUpdateEvent(RealmEmojiUpdateEvent event) {

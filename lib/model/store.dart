@@ -16,6 +16,7 @@ import '../api/model/model.dart';
 import '../api/route/events.dart';
 import '../api/route/messages.dart';
 import '../api/backoff.dart';
+import '../api/route/realm.dart';
 import '../log.dart';
 import '../notifications/receive.dart';
 import 'autocomplete.dart';
@@ -344,6 +345,13 @@ class PerAccountStore extends ChangeNotifier with EmojiStore, ChannelStore, Mess
     return _emoji.emojiDisplayFor(
       emojiType: emojiType, emojiCode: emojiCode, emojiName: emojiName);
   }
+
+  @override
+  void setServerEmojiData(ServerEmojiData data) {
+    _emoji.setServerEmojiData(data);
+    notifyListeners();
+  }
+
 
   EmojiStoreImpl _emoji;
 
@@ -746,6 +754,7 @@ class UpdateMachine {
     final updateMachine = UpdateMachine.fromInitialSnapshot(
       store: store, initialSnapshot: initialSnapshot);
     updateMachine.poll();
+    updateMachine.fetchEmojiData(initialSnapshot.serverEmojiDataUrl);
     // TODO do registerNotificationToken before registerQueue:
     //   https://github.com/zulip/zulip-flutter/pull/325#discussion_r1365982807
     updateMachine.registerNotificationToken();
@@ -770,6 +779,40 @@ class UpdateMachine {
         assert(debugLog('… Backoff wait complete, retrying initial fetch.'));
       }
     }
+  }
+
+  /// Fetch emoji data from the server, and update the store with the result.
+  ///
+  /// This functions a lot like [registerQueue] and the surrounding logic
+  /// in [load] above, but it's unusual in that we've separated it out.
+  /// Effectively it's data that *would have* been in the [registerQueue]
+  /// response, except that we pulled it out to its own endpoint as part of
+  /// a caching strategy, because the data changes infrequently.
+  ///
+  /// Conveniently (a) this deferred fetch doesn't cause any fetch/event race,
+  /// because this data doesn't get updated by events anyway (it can change
+  /// only on a server restart); and (b) we don't need this data for displaying
+  /// messages or anything else, only for certain UIs like the emoji picker,
+  /// so it's fine that we go without it for a while.
+  Future<void> fetchEmojiData(Uri serverEmojiDataUrl) async {
+    final ServerEmojiData data;
+    try {
+      data = await fetchServerEmojiData(store.connection,
+        emojiDataUrl: serverEmojiDataUrl);
+      assert(debugLog('Got emoji data: ${data.codeToNames.length} emoji'));
+    } catch (e) {
+      switch (e) {
+        case Server5xxException() || NetworkException():
+          // TODO retry transient errors in fetching emoji data
+          return;
+
+        default:
+          // TODO(log) non-transient error in fetching emoji data; possible client bug
+          return;
+      }
+    }
+
+    store.setServerEmojiData(data);
   }
 
   Completer<void>? _debugLoopSignal;
