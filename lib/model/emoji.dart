@@ -1,4 +1,5 @@
 import '../api/model/events.dart';
+import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
 
 /// The portion of [PerAccountStore] describing what emoji exist.
@@ -14,7 +15,17 @@ mixin EmojiStore {
 /// itself.  Other code accesses this functionality through [PerAccountStore],
 /// or through the mixin [EmojiStore] which describes its interface.
 class EmojiStoreImpl with EmojiStore {
-  EmojiStoreImpl({required this.realmEmoji});
+  EmojiStoreImpl({
+    required this.realmUrl,
+    required this.userSettings,
+    required this.realmEmoji,
+  });
+
+  /// The same as [PerAccountStore.realmUrl].
+  final Uri realmUrl;
+
+  /// The same object as [PerAccountStore.userSettings].
+  final UserSettings? userSettings;
 
   @override
   Map<String, RealmEmojiItem> realmEmoji;
