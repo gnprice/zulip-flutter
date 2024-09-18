@@ -68,12 +68,16 @@ sealed class EmojiCandidate {
 
   /// Additional Zulip "emoji name" values for this emoji,
   /// to show in the emoji picker UI.
-  List<String> get aliases;
+  List<String> get aliases => _aliases ?? const [];
+  List<String>? _aliases;
 
-  const EmojiCandidate({
+  void addAlias(String alias) => (_aliases ??= []).add(alias);
+
+  EmojiCandidate({
     required this.emojiCode,
     required this.emojiName,
-  });
+    required List<String>? aliases,
+  }) : _aliases = aliases;
 }
 
 /// An [EmojiCandidate] that represents a Unicode emoji.
@@ -82,13 +86,6 @@ sealed class EmojiCandidate {
 class UnicodeEmojiCandidate extends EmojiCandidate {
   @override
   ReactionType get emojiType => ReactionType.unicodeEmoji;
-
-  @override
-  List<String> get aliases => _aliases ?? const [];
-
-  List<String>? _aliases;
-
-  void addAlias(String alias) => (_aliases ??= []).add(alias);
 
   /// The actual Unicode text representing this emoji.
   ///
@@ -99,33 +96,27 @@ class UnicodeEmojiCandidate extends EmojiCandidate {
   UnicodeEmojiCandidate({
     required super.emojiCode,
     required super.emojiName,
-    required List<String>? aliases,
+    required super.aliases,
     required this.emojiUnicode,
-  }) : _aliases = aliases;
+  });
 }
 
 class RealmEmojiCandidate extends EmojiCandidate {
   @override
   ReactionType get emojiType => ReactionType.realmEmoji;
 
-  @override
-  List<String> get aliases => const [];
-
   RealmEmojiCandidate({
     required super.emojiCode,
     required super.emojiName,
-  });
+  }) : super(aliases: null);
 }
 
 class ZulipExtraEmojiCandidate extends EmojiCandidate {
   @override
   ReactionType get emojiType => ReactionType.zulipExtraEmoji;
 
-  @override
-  List<String> get aliases => const [];
-
-  const ZulipExtraEmojiCandidate()
-    : super(emojiName: 'zulip', emojiCode: 'zulip');
+  ZulipExtraEmojiCandidate()
+    : super(emojiName: 'zulip', emojiCode: 'zulip', aliases: null);
 }
 
 /// The portion of [PerAccountStore] describing what emoji exist.
@@ -232,7 +223,7 @@ class EmojiStoreImpl with EmojiStore {
           ),
         for (final entry in realmEmoji.entries)
           RealmEmojiCandidate(emojiCode: entry.key, emojiName: entry.value.name),
-        const ZulipExtraEmojiCandidate(),
+        ZulipExtraEmojiCandidate(),
       ]);
     }
     throw UnimplementedError(); // TODO filter emoji candidates
