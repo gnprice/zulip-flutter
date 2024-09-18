@@ -344,15 +344,10 @@ class PerAccountStore extends ChangeNotifier with EmojiStore, ChannelStore, Mess
   EmojiDisplay emojiDisplayFor({
     required ReactionType emojiType,
     required String emojiCode,
-    required String emojiName,
-    required bool doNotAnimate,
+    required String emojiName
   }) {
     return _emoji.emojiDisplayFor(
-      emojiType: emojiType,
-      emojiCode: emojiCode,
-      emojiName: emojiName,
-      doNotAnimate: doNotAnimate,
-    );
+      emojiType: emojiType, emojiCode: emojiCode, emojiName: emojiName);
   }
 
   EmojiStoreImpl _emoji;

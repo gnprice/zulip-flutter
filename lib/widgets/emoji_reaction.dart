@@ -174,23 +174,10 @@ class ReactionChip extends StatelessWidget {
     );
     final shape = StadiumBorder(side: borderSide);
 
-    // Some people really dislike animated emoji.
-    final doNotAnimate =
-      // From reading code, this doesn't actually get set on iOS:
-      //   https://github.com/zulip/zulip-flutter/pull/410#discussion_r1408522293
-      MediaQuery.disableAnimationsOf(context)
-      || (defaultTargetPlatform == TargetPlatform.iOS
-        // TODO(upstream) On iOS 17+ (new in 2023), there's a more closely
-        //   relevant setting than "reduce motion". It's called "auto-play
-        //   animated images", and we should file an issue to expose it.
-        //   See GitHub comment linked above.
-        && WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.reduceMotion);
-
     final emojiDisplay = store.emojiDisplayFor(
       emojiType: reactionType,
       emojiCode: emojiCode,
       emojiName: emojiName,
-      doNotAnimate: doNotAnimate,
     );
     final emoji = switch (emojiDisplay) {
       UnicodeEmojiDisplay(:final emojiUnicode) => _UnicodeEmoji(
@@ -372,6 +359,18 @@ class _ImageEmoji extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Some people really dislike animated emoji.
+    final doNotAnimate =
+      // From reading code, this doesn't actually get set on iOS:
+      //   https://github.com/zulip/zulip-flutter/pull/410#discussion_r1408522293
+      MediaQuery.disableAnimationsOf(context)
+      || (defaultTargetPlatform == TargetPlatform.iOS
+        // TODO(upstream) On iOS 17+ (new in 2023), there's a more closely
+        //   relevant setting than "reduce motion". It's called "auto-play
+        //   animated images", and we should file an issue to expose it.
+        //   See GitHub comment linked above.
+        && WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.reduceMotion);
+
     // Unicode and text emoji get scaled; it would look weird if image emoji didn't.
     final size = _squareEmojiScalerClamped(context).scale(_squareEmojiSize);
 

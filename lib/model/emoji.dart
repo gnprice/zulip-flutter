@@ -19,7 +19,11 @@ class ImageEmojiDisplay extends EmojiDisplay {
   /// An absolute URL for the emoji's image file.
   final Uri resolvedUrl;
 
-  ImageEmojiDisplay({required this.resolvedUrl});
+  /// An absolute URL for a still version of the emoji's image file;
+  /// compare [RealmEmojiItem.stillUrl].
+  final Uri? resolvedStillUrl;
+
+  ImageEmojiDisplay({required this.resolvedUrl, required this.resolvedStillUrl});
 }
 
 /// An emoji to display as its name, in plain text.
@@ -43,7 +47,6 @@ mixin EmojiStore {
     required ReactionType emojiType,
     required String emojiCode,
     required String emojiName,
-    required bool doNotAnimate,
   });
 }
 
@@ -68,18 +71,19 @@ class EmojiStoreImpl with EmojiStore {
   @override
   Map<String, RealmEmojiItem> realmEmoji;
 
+  /// The realm-relative URL of the unique "Zulip extra emoji", :zulip:.
+  static const _kZulipEmojiUrl = '/static/generated/emoji/images/emoji/unicode/zulip.png';
+
   @override
   EmojiDisplay emojiDisplayFor({
     required ReactionType emojiType,
     required String emojiCode,
     required String emojiName,
-    required bool doNotAnimate,
   }) {
     if (userSettings?.emojiset == Emojiset.text) {
       return TextEmojiDisplay(emojiName: emojiName);
     }
 
-    Uri? url;
     switch (emojiType) {
       case ReactionType.unicodeEmoji:
         final parsed = tryParseEmojiCodeToUnicode(emojiCode);
@@ -89,17 +93,35 @@ class EmojiStoreImpl with EmojiStore {
       case ReactionType.realmEmoji:
         final item = realmEmoji[emojiCode];
         if (item == null) break;
-        final src = doNotAnimate ? (item.stillUrl ?? item.sourceUrl)
-          : item.sourceUrl;
-        url = Uri.tryParse(src);
-        break;
+        return _tryImageEmojiDisplay(
+          sourceUrl: item.sourceUrl, stillUrl: item.stillUrl,
+          emojiName: emojiName);
 
       case ReactionType.zulipExtraEmoji:
-        url = Uri.parse('/static/generated/emoji/images/emoji/unicode/zulip.png');
-        break;
+        return _tryImageEmojiDisplay(
+          sourceUrl: _kZulipEmojiUrl, stillUrl: null, emojiName: emojiName);
     }
-    if (url == null) return TextEmojiDisplay(emojiName: emojiName);
-    return ImageEmojiDisplay(resolvedUrl: realmUrl.resolveUri(url));
+    return TextEmojiDisplay(emojiName: emojiName);
+  }
+
+  EmojiDisplay _tryImageEmojiDisplay({
+    required String sourceUrl,
+    required String? stillUrl,
+    required String emojiName,
+  }) {
+    final source = Uri.tryParse(sourceUrl);
+    if (source == null) return TextEmojiDisplay(emojiName: emojiName);
+
+    Uri? still;
+    if (stillUrl != null) {
+      still = Uri.tryParse(stillUrl);
+      if (still == null) return TextEmojiDisplay(emojiName: emojiName);
+    }
+
+    return ImageEmojiDisplay(
+      resolvedUrl: realmUrl.resolveUri(source),
+      resolvedStillUrl: still == null ? null : realmUrl.resolveUri(still),
+    );
   }
 
   void handleRealmEmojiUpdateEvent(RealmEmojiUpdateEvent event) {
