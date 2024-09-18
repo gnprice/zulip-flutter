@@ -38,6 +38,13 @@ mixin EmojiStore {
   /// The realm's custom emoji (for [ReactionType.realmEmoji],
   /// indexed by [Reaction.emojiCode].
   Map<String, RealmEmojiItem> get realmEmoji;
+
+  EmojiDisplay displayFor({
+    required ReactionType emojiType,
+    required String emojiCode,
+    required String emojiName,
+    required bool doNotAnimate,
+  });
 }
 
 /// The implementation of [EmojiStore] that does the work.
@@ -60,6 +67,34 @@ class EmojiStoreImpl with EmojiStore {
 
   @override
   Map<String, RealmEmojiItem> realmEmoji;
+
+  @override
+  EmojiDisplay displayFor({
+    required ReactionType emojiType,
+    required String emojiCode,
+    required String emojiName,
+    required bool doNotAnimate,
+  }) {
+    // TODO handle store.userSettings.emojiset text
+    switch (emojiType) {
+      case ReactionType.unicodeEmoji:
+        final parsed = tryParseEmojiCodeToUnicode(emojiCode);
+        return parsed == null ? TextEmojiDisplay(emojiName: emojiName)
+          : UnicodeEmojiDisplay(emojiUnicode: parsed);
+      case ReactionType.realmEmoji:
+        final item = realmEmoji[emojiCode];
+        if (item == null) return TextEmojiDisplay(emojiName: emojiName);
+        final src = doNotAnimate ? (item.stillUrl ?? item.sourceUrl)
+          : item.sourceUrl;
+        final url = Uri.tryParse(src);
+        return url == null ? TextEmojiDisplay(emojiName: emojiName)
+          : ImageEmojiDisplay(resolvedUrl: url); // TODO WORK HERE realmUrl.resolveUri
+      case ReactionType.zulipExtraEmoji:
+        final url = Uri.parse('/static/generated/emoji/images/emoji/unicode/zulip.png');
+        return ImageEmojiDisplay(resolvedUrl: url); // TODO WORK HERE realmUrl.resolveUri
+    }
+    // TODO rearrange / dedupe logic
+  }
 
   void handleRealmEmojiUpdateEvent(RealmEmojiUpdateEvent event) {
     realmEmoji = event.realmEmoji;

@@ -340,6 +340,21 @@ class PerAccountStore extends ChangeNotifier with EmojiStore, ChannelStore, Mess
   @override
   Map<String, RealmEmojiItem> get realmEmoji => _emoji.realmEmoji;
 
+  @override
+  EmojiDisplay displayFor({
+    required ReactionType emojiType,
+    required String emojiCode,
+    required String emojiName,
+    required bool doNotAnimate,
+  }) {
+    return _emoji.displayFor(
+      emojiType: emojiType,
+      emojiCode: emojiCode,
+      emojiName: emojiName,
+      doNotAnimate: doNotAnimate,
+    );
+  }
+
   EmojiStoreImpl _emoji;
 
   ////////////////////////////////
