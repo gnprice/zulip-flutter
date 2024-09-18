@@ -79,24 +79,27 @@ class EmojiStoreImpl with EmojiStore {
       return TextEmojiDisplay(emojiName: emojiName);
     }
 
+    Uri? url;
     switch (emojiType) {
       case ReactionType.unicodeEmoji:
         final parsed = tryParseEmojiCodeToUnicode(emojiCode);
-        return parsed == null ? TextEmojiDisplay(emojiName: emojiName)
-          : UnicodeEmojiDisplay(emojiUnicode: parsed);
+        if (parsed == null) break;
+        return UnicodeEmojiDisplay(emojiUnicode: parsed);
+
       case ReactionType.realmEmoji:
         final item = realmEmoji[emojiCode];
-        if (item == null) return TextEmojiDisplay(emojiName: emojiName);
+        if (item == null) break;
         final src = doNotAnimate ? (item.stillUrl ?? item.sourceUrl)
           : item.sourceUrl;
-        final url = Uri.tryParse(src);
-        return url == null ? TextEmojiDisplay(emojiName: emojiName)
-          : ImageEmojiDisplay(resolvedUrl: url); // TODO WORK HERE realmUrl.resolveUri
+        url = Uri.tryParse(src);
+        break;
+
       case ReactionType.zulipExtraEmoji:
-        final url = Uri.parse('/static/generated/emoji/images/emoji/unicode/zulip.png');
-        return ImageEmojiDisplay(resolvedUrl: url); // TODO WORK HERE realmUrl.resolveUri
+        url = Uri.parse('/static/generated/emoji/images/emoji/unicode/zulip.png');
+        break;
     }
-    // TODO rearrange / dedupe logic
+    if (url == null) return TextEmojiDisplay(emojiName: emojiName);
+    return ImageEmojiDisplay(resolvedUrl: realmUrl.resolveUri(url));
   }
 
   void handleRealmEmojiUpdateEvent(RealmEmojiUpdateEvent event) {
