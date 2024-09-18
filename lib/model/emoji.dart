@@ -75,7 +75,10 @@ class EmojiStoreImpl with EmojiStore {
     required String emojiName,
     required bool doNotAnimate,
   }) {
-    // TODO handle store.userSettings.emojiset text
+    if (userSettings?.emojiset == Emojiset.text) {
+      return TextEmojiDisplay(emojiName: emojiName);
+    }
+
     switch (emojiType) {
       case ReactionType.unicodeEmoji:
         final parsed = tryParseEmojiCodeToUnicode(emojiCode);
