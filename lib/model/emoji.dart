@@ -39,7 +39,7 @@ mixin EmojiStore {
   /// indexed by [Reaction.emojiCode].
   Map<String, RealmEmojiItem> get realmEmoji;
 
-  EmojiDisplay displayFor({
+  EmojiDisplay emojiDisplayFor({
     required ReactionType emojiType,
     required String emojiCode,
     required String emojiName,
@@ -69,7 +69,7 @@ class EmojiStoreImpl with EmojiStore {
   Map<String, RealmEmojiItem> realmEmoji;
 
   @override
-  EmojiDisplay displayFor({
+  EmojiDisplay emojiDisplayFor({
     required ReactionType emojiType,
     required String emojiCode,
     required String emojiName,

@@ -341,13 +341,13 @@ class PerAccountStore extends ChangeNotifier with EmojiStore, ChannelStore, Mess
   Map<String, RealmEmojiItem> get realmEmoji => _emoji.realmEmoji;
 
   @override
-  EmojiDisplay displayFor({
+  EmojiDisplay emojiDisplayFor({
     required ReactionType emojiType,
     required String emojiCode,
     required String emojiName,
     required bool doNotAnimate,
   }) {
-    return _emoji.displayFor(
+    return _emoji.emojiDisplayFor(
       emojiType: emojiType,
       emojiCode: emojiCode,
       emojiName: emojiName,

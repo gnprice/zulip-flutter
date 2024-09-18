@@ -186,7 +186,7 @@ class ReactionChip extends StatelessWidget {
         //   See GitHub comment linked above.
         && WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.reduceMotion);
 
-    final emojiDisplay = store.displayFor(
+    final emojiDisplay = store.emojiDisplayFor(
       emojiType: reactionType,
       emojiCode: emojiCode,
       emojiName: emojiName,
