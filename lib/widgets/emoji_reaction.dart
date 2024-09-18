@@ -180,12 +180,12 @@ class ReactionChip extends StatelessWidget {
       emojiName: emojiName,
     );
     final emoji = switch (emojiDisplay) {
-      UnicodeEmojiDisplay(:final emojiUnicode) => _UnicodeEmoji(
-        emojiUnicode: emojiUnicode, selected: selfVoted),
-      ImageEmojiDisplay(:final resolvedUrl) => _ImageEmoji(
-        emojiName: emojiName, resolvedUrl: resolvedUrl, selected: selfVoted),
-      TextEmojiDisplay(:final emojiName) => _TextEmoji(
-        emojiName: emojiName, selected: selfVoted),
+      UnicodeEmojiDisplay() => _UnicodeEmoji(
+        emojiDisplay: emojiDisplay, selected: selfVoted),
+      ImageEmojiDisplay() => _ImageEmoji(
+        emojiDisplay: emojiDisplay, emojiName: emojiName, selected: selfVoted),
+      TextEmojiDisplay() => _TextEmoji(
+        emojiDisplay: emojiDisplay, selected: selfVoted),
     };
 
     return Tooltip(
@@ -293,11 +293,11 @@ TextScaler _labelTextScalerClamped(BuildContext context) =>
 
 class _UnicodeEmoji extends StatelessWidget {
   const _UnicodeEmoji({
-    required this.emojiUnicode,
+    required this.emojiDisplay,
     required this.selected,
   });
 
-  final String emojiUnicode;
+  final UnicodeEmojiDisplay emojiDisplay;
   final bool selected;
 
   @override
@@ -314,7 +314,7 @@ class _UnicodeEmoji extends StatelessWidget {
             fontSize: _notoColorEmojiTextSize,
           ),
           strutStyle: const StrutStyle(fontSize: _notoColorEmojiTextSize, forceStrutHeight: true),
-          emojiUnicode);
+          emojiDisplay.emojiUnicode);
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
         // We expect the font "Apple Color Emoji" to be used. There are some
@@ -340,7 +340,7 @@ class _UnicodeEmoji extends StatelessWidget {
             textScaler: _squareEmojiScalerClamped(context),
             style: const TextStyle(fontSize: _squareEmojiSize),
             strutStyle: const StrutStyle(fontSize: _squareEmojiSize, forceStrutHeight: true),
-            emojiUnicode)),
+            emojiDisplay.emojiUnicode)),
         ]);
     }
   }
@@ -348,13 +348,13 @@ class _UnicodeEmoji extends StatelessWidget {
 
 class _ImageEmoji extends StatelessWidget {
   const _ImageEmoji({
+    required this.emojiDisplay,
     required this.emojiName,
-    required this.resolvedUrl,
     required this.selected,
   });
 
+  final ImageEmojiDisplay emojiDisplay;
   final String emojiName;
-  final Uri resolvedUrl;
   final bool selected;
 
   @override
@@ -371,6 +371,10 @@ class _ImageEmoji extends StatelessWidget {
         //   See GitHub comment linked above.
         && WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.reduceMotion);
 
+    final resolvedUrl =
+      doNotAnimate ? (emojiDisplay.resolvedStillUrl ?? emojiDisplay.resolvedUrl)
+        : emojiDisplay.resolvedUrl;
+
     // Unicode and text emoji get scaled; it would look weird if image emoji didn't.
     final size = _squareEmojiScalerClamped(context).scale(_squareEmojiSize);
 
@@ -379,19 +383,26 @@ class _ImageEmoji extends StatelessWidget {
       width: size,
       height: size,
       errorBuilder: (context, _, __) => _TextEmoji(
-        emojiName: emojiName, selected: selected),
+        emojiDisplay: TextEmojiDisplay(emojiName: emojiName), selected: selected),
     );
   }
 }
 
 class _TextEmoji extends StatelessWidget {
-  const _TextEmoji({required this.emojiName, required this.selected});
+  const _TextEmoji({required this.emojiDisplay, required this.selected});
 
-  final String emojiName;
+  final TextEmojiDisplay emojiDisplay;
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
+    final emojiName = emojiDisplay.emojiName;
+
+    // Encourage line breaks before "_" (common in these), but try not
+    // to leave a colon alone on a line. See:
+    //   <https://github.com/flutter/flutter/issues/61081#issuecomment-1103330522>
+    final text = ':\ufeff${emojiName.replaceAll('_', '\u200b_')}\ufeff:';
+
     final reactionTheme = EmojiReactionTheme.of(context);
     return Text(
       textAlign: TextAlign.end,
@@ -403,9 +414,6 @@ class _TextEmoji extends StatelessWidget {
         color: selected ? reactionTheme.textSelected : reactionTheme.textUnselected,
       ).merge(weightVariableTextStyle(context,
           wght: selected ? 600 : null)),
-      // Encourage line breaks before "_" (common in these), but try not
-      // to leave a colon alone on a line. See:
-      //   <https://github.com/flutter/flutter/issues/61081#issuecomment-1103330522>
-      ':\ufeff${emojiName.replaceAll('_', '\u200b_')}\ufeff:');
+      text);
   }
 }
