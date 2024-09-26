@@ -52,9 +52,9 @@ class TextEmojiDisplay extends EmojiDisplay {
 }
 
 /// An emoji that might be offered in an emoji picker UI.
-sealed class EmojiCandidate {
+final class EmojiCandidate {
   /// The Zulip "emoji type" for this emoji.
-  ReactionType get emojiType;
+  final ReactionType emojiType;
 
   /// The Zulip "emoji code" for this emoji.
   ///
@@ -73,50 +73,15 @@ sealed class EmojiCandidate {
 
   void addAlias(String alias) => (_aliases ??= []).add(alias);
 
+  final EmojiDisplay emojiDisplay;
+
   EmojiCandidate({
+    required this.emojiType,
     required this.emojiCode,
     required this.emojiName,
     required List<String>? aliases,
+    required this.emojiDisplay,
   }) : _aliases = aliases;
-}
-
-/// An [EmojiCandidate] that represents a Unicode emoji.
-///
-/// Data describing a Unicode emoji that a given Zulip server knows about.
-class UnicodeEmojiCandidate extends EmojiCandidate {
-  @override
-  ReactionType get emojiType => ReactionType.unicodeEmoji;
-
-  /// The actual Unicode text representing this emoji.
-  ///
-  /// For example when [emojiCode] is "1f642",
-  /// this will be "\u{1f642}" aka "🙂".
-  final String emojiUnicode;
-
-  UnicodeEmojiCandidate({
-    required super.emojiCode,
-    required super.emojiName,
-    required super.aliases,
-    required this.emojiUnicode,
-  });
-}
-
-class RealmEmojiCandidate extends EmojiCandidate {
-  @override
-  ReactionType get emojiType => ReactionType.realmEmoji;
-
-  RealmEmojiCandidate({
-    required super.emojiCode,
-    required super.emojiName,
-  }) : super(aliases: null);
-}
-
-class ZulipExtraEmojiCandidate extends EmojiCandidate {
-  @override
-  ReactionType get emojiType => ReactionType.zulipExtraEmoji;
-
-  ZulipExtraEmojiCandidate()
-    : super(emojiName: 'zulip', emojiCode: 'zulip', aliases: null);
 }
 
 /// The portion of [PerAccountStore] describing what emoji exist.
@@ -209,21 +174,37 @@ class EmojiStoreImpl with EmojiStore {
 
   List<EmojiCandidate>? _allEmojiCandidates;
 
+  EmojiCandidate _emojiCandidateFor({
+    required ReactionType emojiType,
+    required String emojiCode,
+    required String emojiName,
+    required List<String>? aliases,
+  }) {
+    return EmojiCandidate(
+      emojiType: emojiType, emojiCode: emojiCode, emojiName: emojiName,
+      aliases: aliases,
+      emojiDisplay: emojiDisplayFor(
+        emojiType: emojiType, emojiCode: emojiCode, emojiName: emojiName));
+  }
+
   @override
   Iterable<EmojiCandidate> emojiCandidatesMatching(String query) {
     if (query.isEmpty) {
       return (_allEmojiCandidates ??= [
         // TODO fix this logic for when realm emoji overrides Unicode emoji
         for (final entry in _serverEmojiData.entries)
-          UnicodeEmojiCandidate(
-            emojiCode: entry.key,
-            emojiName: entry.value.first,
-            aliases: entry.value.length > 1 ? entry.value.sublist(1) : null,
-            emojiUnicode: tryParseEmojiCodeToUnicode(entry.key)!,
-          ),
+          _emojiCandidateFor(
+            emojiType: ReactionType.unicodeEmoji,
+            emojiCode: entry.key, emojiName: entry.value.first,
+            aliases: entry.value.length > 1 ? entry.value.sublist(1) : null),
         for (final entry in realmEmoji.entries)
-          RealmEmojiCandidate(emojiCode: entry.key, emojiName: entry.value.name),
-        ZulipExtraEmojiCandidate(),
+          _emojiCandidateFor(
+            emojiType: ReactionType.realmEmoji,
+            emojiCode: entry.key, emojiName: entry.value.name,
+            aliases: null),
+        _emojiCandidateFor(emojiType: ReactionType.zulipExtraEmoji,
+          emojiCode: 'zulip', emojiName: 'zulip',
+          aliases: null),
       ]);
     }
     throw UnimplementedError(); // TODO filter emoji candidates
