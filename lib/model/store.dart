@@ -355,6 +355,10 @@ class PerAccountStore extends ChangeNotifier with EmojiStore, ChannelStore, Mess
     notifyListeners();
   }
 
+  @override
+  Iterable<EmojiCandidate> emojiCandidatesMatching(String query) =>
+    _emoji.emojiCandidatesMatching(query);
+
   EmojiStoreImpl _emoji;
 
   ////////////////////////////////
