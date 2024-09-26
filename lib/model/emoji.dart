@@ -71,15 +71,11 @@ mixin EmojiStore {
 class EmojiStoreImpl with EmojiStore {
   EmojiStoreImpl({
     required this.realmUrl,
-    required this.userSettings,
     required this.realmEmoji,
   });
 
   /// The same as [PerAccountStore.realmUrl].
   final Uri realmUrl;
-
-  /// The same object as [PerAccountStore.userSettings].
-  final UserSettings? userSettings;
 
   @override
   Map<String, RealmEmojiItem> realmEmoji;
