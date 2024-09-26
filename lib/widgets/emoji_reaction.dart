@@ -178,7 +178,8 @@ class ReactionChip extends StatelessWidget {
       emojiType: reactionType,
       emojiCode: emojiCode,
       emojiName: emojiName,
-    );
+    ).resolve(store.userSettings);
+
     final emoji = switch (emojiDisplay) {
       UnicodeEmojiDisplay() => _UnicodeEmoji(
         emojiDisplay: emojiDisplay, selected: selfVoted),

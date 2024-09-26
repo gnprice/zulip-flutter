@@ -4,6 +4,18 @@ import '../api/model/model.dart';
 
 /// An emoji, described by how to display it in the UI.
 sealed class EmojiDisplay {
+  /// The emoji's name, as in [Reaction.emojiName].
+  final String emojiName;
+
+  EmojiDisplay({required this.emojiName});
+
+  EmojiDisplay resolve(UserSettings? userSettings) { // TODO(server-5)
+    if (this is TextEmojiDisplay) return this;
+    if (userSettings?.emojiset == Emojiset.text) {
+      return TextEmojiDisplay(emojiName: emojiName);
+    }
+    return this;
+  }
 }
 
 /// An emoji to display as Unicode text, relying on an emoji font.
@@ -11,7 +23,7 @@ class UnicodeEmojiDisplay extends EmojiDisplay {
   /// The actual Unicode text representing this emoji; for example, "🙂".
   final String emojiUnicode;
 
-  UnicodeEmojiDisplay({required this.emojiUnicode});
+  UnicodeEmojiDisplay({required super.emojiName, required this.emojiUnicode});
 }
 
 /// An emoji to display as an image.
@@ -23,7 +35,11 @@ class ImageEmojiDisplay extends EmojiDisplay {
   /// compare [RealmEmojiItem.stillUrl].
   final Uri? resolvedStillUrl;
 
-  ImageEmojiDisplay({required this.resolvedUrl, required this.resolvedStillUrl});
+  ImageEmojiDisplay({
+    required super.emojiName,
+    required this.resolvedUrl,
+    required this.resolvedStillUrl,
+  });
 }
 
 /// An emoji to display as its name, in plain text.
@@ -31,10 +47,7 @@ class ImageEmojiDisplay extends EmojiDisplay {
 /// We do this based on a user preference,
 /// and as a fallback when the Unicode or image approaches fail.
 class TextEmojiDisplay extends EmojiDisplay {
-  /// The emoji's name, as in [Reaction.emojiName].
-  final String emojiName;
-
-  TextEmojiDisplay({required this.emojiName});
+  TextEmojiDisplay({required super.emojiName});
 }
 
 /// The portion of [PerAccountStore] describing what emoji exist.
@@ -80,15 +93,11 @@ class EmojiStoreImpl with EmojiStore {
     required String emojiCode,
     required String emojiName,
   }) {
-    if (userSettings?.emojiset == Emojiset.text) {
-      return TextEmojiDisplay(emojiName: emojiName);
-    }
-
     switch (emojiType) {
       case ReactionType.unicodeEmoji:
         final parsed = tryParseEmojiCodeToUnicode(emojiCode);
         if (parsed == null) break;
-        return UnicodeEmojiDisplay(emojiUnicode: parsed);
+        return UnicodeEmojiDisplay(emojiName: emojiName, emojiUnicode: parsed);
 
       case ReactionType.realmEmoji:
         final item = realmEmoji[emojiCode];
@@ -119,6 +128,7 @@ class EmojiStoreImpl with EmojiStore {
     }
 
     return ImageEmojiDisplay(
+      emojiName: emojiName,
       resolvedUrl: realmUrl.resolveUri(source),
       resolvedStillUrl: still == null ? null : realmUrl.resolveUri(still),
     );
