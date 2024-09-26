@@ -187,25 +187,29 @@ class EmojiStoreImpl with EmojiStore {
         emojiType: emojiType, emojiCode: emojiCode, emojiName: emojiName));
   }
 
+  List<EmojiCandidate> _generateAllCandidates() {
+    return [
+      // TODO fix this logic for when realm emoji overrides Unicode emoji
+      for (final entry in _serverEmojiData.entries)
+        _emojiCandidateFor(
+          emojiType: ReactionType.unicodeEmoji,
+          emojiCode: entry.key, emojiName: entry.value.first,
+          aliases: entry.value.length > 1 ? entry.value.sublist(1) : null),
+      for (final entry in realmEmoji.entries)
+        _emojiCandidateFor(
+          emojiType: ReactionType.realmEmoji,
+          emojiCode: entry.key, emojiName: entry.value.name,
+          aliases: null),
+      _emojiCandidateFor(emojiType: ReactionType.zulipExtraEmoji,
+        emojiCode: 'zulip', emojiName: 'zulip',
+        aliases: null),
+    ];
+  }
+
   @override
   Iterable<EmojiCandidate> emojiCandidatesMatching(String query) {
     if (query.isEmpty) {
-      return (_allEmojiCandidates ??= [
-        // TODO fix this logic for when realm emoji overrides Unicode emoji
-        for (final entry in _serverEmojiData.entries)
-          _emojiCandidateFor(
-            emojiType: ReactionType.unicodeEmoji,
-            emojiCode: entry.key, emojiName: entry.value.first,
-            aliases: entry.value.length > 1 ? entry.value.sublist(1) : null),
-        for (final entry in realmEmoji.entries)
-          _emojiCandidateFor(
-            emojiType: ReactionType.realmEmoji,
-            emojiCode: entry.key, emojiName: entry.value.name,
-            aliases: null),
-        _emojiCandidateFor(emojiType: ReactionType.zulipExtraEmoji,
-          emojiCode: 'zulip', emojiName: 'zulip',
-          aliases: null),
-      ]);
+      return (_allEmojiCandidates ??= _generateAllCandidates());
     }
     throw UnimplementedError(); // TODO filter emoji candidates
   }
