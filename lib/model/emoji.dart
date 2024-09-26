@@ -212,13 +212,48 @@ class EmojiStoreImpl with EmojiStore {
     return byEmojiName.values.toList(growable: false);
   }
 
+  // Compare query_matches_string_in_order in Zulip web:shared/src/typeahead.ts .
+  bool _nameMatches(String emojiName, String adjustedQuery) {
+    // TODO this assumes emojiName is already lower-case (and no diacritics)
+    const String separator = '_';
+
+    if (!adjustedQuery.contains(separator)) {
+      // If the query is a single token (doesn't contain a separator),
+      // the match can be anywhere in the string.
+      return emojiName.contains(adjustedQuery);
+    }
+
+    // If there is a separator in the query, then we
+    // require the match to start at the start of a token.
+    // (E.g. for 'ab_cd_ef', query could be 'ab_c' or 'cd_ef',
+    // but not 'b_cd_ef'.)
+    return emojiName.startsWith(adjustedQuery)
+      || emojiName.contains(separator + adjustedQuery);
+  }
+
+  // Compare get_emoji_matcher in Zulip web:shared/src/typeahead.ts .
+  bool _candidateMatches(EmojiCandidate candidate, String adjustedQuery) {
+    if (candidate.emojiDisplay case UnicodeEmojiDisplay(:var emojiUnicode)) {
+      if (adjustedQuery == emojiUnicode) return true;
+    }
+    return _nameMatches(candidate.emojiName, adjustedQuery)
+      || candidate.aliases.any((alias) => _nameMatches(alias, adjustedQuery));
+  }
+
   @override
   Iterable<EmojiCandidate> emojiCandidatesMatching(String query) {
     _allEmojiCandidates ??= _generateAllCandidates();
     if (query.isEmpty) {
       return _allEmojiCandidates!;
     }
-    throw UnimplementedError(); // TODO filter emoji candidates
+
+    final adjustedQuery = query.toLowerCase().replaceAll(' ', '_'); // TODO remove diacritics too
+    final results = <EmojiCandidate>[];
+    for (final candidate in _allEmojiCandidates!) {
+      if (!_candidateMatches(candidate, adjustedQuery)) continue;
+      results.add(candidate); // TODO reduce aliases to just matches
+    }
+    return results;
   }
 
   @override
