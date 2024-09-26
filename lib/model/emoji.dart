@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import '../api/model/events.dart';
 import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
@@ -188,28 +190,51 @@ class EmojiStoreImpl with EmojiStore {
   }
 
   List<EmojiCandidate> _generateAllCandidates() {
-    final byEmojiName = <String, EmojiCandidate>{};
+    final results = <EmojiCandidate>[];
+
+    final namesOverridden = {
+      for (final emoji in realmEmoji.values) emoji.name,
+      'zulip',
+    };
     for (final entry in _serverEmojiData.entries) {
-      final emojiName = entry.value.first;
-      byEmojiName[emojiName] = _emojiCandidateFor(
+      final allNames = entry.value;
+      final String emojiName;
+      final List<String>? aliases;
+      if (allNames.any(namesOverridden.contains)) {
+        final names = allNames.whereNot(namesOverridden.contains).toList();
+        if (names.isEmpty) continue;
+        emojiName = names.removeAt(0);
+        aliases = names;
+      } else {
+        // Most emoji aren't overridden, so avoid copying the list.
+        emojiName = allNames.first;
+        aliases = allNames.length > 1 ? allNames.sublist(1) : null;
+      }
+      results.add(_emojiCandidateFor(
         emojiType: ReactionType.unicodeEmoji,
         emojiCode: entry.key, emojiName: emojiName,
-        aliases: entry.value.length > 1 ? entry.value.sublist(1) : null);
+        aliases: aliases));
     }
+
     for (final entry in realmEmoji.entries) {
       final emojiName = entry.value.name;
-      byEmojiName[emojiName] = _emojiCandidateFor(
+      if (emojiName == 'zulip') {
+        // TODO does 'zulip' really override realm emoji?
+        //   (This is copied from zulip-mobile's behavior.)
+        continue;
+      }
+      results.add(_emojiCandidateFor(
         emojiType: ReactionType.realmEmoji,
         emojiCode: entry.key, emojiName: emojiName,
-        aliases: null);
+        aliases: null));
     }
-    // TODO does 'zulip' really override realm emoji?
-    //   (This is copied from zulip-mobile's behavior.)
-    byEmojiName['zulip'] = _emojiCandidateFor(
+
+    results.add(_emojiCandidateFor(
       emojiType: ReactionType.zulipExtraEmoji,
       emojiCode: 'zulip', emojiName: 'zulip',
-      aliases: null);
-    return byEmojiName.values.toList(growable: false);
+      aliases: null));
+
+    return results;
   }
 
   // Compare query_matches_string_in_order in Zulip web:shared/src/typeahead.ts .
