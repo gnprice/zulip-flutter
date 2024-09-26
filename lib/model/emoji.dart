@@ -188,28 +188,35 @@ class EmojiStoreImpl with EmojiStore {
   }
 
   List<EmojiCandidate> _generateAllCandidates() {
-    return [
-      // TODO fix this logic for when realm emoji overrides Unicode emoji
-      for (final entry in _serverEmojiData.entries)
-        _emojiCandidateFor(
-          emojiType: ReactionType.unicodeEmoji,
-          emojiCode: entry.key, emojiName: entry.value.first,
-          aliases: entry.value.length > 1 ? entry.value.sublist(1) : null),
-      for (final entry in realmEmoji.entries)
-        _emojiCandidateFor(
-          emojiType: ReactionType.realmEmoji,
-          emojiCode: entry.key, emojiName: entry.value.name,
-          aliases: null),
-      _emojiCandidateFor(emojiType: ReactionType.zulipExtraEmoji,
-        emojiCode: 'zulip', emojiName: 'zulip',
-        aliases: null),
-    ];
+    final byEmojiName = <String, EmojiCandidate>{};
+    for (final entry in _serverEmojiData.entries) {
+      final emojiName = entry.value.first;
+      byEmojiName[emojiName] = _emojiCandidateFor(
+        emojiType: ReactionType.unicodeEmoji,
+        emojiCode: entry.key, emojiName: emojiName,
+        aliases: entry.value.length > 1 ? entry.value.sublist(1) : null);
+    }
+    for (final entry in realmEmoji.entries) {
+      final emojiName = entry.value.name;
+      byEmojiName[emojiName] = _emojiCandidateFor(
+        emojiType: ReactionType.realmEmoji,
+        emojiCode: entry.key, emojiName: emojiName,
+        aliases: null);
+    }
+    // TODO does 'zulip' really override realm emoji?
+    //   (This is copied from zulip-mobile's behavior.)
+    byEmojiName['zulip'] = _emojiCandidateFor(
+      emojiType: ReactionType.zulipExtraEmoji,
+      emojiCode: 'zulip', emojiName: 'zulip',
+      aliases: null);
+    return byEmojiName.values.toList(growable: false);
   }
 
   @override
   Iterable<EmojiCandidate> emojiCandidatesMatching(String query) {
+    _allEmojiCandidates ??= _generateAllCandidates();
     if (query.isEmpty) {
-      return (_allEmojiCandidates ??= _generateAllCandidates());
+      return _allEmojiCandidates!;
     }
     throw UnimplementedError(); // TODO filter emoji candidates
   }
