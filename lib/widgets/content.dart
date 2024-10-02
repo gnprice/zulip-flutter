@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ import 'dialog.dart';
 import 'icons.dart';
 import 'lightbox.dart';
 import 'message_list.dart';
+import 'poll.dart';
 import 'store.dart';
 import 'text.dart';
 
@@ -40,6 +42,10 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
       colorGlobalTimeBorder: const HSLColor.fromAHSL(1, 0, 0, 0.8).toColor(),
       colorMathBlockBorder: const HSLColor.fromAHSL(0.15, 240, 0.8, 0.5).toColor(),
       colorMessageMediaContainerBackground: const Color.fromRGBO(0, 0, 0, 0.03),
+      colorPollNames: const HSLColor.fromAHSL(1, 0, 0, .45).toColor(),
+      colorPollVoteCountBackground: const HSLColor.fromAHSL(1, 0, 0, 1).toColor(),
+      colorPollVoteCountBorder: const HSLColor.fromAHSL(1, 156, 0.28, 0.7).toColor(),
+      colorPollVoteCountText: const HSLColor.fromAHSL(1, 156, 0.41, 0.4).toColor(),
       colorThematicBreak: const HSLColor.fromAHSL(1, 0, 0, .87).toColor(),
       textStylePlainParagraph: _plainParagraphCommon(context).copyWith(
         color: const HSLColor.fromAHSL(1, 0, 0, 0.15).toColor(),
@@ -65,9 +71,13 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
       colorGlobalTimeBorder: const HSLColor.fromAHSL(0.4, 0, 0, 0).toColor(),
       colorMathBlockBorder: const HSLColor.fromAHSL(1, 240, 0.4, 0.4).toColor(),
       colorMessageMediaContainerBackground: const HSLColor.fromAHSL(0.03, 0, 0, 1).toColor(),
-      colorThematicBreak: const HSLColor.fromAHSL(1, 0, 0, .87).toColor().withOpacity(0.2),
+      colorPollNames: const HSLColor.fromAHSL(1, 236, .15, .7).toColor(),
+      colorPollVoteCountBackground: const HSLColor.fromAHSL(0.2, 0, 0, 0).toColor(),
+      colorPollVoteCountBorder: const HSLColor.fromAHSL(1, 185, 0.35, 0.35).toColor(),
+      colorPollVoteCountText: const HSLColor.fromAHSL(1, 185, 0.35, 0.65).toColor(),
+      colorThematicBreak: const HSLColor.fromAHSL(1, 0, 0, .87).toColor().withValues(alpha: 0.2),
       textStylePlainParagraph: _plainParagraphCommon(context).copyWith(
-        color: const HSLColor.fromAHSL(0.75, 0, 0, 1).toColor(),
+        color: const HSLColor.fromAHSL(1, 0, 0, 0.85).toColor(),
         debugLabel: 'ContentTheme.textStylePlainParagraph'),
       codeBlockTextStyles: CodeBlockTextStyles.dark(context),
       textStyleError: TextStyle(fontSize: kBaseFontSize, color: Colors.red.shade900)
@@ -89,6 +99,10 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
     required this.colorGlobalTimeBorder,
     required this.colorMathBlockBorder,
     required this.colorMessageMediaContainerBackground,
+    required this.colorPollNames,
+    required this.colorPollVoteCountBackground,
+    required this.colorPollVoteCountBorder,
+    required this.colorPollVoteCountText,
     required this.colorThematicBreak,
     required this.textStylePlainParagraph,
     required this.codeBlockTextStyles,
@@ -114,6 +128,10 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
   final Color colorGlobalTimeBorder;
   final Color colorMathBlockBorder; // TODO(#46) this won't be needed
   final Color colorMessageMediaContainerBackground;
+  final Color colorPollNames;
+  final Color colorPollVoteCountBackground;
+  final Color colorPollVoteCountBorder;
+  final Color colorPollVoteCountText;
   final Color colorThematicBreak;
 
   /// The complete [TextStyle] we use for plain, unstyled paragraphs.
@@ -165,6 +183,10 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
     Color? colorGlobalTimeBorder,
     Color? colorMathBlockBorder,
     Color? colorMessageMediaContainerBackground,
+    Color? colorPollNames,
+    Color? colorPollVoteCountBackground,
+    Color? colorPollVoteCountBorder,
+    Color? colorPollVoteCountText,
     Color? colorThematicBreak,
     TextStyle? textStylePlainParagraph,
     CodeBlockTextStyles? codeBlockTextStyles,
@@ -180,6 +202,10 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
       colorGlobalTimeBorder: colorGlobalTimeBorder ?? this.colorGlobalTimeBorder,
       colorMathBlockBorder: colorMathBlockBorder ?? this.colorMathBlockBorder,
       colorMessageMediaContainerBackground: colorMessageMediaContainerBackground ?? this.colorMessageMediaContainerBackground,
+      colorPollNames: colorPollNames ?? this.colorPollNames,
+      colorPollVoteCountBackground: colorPollVoteCountBackground ?? this.colorPollVoteCountBackground,
+      colorPollVoteCountBorder: colorPollVoteCountBorder ?? this.colorPollVoteCountBorder,
+      colorPollVoteCountText: colorPollVoteCountText ?? this.colorPollVoteCountText,
       colorThematicBreak: colorThematicBreak ?? this.colorThematicBreak,
       textStylePlainParagraph: textStylePlainParagraph ?? this.textStylePlainParagraph,
       codeBlockTextStyles: codeBlockTextStyles ?? this.codeBlockTextStyles,
@@ -202,6 +228,10 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
       colorGlobalTimeBorder: Color.lerp(colorGlobalTimeBorder, other.colorGlobalTimeBorder, t)!,
       colorMathBlockBorder: Color.lerp(colorMathBlockBorder, other.colorMathBlockBorder, t)!,
       colorMessageMediaContainerBackground: Color.lerp(colorMessageMediaContainerBackground, other.colorMessageMediaContainerBackground, t)!,
+      colorPollNames: Color.lerp(colorPollNames, other.colorPollNames, t)!,
+      colorPollVoteCountBackground: Color.lerp(colorPollVoteCountBackground, other.colorPollVoteCountBackground, t)!,
+      colorPollVoteCountBorder: Color.lerp(colorPollVoteCountBorder, other.colorPollVoteCountBorder, t)!,
+      colorPollVoteCountText: Color.lerp(colorPollVoteCountText, other.colorPollVoteCountText, t)!,
       colorThematicBreak: Color.lerp(colorThematicBreak, other.colorThematicBreak, t)!,
       textStylePlainParagraph: TextStyle.lerp(textStylePlainParagraph, other.textStylePlainParagraph, t)!,
       codeBlockTextStyles: CodeBlockTextStyles.lerp(codeBlockTextStyles, other.codeBlockTextStyles, t),
@@ -224,14 +254,18 @@ class MessageContent extends StatelessWidget {
   const MessageContent({super.key, required this.message, required this.content});
 
   final Message message;
-  final ZulipContent content;
+  final ZulipMessageContent content;
 
   @override
   Widget build(BuildContext context) {
+    final content = this.content;
     return InheritedMessage(message: message,
       child: DefaultTextStyle(
         style: ContentTheme.of(context).textStylePlainParagraph,
-        child: BlockContentList(nodes: content.nodes)));
+        child: switch (content) {
+          ZulipContent() => BlockContentList(nodes: content.nodes),
+          PollContent()  => PollWidget(poll: content.poll),
+        }));
   }
 }
 
@@ -265,44 +299,33 @@ class BlockContentList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       ...nodes.map((node) {
-        if (node is LineBreakNode) {
-          // This goes in a Column.  So to get the effect of a newline,
-          // just use an empty Text.
-          return const Text('');
-        } else if (node is ThematicBreakNode) {
-          return const ThematicBreak();
-        } else if (node is ParagraphNode) {
-          return Paragraph(node: node);
-        } else if (node is HeadingNode) {
-          return Heading(node: node);
-        } else if (node is QuotationNode) {
-          return Quotation(node: node);
-        } else if (node is ListNode) {
-          return ListNodeWidget(node: node);
-        } else if (node is SpoilerNode) {
-          return Spoiler(node: node);
-        } else if (node is CodeBlockNode) {
-          return CodeBlock(node: node);
-        } else if (node is MathBlockNode) {
-          return MathBlock(node: node);
-        } else if (node is ImageNodeList) {
-          return MessageImageList(node: node);
-        } else if (node is ImageNode) {
-          assert(false,
-            "[ImageNode] not allowed in [BlockContentList]. "
-            "It should be wrapped in [ImageNodeList]."
-          );
-          return MessageImage(node: node);
-        } else if (node is InlineVideoNode) {
-          return MessageInlineVideo(node: node);
-        } else if (node is EmbedVideoNode) {
-          return MessageEmbedVideo(node: node);
-        } else if (node is UnimplementedBlockContentNode) {
-          return Text.rich(_errorUnimplemented(node, context: context));
-        } else {
-          // TODO(dart-3): Use a sealed class / pattern-matching to exclude this.
-          throw Exception("impossible BlockContentNode: ${node.debugHtmlText}");
-        }
+        return switch (node) {
+          LineBreakNode() =>
+            // This goes in a Column.  So to get the effect of a newline,
+            // just use an empty Text.
+            const Text(''),
+          ThematicBreakNode() => const ThematicBreak(),
+          ParagraphNode() => Paragraph(node: node),
+          HeadingNode() => Heading(node: node),
+          QuotationNode() => Quotation(node: node),
+          ListNode() => ListNodeWidget(node: node),
+          SpoilerNode() => Spoiler(node: node),
+          CodeBlockNode() => CodeBlock(node: node),
+          MathBlockNode() => MathBlock(node: node),
+          ImageNodeList() => MessageImageList(node: node),
+          ImageNode() => (){
+            assert(false,
+              "[ImageNode] not allowed in [BlockContentList]. "
+              "It should be wrapped in [ImageNodeList]."
+            );
+            return MessageImage(node: node);
+          }(),
+          InlineVideoNode() => MessageInlineVideo(node: node),
+          EmbedVideoNode() => MessageEmbedVideo(node: node),
+          UnimplementedBlockContentNode() =>
+            Text.rich(_errorUnimplemented(node, context: context)),
+        };
+
       }),
     ]);
   }
@@ -571,26 +594,33 @@ class MessageImage extends StatelessWidget {
     final message = InheritedMessage.of(context);
 
     // TODO image hover animation
-    final src = node.srcUrl;
-
+    final srcUrl = node.srcUrl;
+    final thumbnailUrl = node.thumbnailUrl;
     final store = PerAccountStoreWidget.of(context);
-    final resolvedSrc = store.tryResolveUrl(src);
+    final resolvedSrcUrl = store.tryResolveUrl(srcUrl);
+    final resolvedThumbnailUrl = thumbnailUrl == null
+      ? null : store.tryResolveUrl(thumbnailUrl);
+
     // TODO if src fails to parse, show an explicit "broken image"
 
     return MessageMediaContainer(
-      onTap: resolvedSrc == null ? null : () { // TODO(log)
-        Navigator.of(context).push(getLightboxRoute(
+      onTap: resolvedSrcUrl == null ? null : () { // TODO(log)
+        Navigator.of(context).push(getImageLightboxRoute(
           context: context,
           message: message,
-          src: resolvedSrc,
-          mediaType: MediaType.image));
+          src: resolvedSrcUrl,
+          thumbnailUrl: resolvedThumbnailUrl,
+          originalWidth: node.originalWidth,
+          originalHeight: node.originalHeight));
       },
-      child: resolvedSrc == null ? null : LightboxHero(
-        message: message,
-        src: resolvedSrc,
-        child: RealmContentNetworkImage(
-          resolvedSrc,
-          filterQuality: FilterQuality.medium)));
+      child: node.loading
+        ? const CupertinoActivityIndicator()
+        : resolvedSrcUrl == null ? null : LightboxHero(
+            message: message,
+            src: resolvedSrcUrl,
+            child: RealmContentNetworkImage(
+              resolvedThumbnailUrl ?? resolvedSrcUrl,
+              filterQuality: FilterQuality.medium)));
   }
 }
 
@@ -607,11 +637,10 @@ class MessageInlineVideo extends StatelessWidget {
 
     return MessageMediaContainer(
       onTap: resolvedSrc == null ? null : () { // TODO(log)
-        Navigator.of(context).push(getLightboxRoute(
+        Navigator.of(context).push(getVideoLightboxRoute(
           context: context,
           message: message,
-          src: resolvedSrc,
-          mediaType: MediaType.video));
+          src: resolvedSrc));
       },
       child: Container(
         color: Colors.black, // Web has the same color in light and dark mode.
@@ -922,65 +951,65 @@ class _InlineContentBuilder {
   }
 
   InlineSpan _buildNode(InlineContentNode node) {
-    if (node is TextNode) {
-      return TextSpan(text: node.text, recognizer: _recognizer);
-    } else if (node is LineBreakInlineNode) {
-      // Each `<br/>` is followed by a newline, which browsers apparently ignore
-      // and our parser doesn't.  So don't do anything here.
-      return const TextSpan(text: "");
-    } else if (node is StrongNode) {
-      return _buildStrong(node);
-    } else if (node is DeletedNode) {
-      return _buildDeleted(node);
-    } else if (node is EmphasisNode) {
-      return _buildEmphasis(node);
-    } else if (node is LinkNode) {
-      return _buildLink(node);
-    } else if (node is InlineCodeNode) {
-      return _buildInlineCode(node);
-    } else if (node is UserMentionNode) {
-      return WidgetSpan(alignment: PlaceholderAlignment.middle,
-        child: UserMention(ambientTextStyle: widget.style, node: node));
-    } else if (node is UnicodeEmojiNode) {
-      return TextSpan(text: node.emojiUnicode, recognizer: _recognizer);
-    } else if (node is ImageEmojiNode) {
-      return WidgetSpan(alignment: PlaceholderAlignment.middle,
-        child: MessageImageEmoji(node: node));
-    } else if (node is MathInlineNode) {
-      return TextSpan(
-        style: widget.style
-          .merge(ContentTheme.of(_context!).textStyleInlineMath)
-          .apply(fontSizeFactor: kInlineCodeFontSizeFactor),
-        children: [TextSpan(text: node.texSource)]);
-    } else if (node is GlobalTimeNode) {
-      return WidgetSpan(alignment: PlaceholderAlignment.middle,
-        child: GlobalTime(node: node, ambientTextStyle: widget.style));
-    } else if (node is UnimplementedInlineContentNode) {
-      return _errorUnimplemented(node, context: _context!);
-    } else {
-      // TODO(dart-3): Use a sealed class / pattern matching to eliminate this case.
-      throw Exception("impossible InlineContentNode: ${node.debugHtmlText}");
+    switch (node) {
+      case TextNode():
+        return TextSpan(text: node.text, recognizer: _recognizer);
+
+      case LineBreakInlineNode():
+        // Each `<br/>` is followed by a newline, which browsers apparently ignore
+        // and our parser doesn't.  So don't do anything here.
+        return const TextSpan(text: "");
+
+      case StrongNode():
+        return _buildNodes(node.nodes,
+          style: bolderWghtTextStyle(widget.style, by: 200));
+
+      case DeletedNode():
+        return _buildNodes(node.nodes,
+          style: const TextStyle(decoration: TextDecoration.lineThrough));
+
+      case EmphasisNode():
+        return _buildNodes(node.nodes,
+          style: const TextStyle(fontStyle: FontStyle.italic));
+
+      case LinkNode():
+        final recognizer = widget.linkRecognizers?[node];
+        assert(recognizer != null);
+        _pushRecognizer(recognizer);
+        final result = _buildNodes(node.nodes,
+          // Web has the same color in light and dark mode.
+          style: TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()));
+        _popRecognizer();
+        return result;
+
+      case InlineCodeNode():
+        return _buildInlineCode(node);
+
+      case UserMentionNode():
+        return WidgetSpan(alignment: PlaceholderAlignment.middle,
+          child: UserMention(ambientTextStyle: widget.style, node: node));
+
+      case UnicodeEmojiNode():
+        return TextSpan(text: node.emojiUnicode, recognizer: _recognizer);
+
+      case ImageEmojiNode():
+        return WidgetSpan(alignment: PlaceholderAlignment.middle,
+          child: MessageImageEmoji(node: node));
+
+      case MathInlineNode():
+        return TextSpan(
+          style: widget.style
+            .merge(ContentTheme.of(_context!).textStyleInlineMath)
+            .apply(fontSizeFactor: kInlineCodeFontSizeFactor),
+          children: [TextSpan(text: node.texSource)]);
+
+      case GlobalTimeNode():
+        return WidgetSpan(alignment: PlaceholderAlignment.middle,
+          child: GlobalTime(node: node, ambientTextStyle: widget.style));
+
+      case UnimplementedInlineContentNode():
+        return _errorUnimplemented(node, context: _context!);
     }
-  }
-
-  InlineSpan _buildStrong(StrongNode node) => _buildNodes(node.nodes,
-    style: bolderWghtTextStyle(widget.style, by: 200));
-
-  InlineSpan _buildDeleted(DeletedNode node) => _buildNodes(node.nodes,
-    style: const TextStyle(decoration: TextDecoration.lineThrough));
-
-  InlineSpan _buildEmphasis(EmphasisNode node) => _buildNodes(node.nodes,
-    style: const TextStyle(fontStyle: FontStyle.italic));
-
-  InlineSpan _buildLink(LinkNode node) {
-    final recognizer = widget.linkRecognizers?[node];
-    assert(recognizer != null);
-    _pushRecognizer(recognizer);
-    final result = _buildNodes(node.nodes,
-      // Web has the same color in light and dark mode.
-      style: TextStyle(color: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor()));
-    _popRecognizer();
-    return result;
   }
 
   InlineSpan _buildInlineCode(InlineCodeNode node) {

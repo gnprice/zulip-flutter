@@ -21,6 +21,20 @@ InitialSnapshot _$InitialSnapshotFromJson(Map<String, dynamic> json) =>
       customProfileFields: (json['custom_profile_fields'] as List<dynamic>)
           .map((e) => CustomProfileField.fromJson(e as Map<String, dynamic>))
           .toList(),
+      emailAddressVisibility: $enumDecodeNullable(
+          _$EmailAddressVisibilityEnumMap, json['email_address_visibility']),
+      serverTypingStartedExpiryPeriodMilliseconds:
+          (json['server_typing_started_expiry_period_milliseconds'] as num?)
+                  ?.toInt() ??
+              15000,
+      serverTypingStoppedWaitPeriodMilliseconds:
+          (json['server_typing_stopped_wait_period_milliseconds'] as num?)
+                  ?.toInt() ??
+              5000,
+      serverTypingStartedWaitPeriodMilliseconds:
+          (json['server_typing_started_wait_period_milliseconds'] as num?)
+                  ?.toInt() ??
+              10000,
       realmEmoji: (json['realm_emoji'] as Map<String, dynamic>).map(
         (k, e) =>
             MapEntry(k, RealmEmojiItem.fromJson(e as Map<String, dynamic>)),
@@ -74,6 +88,14 @@ Map<String, dynamic> _$InitialSnapshotToJson(InitialSnapshot instance) =>
       'zulip_merge_base': instance.zulipMergeBase,
       'alert_words': instance.alertWords,
       'custom_profile_fields': instance.customProfileFields,
+      'email_address_visibility':
+          _$EmailAddressVisibilityEnumMap[instance.emailAddressVisibility],
+      'server_typing_started_expiry_period_milliseconds':
+          instance.serverTypingStartedExpiryPeriodMilliseconds,
+      'server_typing_stopped_wait_period_milliseconds':
+          instance.serverTypingStoppedWaitPeriodMilliseconds,
+      'server_typing_started_wait_period_milliseconds':
+          instance.serverTypingStartedWaitPeriodMilliseconds,
       'realm_emoji': instance.realmEmoji,
       'recent_private_conversations': instance.recentPrivateConversations,
       'subscriptions': instance.subscriptions,
@@ -87,6 +109,14 @@ Map<String, dynamic> _$InitialSnapshotToJson(InitialSnapshot instance) =>
       'realm_non_active_users': instance.realmNonActiveUsers,
       'cross_realm_bots': instance.crossRealmBots,
     };
+
+const _$EmailAddressVisibilityEnumMap = {
+  EmailAddressVisibility.everyone: 1,
+  EmailAddressVisibility.members: 2,
+  EmailAddressVisibility.admins: 3,
+  EmailAddressVisibility.nobody: 4,
+  EmailAddressVisibility.moderators: 5,
+};
 
 RealmDefaultExternalAccount _$RealmDefaultExternalAccountFromJson(
         Map<String, dynamic> json) =>
@@ -181,8 +211,8 @@ UnreadMessagesSnapshot _$UnreadMessagesSnapshotFromJson(
       dms: (json['pms'] as List<dynamic>)
           .map((e) => UnreadDmSnapshot.fromJson(e as Map<String, dynamic>))
           .toList(),
-      streams: (json['streams'] as List<dynamic>)
-          .map((e) => UnreadStreamSnapshot.fromJson(e as Map<String, dynamic>))
+      channels: (json['streams'] as List<dynamic>)
+          .map((e) => UnreadChannelSnapshot.fromJson(e as Map<String, dynamic>))
           .toList(),
       huddles: (json['huddles'] as List<dynamic>)
           .map((e) => UnreadHuddleSnapshot.fromJson(e as Map<String, dynamic>))
@@ -198,7 +228,7 @@ Map<String, dynamic> _$UnreadMessagesSnapshotToJson(
     <String, dynamic>{
       'count': instance.count,
       'pms': instance.dms,
-      'streams': instance.streams,
+      'streams': instance.channels,
       'huddles': instance.huddles,
       'mentions': instance.mentions,
       'old_unreads_missing': instance.oldUnreadsMissing,
@@ -220,9 +250,9 @@ Map<String, dynamic> _$UnreadDmSnapshotToJson(UnreadDmSnapshot instance) =>
       'unread_message_ids': instance.unreadMessageIds,
     };
 
-UnreadStreamSnapshot _$UnreadStreamSnapshotFromJson(
+UnreadChannelSnapshot _$UnreadChannelSnapshotFromJson(
         Map<String, dynamic> json) =>
-    UnreadStreamSnapshot(
+    UnreadChannelSnapshot(
       topic: json['topic'] as String,
       streamId: (json['stream_id'] as num).toInt(),
       unreadMessageIds: (json['unread_message_ids'] as List<dynamic>)
@@ -230,8 +260,8 @@ UnreadStreamSnapshot _$UnreadStreamSnapshotFromJson(
           .toList(),
     );
 
-Map<String, dynamic> _$UnreadStreamSnapshotToJson(
-        UnreadStreamSnapshot instance) =>
+Map<String, dynamic> _$UnreadChannelSnapshotToJson(
+        UnreadChannelSnapshot instance) =>
     <String, dynamic>{
       'topic': instance.topic,
       'stream_id': instance.streamId,

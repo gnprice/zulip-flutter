@@ -92,14 +92,11 @@ Map<String, dynamic> _$RealmEmojiItemToJson(RealmEmojiItem instance) =>
 
 User _$UserFromJson(Map<String, dynamic> json) => User(
       userId: (json['user_id'] as num).toInt(),
-      deliveryEmailStaleDoNotUse: json['delivery_email'] as String?,
+      deliveryEmail: json['delivery_email'] as String?,
       email: json['email'] as String,
       fullName: json['full_name'] as String,
       dateJoined: json['date_joined'] as String,
       isActive: json['is_active'] as bool,
-      isOwner: json['is_owner'] as bool,
-      isAdmin: json['is_admin'] as bool,
-      isGuest: json['is_guest'] as bool,
       isBillingAdmin: json['is_billing_admin'] as bool?,
       isBot: json['is_bot'] as bool,
       botType: (json['bot_type'] as num?)?.toInt(),
@@ -120,14 +117,11 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
 
 Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
       'user_id': instance.userId,
-      'delivery_email': instance.deliveryEmailStaleDoNotUse,
+      'delivery_email': instance.deliveryEmail,
       'email': instance.email,
       'full_name': instance.fullName,
       'date_joined': instance.dateJoined,
       'is_active': instance.isActive,
-      'is_owner': instance.isOwner,
-      'is_admin': instance.isAdmin,
-      'is_guest': instance.isGuest,
       'is_billing_admin': instance.isBillingAdmin,
       'is_bot': instance.isBot,
       'bot_type': instance.botType,
@@ -175,8 +169,8 @@ ZulipStream _$ZulipStreamFromJson(Map<String, dynamic> json) => ZulipStream(
       isWebPublic: json['is_web_public'] as bool,
       historyPublicToSubscribers: json['history_public_to_subscribers'] as bool,
       messageRetentionDays: (json['message_retention_days'] as num?)?.toInt(),
-      streamPostPolicy:
-          $enumDecode(_$StreamPostPolicyEnumMap, json['stream_post_policy']),
+      channelPostPolicy:
+          $enumDecode(_$ChannelPostPolicyEnumMap, json['stream_post_policy']),
       canRemoveSubscribersGroup: (ZulipStream._readCanRemoveSubscribersGroup(
               json, 'can_remove_subscribers_group') as num?)
           ?.toInt(),
@@ -195,17 +189,17 @@ Map<String, dynamic> _$ZulipStreamToJson(ZulipStream instance) =>
       'is_web_public': instance.isWebPublic,
       'history_public_to_subscribers': instance.historyPublicToSubscribers,
       'message_retention_days': instance.messageRetentionDays,
-      'stream_post_policy': instance.streamPostPolicy,
+      'stream_post_policy': instance.channelPostPolicy,
       'can_remove_subscribers_group': instance.canRemoveSubscribersGroup,
       'stream_weekly_traffic': instance.streamWeeklyTraffic,
     };
 
-const _$StreamPostPolicyEnumMap = {
-  StreamPostPolicy.any: 1,
-  StreamPostPolicy.administrators: 2,
-  StreamPostPolicy.fullMembers: 3,
-  StreamPostPolicy.moderators: 4,
-  StreamPostPolicy.unknown: null,
+const _$ChannelPostPolicyEnumMap = {
+  ChannelPostPolicy.any: 1,
+  ChannelPostPolicy.administrators: 2,
+  ChannelPostPolicy.fullMembers: 3,
+  ChannelPostPolicy.moderators: 4,
+  ChannelPostPolicy.unknown: null,
 };
 
 Subscription _$SubscriptionFromJson(Map<String, dynamic> json) => Subscription(
@@ -219,8 +213,8 @@ Subscription _$SubscriptionFromJson(Map<String, dynamic> json) => Subscription(
       isWebPublic: json['is_web_public'] as bool,
       historyPublicToSubscribers: json['history_public_to_subscribers'] as bool,
       messageRetentionDays: (json['message_retention_days'] as num?)?.toInt(),
-      streamPostPolicy:
-          $enumDecode(_$StreamPostPolicyEnumMap, json['stream_post_policy']),
+      channelPostPolicy:
+          $enumDecode(_$ChannelPostPolicyEnumMap, json['stream_post_policy']),
       canRemoveSubscribersGroup: (ZulipStream._readCanRemoveSubscribersGroup(
               json, 'can_remove_subscribers_group') as num?)
           ?.toInt(),
@@ -247,7 +241,7 @@ Map<String, dynamic> _$SubscriptionToJson(Subscription instance) =>
       'is_web_public': instance.isWebPublic,
       'history_public_to_subscribers': instance.historyPublicToSubscribers,
       'message_retention_days': instance.messageRetentionDays,
-      'stream_post_policy': instance.streamPostPolicy,
+      'stream_post_policy': instance.channelPostPolicy,
       'can_remove_subscribers_group': instance.canRemoveSubscribersGroup,
       'stream_weekly_traffic': instance.streamWeeklyTraffic,
       'desktop_notifications': instance.desktopNotifications,
@@ -260,52 +254,77 @@ Map<String, dynamic> _$SubscriptionToJson(Subscription instance) =>
       'color': instance.color,
     };
 
-StreamMessage _$StreamMessageFromJson(Map<String, dynamic> json) =>
-    StreamMessage(
-      client: json['client'] as String,
-      content: json['content'] as String,
-      contentType: json['content_type'] as String,
-      id: (json['id'] as num).toInt(),
-      isMeMessage: json['is_me_message'] as bool,
-      lastEditTimestamp: (json['last_edit_timestamp'] as num?)?.toInt(),
-      reactions: Message._reactionsFromJson(json['reactions']),
-      recipientId: (json['recipient_id'] as num).toInt(),
-      senderEmail: json['sender_email'] as String,
-      senderFullName: json['sender_full_name'] as String,
-      senderId: (json['sender_id'] as num).toInt(),
-      senderRealmStr: json['sender_realm_str'] as String,
-      topic: json['subject'] as String,
-      timestamp: (json['timestamp'] as num).toInt(),
-      flags: Message._flagsFromJson(json['flags']),
-      matchContent: json['match_content'] as String?,
-      matchTopic: json['match_subject'] as String?,
-      displayRecipient: json['display_recipient'] as String,
-      streamId: (json['stream_id'] as num).toInt(),
-    );
+StreamMessage _$StreamMessageFromJson(Map<String, dynamic> json) {
+  $checkKeys(
+    json,
+    requiredKeys: const ['display_recipient'],
+    disallowNullValues: const ['display_recipient'],
+  );
+  return StreamMessage(
+    client: json['client'] as String,
+    content: json['content'] as String,
+    contentType: json['content_type'] as String,
+    editState: Message._messageEditStateFromJson(
+        MessageEditState._readFromMessage(json, 'edit_state')),
+    id: (json['id'] as num).toInt(),
+    isMeMessage: json['is_me_message'] as bool,
+    lastEditTimestamp: (json['last_edit_timestamp'] as num?)?.toInt(),
+    reactions: Message._reactionsFromJson(json['reactions']),
+    recipientId: (json['recipient_id'] as num).toInt(),
+    senderEmail: json['sender_email'] as String,
+    senderFullName: json['sender_full_name'] as String,
+    senderId: (json['sender_id'] as num).toInt(),
+    senderRealmStr: json['sender_realm_str'] as String,
+    topic: json['subject'] as String,
+    timestamp: (json['timestamp'] as num).toInt(),
+    flags: Message._flagsFromJson(json['flags']),
+    matchContent: json['match_content'] as String?,
+    matchTopic: json['match_subject'] as String?,
+    displayRecipient: json['display_recipient'] as String?,
+    streamId: (json['stream_id'] as num).toInt(),
+  )..poll = Poll.fromJson(Message._readPoll(json, 'submessages'));
+}
 
-Map<String, dynamic> _$StreamMessageToJson(StreamMessage instance) =>
-    <String, dynamic>{
-      'client': instance.client,
-      'content': instance.content,
-      'content_type': instance.contentType,
-      'id': instance.id,
-      'is_me_message': instance.isMeMessage,
-      'last_edit_timestamp': instance.lastEditTimestamp,
-      'reactions': Message._reactionsToJson(instance.reactions),
-      'recipient_id': instance.recipientId,
-      'sender_email': instance.senderEmail,
-      'sender_full_name': instance.senderFullName,
-      'sender_id': instance.senderId,
-      'sender_realm_str': instance.senderRealmStr,
-      'subject': instance.topic,
-      'timestamp': instance.timestamp,
-      'flags': instance.flags,
-      'match_content': instance.matchContent,
-      'match_subject': instance.matchTopic,
-      'type': instance.type,
-      'display_recipient': instance.displayRecipient,
-      'stream_id': instance.streamId,
-    };
+Map<String, dynamic> _$StreamMessageToJson(StreamMessage instance) {
+  final val = <String, dynamic>{
+    'client': instance.client,
+    'content': instance.content,
+    'content_type': instance.contentType,
+    'edit_state': _$MessageEditStateEnumMap[instance.editState]!,
+    'id': instance.id,
+    'is_me_message': instance.isMeMessage,
+    'last_edit_timestamp': instance.lastEditTimestamp,
+    'reactions': Message._reactionsToJson(instance.reactions),
+    'recipient_id': instance.recipientId,
+    'sender_email': instance.senderEmail,
+    'sender_full_name': instance.senderFullName,
+    'sender_id': instance.senderId,
+    'sender_realm_str': instance.senderRealmStr,
+    'subject': instance.topic,
+    'submessages': Poll.toJson(instance.poll),
+    'timestamp': instance.timestamp,
+    'flags': instance.flags,
+    'match_content': instance.matchContent,
+    'match_subject': instance.matchTopic,
+    'type': instance.type,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('display_recipient', instance.displayRecipient);
+  val['stream_id'] = instance.streamId;
+  return val;
+}
+
+const _$MessageEditStateEnumMap = {
+  MessageEditState.none: 'none',
+  MessageEditState.edited: 'edited',
+  MessageEditState.moved: 'moved',
+};
 
 DmRecipient _$DmRecipientFromJson(Map<String, dynamic> json) => DmRecipient(
       id: (json['id'] as num).toInt(),
@@ -324,6 +343,8 @@ DmMessage _$DmMessageFromJson(Map<String, dynamic> json) => DmMessage(
       client: json['client'] as String,
       content: json['content'] as String,
       contentType: json['content_type'] as String,
+      editState: Message._messageEditStateFromJson(
+          MessageEditState._readFromMessage(json, 'edit_state')),
       id: (json['id'] as num).toInt(),
       isMeMessage: json['is_me_message'] as bool,
       lastEditTimestamp: (json['last_edit_timestamp'] as num?)?.toInt(),
@@ -340,12 +361,13 @@ DmMessage _$DmMessageFromJson(Map<String, dynamic> json) => DmMessage(
       matchTopic: json['match_subject'] as String?,
       displayRecipient: const DmRecipientListConverter()
           .fromJson(json['display_recipient'] as List),
-    );
+    )..poll = Poll.fromJson(Message._readPoll(json, 'submessages'));
 
 Map<String, dynamic> _$DmMessageToJson(DmMessage instance) => <String, dynamic>{
       'client': instance.client,
       'content': instance.content,
       'content_type': instance.contentType,
+      'edit_state': _$MessageEditStateEnumMap[instance.editState]!,
       'id': instance.id,
       'is_me_message': instance.isMeMessage,
       'last_edit_timestamp': instance.lastEditTimestamp,
@@ -356,6 +378,7 @@ Map<String, dynamic> _$DmMessageToJson(DmMessage instance) => <String, dynamic>{
       'sender_id': instance.senderId,
       'sender_realm_str': instance.senderRealmStr,
       'subject': instance.topic,
+      'submessages': Poll.toJson(instance.poll),
       'timestamp': instance.timestamp,
       'flags': instance.flags,
       'match_content': instance.matchContent,
@@ -376,6 +399,19 @@ const _$EmojisetEnumMap = {
   Emojiset.googleBlob: 'google-blob',
   Emojiset.twitter: 'twitter',
   Emojiset.text: 'text',
+};
+
+const _$ChannelPropertyNameEnumMap = {
+  ChannelPropertyName.name: 'name',
+  ChannelPropertyName.description: 'description',
+  ChannelPropertyName.firstMessageId: 'first_message_id',
+  ChannelPropertyName.inviteOnly: 'invite_only',
+  ChannelPropertyName.messageRetentionDays: 'message_retention_days',
+  ChannelPropertyName.channelPostPolicy: 'stream_post_policy',
+  ChannelPropertyName.canRemoveSubscribersGroup: 'can_remove_subscribers_group',
+  ChannelPropertyName.canRemoveSubscribersGroupId:
+      'can_remove_subscribers_group_id',
+  ChannelPropertyName.streamWeeklyTraffic: 'stream_weekly_traffic',
 };
 
 const _$MessageFlagEnumMap = {

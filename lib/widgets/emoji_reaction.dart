@@ -3,10 +3,106 @@ import 'package:flutter/material.dart';
 
 import '../api/model/model.dart';
 import '../api/route/messages.dart';
-import '../model/content.dart';
+import '../model/emoji.dart';
 import 'content.dart';
 import 'store.dart';
 import 'text.dart';
+
+/// Emoji-reaction styles that differ between light and dark themes.
+class EmojiReactionTheme extends ThemeExtension<EmojiReactionTheme> {
+  EmojiReactionTheme.light() :
+    this._(
+      bgSelected: Colors.white,
+
+      // TODO shadow effect, following web, which uses `box-shadow: inset`:
+      //   https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow#inset
+      //   Needs Flutter support for something like that:
+      //     https://github.com/flutter/flutter/issues/18636
+      //     https://github.com/flutter/flutter/issues/52999
+      //   Until then use a solid color; a much-lightened version of the shadow color.
+      //   Also adapt by making [borderUnselected] more transparent, so we'll
+      //   want to check that against web when implementing the shadow.
+      bgUnselected: const HSLColor.fromAHSL(0.08, 210, 0.50, 0.875).toColor(),
+
+      borderSelected: Colors.black.withValues(alpha: 0.45),
+
+      // TODO see TODO on [bgUnselected] about shadow effect
+      borderUnselected: Colors.black.withValues(alpha: 0.05),
+
+      textSelected: const HSLColor.fromAHSL(1, 210, 0.20, 0.20).toColor(),
+      textUnselected: const HSLColor.fromAHSL(1, 210, 0.20, 0.25).toColor(),
+    );
+
+  EmojiReactionTheme.dark() :
+    this._(
+      bgSelected: Colors.black.withValues(alpha: 0.8),
+      bgUnselected: Colors.black.withValues(alpha: 0.3),
+      borderSelected: Colors.white.withValues(alpha: 0.75),
+      borderUnselected: Colors.white.withValues(alpha: 0.15),
+      textSelected: Colors.white.withValues(alpha: 0.85),
+      textUnselected: Colors.white.withValues(alpha: 0.75),
+    );
+
+  EmojiReactionTheme._({
+    required this.bgSelected,
+    required this.bgUnselected,
+    required this.borderSelected,
+    required this.borderUnselected,
+    required this.textSelected,
+    required this.textUnselected,
+  });
+
+  /// The [EmojiReactionTheme] from the context's active theme.
+  ///
+  /// The [ThemeData] must include [EmojiReactionTheme] in [ThemeData.extensions].
+  static EmojiReactionTheme of(BuildContext context) {
+    final theme = Theme.of(context);
+    final extension = theme.extension<EmojiReactionTheme>();
+    assert(extension != null);
+    return extension!;
+  }
+
+  final Color bgSelected;
+  final Color bgUnselected;
+  final Color borderSelected;
+  final Color borderUnselected;
+  final Color textSelected;
+  final Color textUnselected;
+
+  @override
+  EmojiReactionTheme copyWith({
+    Color? bgSelected,
+    Color? bgUnselected,
+    Color? borderSelected,
+    Color? borderUnselected,
+    Color? textSelected,
+    Color? textUnselected,
+  }) {
+    return EmojiReactionTheme._(
+      bgSelected: bgSelected ?? this.bgSelected,
+      bgUnselected: bgUnselected ?? this.bgUnselected,
+      borderSelected: borderSelected ?? this.borderSelected,
+      borderUnselected: borderUnselected ?? this.borderUnselected,
+      textSelected: textSelected ?? this.textSelected,
+      textUnselected: textUnselected ?? this.textUnselected,
+    );
+  }
+
+  @override
+  EmojiReactionTheme lerp(EmojiReactionTheme other, double t) {
+    if (identical(this, other)) {
+      return this;
+    }
+    return EmojiReactionTheme._(
+      bgSelected: Color.lerp(bgSelected, other.bgSelected, t)!,
+      bgUnselected: Color.lerp(bgUnselected, other.bgUnselected, t)!,
+      borderSelected: Color.lerp(borderSelected, other.borderSelected, t)!,
+      borderUnselected: Color.lerp(borderUnselected, other.borderUnselected, t)!,
+      textSelected: Color.lerp(textSelected, other.textSelected, t)!,
+      textUnselected: Color.lerp(textUnselected, other.textUnselected, t)!,
+    );
+  }
+}
 
 class ReactionChipsList extends StatelessWidget {
   const ReactionChipsList({
@@ -32,24 +128,6 @@ class ReactionChipsList extends StatelessWidget {
   }
 }
 
-final _textColorSelected = const HSLColor.fromAHSL(1, 210, 0.20, 0.20).toColor();
-final _textColorUnselected = const HSLColor.fromAHSL(1, 210, 0.20, 0.25).toColor();
-
-const _backgroundColorSelected = Colors.white;
-// TODO shadow effect, following web, which uses `box-shadow: inset`:
-//   https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow#inset
-//   Needs Flutter support for something like that:
-//     https://github.com/flutter/flutter/issues/18636
-//     https://github.com/flutter/flutter/issues/52999
-//   Until then use a solid color; a much-lightened version of the shadow color.
-//   Also adapt by making [_borderColorUnselected] more transparent, so we'll
-//   want to check that against web when implementing the shadow.
-final _backgroundColorUnselected = const HSLColor.fromAHSL(0.08, 210, 0.50, 0.875).toColor();
-
-final _borderColorSelected = Colors.black.withOpacity(0.45);
-// TODO see TODO on [_backgroundColorUnselected] about shadow effect
-final _borderColorUnselected = Colors.black.withOpacity(0.05);
-
 class ReactionChip extends StatelessWidget {
   final bool showName;
   final int messageId;
@@ -71,8 +149,6 @@ class ReactionChip extends StatelessWidget {
     final emojiName = reactionWithVotes.emojiName;
     final userIds = reactionWithVotes.userIds;
 
-    final emojiset = store.userSettings?.emojiset ?? Emojiset.google;
-
     final selfVoted = userIds.contains(store.selfUserId);
     final label = showName
       // TODO(i18n): List formatting, like you can do in JavaScript:
@@ -85,11 +161,12 @@ class ReactionChip extends StatelessWidget {
         }).join(', ')
       : userIds.length.toString();
 
-    final borderColor =     selfVoted ? _borderColorSelected       : _borderColorUnselected;
-    final labelColor =      selfVoted ? _textColorSelected         : _textColorUnselected;
-    final backgroundColor = selfVoted ? _backgroundColorSelected   : _backgroundColorUnselected;
-    final splashColor =     selfVoted ? _backgroundColorUnselected : _backgroundColorSelected;
-    final highlightColor =  splashColor.withOpacity(0.5);
+    final reactionTheme = EmojiReactionTheme.of(context);
+    final borderColor =     selfVoted ? reactionTheme.borderSelected : reactionTheme.borderUnselected;
+    final labelColor =      selfVoted ? reactionTheme.textSelected   : reactionTheme.textUnselected;
+    final backgroundColor = selfVoted ? reactionTheme.bgSelected     : reactionTheme.bgUnselected;
+    final splashColor =     selfVoted ? reactionTheme.bgUnselected   : reactionTheme.bgSelected;
+    final highlightColor =  splashColor.withValues(alpha: 0.5);
 
     final borderSide = BorderSide(
       color: borderColor,
@@ -97,26 +174,20 @@ class ReactionChip extends StatelessWidget {
     );
     final shape = StadiumBorder(side: borderSide);
 
-    final Widget emoji;
-    if (emojiset == Emojiset.text) {
-      emoji = _TextEmoji(emojiName: emojiName, selected: selfVoted);
-    } else {
-      switch (reactionType) {
-        case ReactionType.unicodeEmoji:
-          emoji = _UnicodeEmoji(
-            emojiCode: emojiCode,
-            emojiName: emojiName,
-            selected: selfVoted,
-          );
-        case ReactionType.realmEmoji:
-        case ReactionType.zulipExtraEmoji:
-          emoji = _ImageEmoji(
-            emojiCode: emojiCode,
-            emojiName: emojiName,
-            selected: selfVoted,
-          );
-      }
-    }
+    final emojiDisplay = store.emojiDisplayFor(
+      emojiType: reactionType,
+      emojiCode: emojiCode,
+      emojiName: emojiName,
+    ).resolve(store.userSettings);
+
+    final emoji = switch (emojiDisplay) {
+      UnicodeEmojiDisplay() => _UnicodeEmoji(
+        emojiDisplay: emojiDisplay, selected: selfVoted),
+      ImageEmojiDisplay() => _ImageEmoji(
+        emojiDisplay: emojiDisplay, emojiName: emojiName, selected: selfVoted),
+      TextEmojiDisplay() => _TextEmoji(
+        emojiDisplay: emojiDisplay, selected: selfVoted),
+    };
 
     return Tooltip(
       // TODO(#434): Semantics with eg "Reaction: <emoji name>; you and N others: <names>"
@@ -223,22 +294,15 @@ TextScaler _labelTextScalerClamped(BuildContext context) =>
 
 class _UnicodeEmoji extends StatelessWidget {
   const _UnicodeEmoji({
-    required this.emojiCode,
-    required this.emojiName,
+    required this.emojiDisplay,
     required this.selected,
   });
 
-  final String emojiCode;
-  final String emojiName;
+  final UnicodeEmojiDisplay emojiDisplay;
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    final parsed = tryParseEmojiCodeToUnicode(emojiCode);
-    if (parsed == null) { // TODO(log)
-      return _TextEmoji(emojiName: emojiName, selected: selected);
-    }
-
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
       case TargetPlatform.fuchsia:
@@ -251,7 +315,7 @@ class _UnicodeEmoji extends StatelessWidget {
             fontSize: _notoColorEmojiTextSize,
           ),
           strutStyle: const StrutStyle(fontSize: _notoColorEmojiTextSize, forceStrutHeight: true),
-          parsed);
+          emojiDisplay.emojiUnicode);
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
         // We expect the font "Apple Color Emoji" to be used. There are some
@@ -277,7 +341,7 @@ class _UnicodeEmoji extends StatelessWidget {
             textScaler: _squareEmojiScalerClamped(context),
             style: const TextStyle(fontSize: _squareEmojiSize),
             strutStyle: const StrutStyle(fontSize: _squareEmojiSize, forceStrutHeight: true),
-            parsed)),
+            emojiDisplay.emojiUnicode)),
         ]);
     }
   }
@@ -285,21 +349,17 @@ class _UnicodeEmoji extends StatelessWidget {
 
 class _ImageEmoji extends StatelessWidget {
   const _ImageEmoji({
-    required this.emojiCode,
+    required this.emojiDisplay,
     required this.emojiName,
     required this.selected,
   });
 
-  final String emojiCode;
+  final ImageEmojiDisplay emojiDisplay;
   final String emojiName;
   final bool selected;
 
-  Widget get _textFallback => _TextEmoji(emojiName: emojiName, selected: selected);
-
   @override
   Widget build(BuildContext context) {
-    final store = PerAccountStoreWidget.of(context);
-
     // Some people really dislike animated emoji.
     final doNotAnimate =
       // From reading code, this doesn't actually get set on iOS:
@@ -312,43 +372,39 @@ class _ImageEmoji extends StatelessWidget {
         //   See GitHub comment linked above.
         && WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.reduceMotion);
 
-    final String src;
-    switch (emojiCode) {
-      case 'zulip': // the single "zulip extra emoji"
-        src = '/static/generated/emoji/images/emoji/unicode/zulip.png';
-      default:
-        final item = store.realmEmoji[emojiCode];
-        if (item == null) {
-          return _textFallback;
-        }
-        src = doNotAnimate && item.stillUrl != null ? item.stillUrl! : item.sourceUrl;
-    }
-    final parsedSrc = Uri.tryParse(src);
-    if (parsedSrc == null) { // TODO(log)
-      return _textFallback;
-    }
-    final resolved = store.realmUrl.resolveUri(parsedSrc);
+    final resolvedUrl = doNotAnimate
+      ? (emojiDisplay.resolvedStillUrl ?? emojiDisplay.resolvedUrl)
+      : emojiDisplay.resolvedUrl;
 
     // Unicode and text emoji get scaled; it would look weird if image emoji didn't.
     final size = _squareEmojiScalerClamped(context).scale(_squareEmojiSize);
 
     return RealmContentNetworkImage(
-      resolved,
+      resolvedUrl,
       width: size,
       height: size,
-      errorBuilder: (context, _, __) => _textFallback,
+      errorBuilder: (context, _, __) => _TextEmoji(
+        emojiDisplay: TextEmojiDisplay(emojiName: emojiName), selected: selected),
     );
   }
 }
 
 class _TextEmoji extends StatelessWidget {
-  const _TextEmoji({required this.emojiName, required this.selected});
+  const _TextEmoji({required this.emojiDisplay, required this.selected});
 
-  final String emojiName;
+  final TextEmojiDisplay emojiDisplay;
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
+    final emojiName = emojiDisplay.emojiName;
+
+    // Encourage line breaks before "_" (common in these), but try not
+    // to leave a colon alone on a line. See:
+    //   <https://github.com/flutter/flutter/issues/61081#issuecomment-1103330522>
+    final text = ':\ufeff${emojiName.replaceAll('_', '\u200b_')}\ufeff:';
+
+    final reactionTheme = EmojiReactionTheme.of(context);
     return Text(
       textAlign: TextAlign.end,
       textScaler: _textEmojiScalerClamped(context),
@@ -356,12 +412,9 @@ class _TextEmoji extends StatelessWidget {
       style: TextStyle(
         fontSize: 14 * 0.8,
         height: 1, // to be denser when we have to wrap
-        color: selected ? _textColorSelected : _textColorUnselected,
+        color: selected ? reactionTheme.textSelected : reactionTheme.textUnselected,
       ).merge(weightVariableTextStyle(context,
           wght: selected ? 600 : null)),
-      // Encourage line breaks before "_" (common in these), but try not
-      // to leave a colon alone on a line. See:
-      //   <https://github.com/flutter/flutter/issues/61081#issuecomment-1103330522>
-      ':\ufeff${emojiName.replaceAll('_', '\u200b_')}\ufeff:');
+      text);
   }
 }

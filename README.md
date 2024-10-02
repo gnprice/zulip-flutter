@@ -92,12 +92,27 @@ Two specific points to expand on:
 
 ### Setting up
 
+Running the app requires only a standard Flutter setup,
+using the Flutter `main` channel:
+
 1. Follow the [Flutter installation guide](https://docs.flutter.dev/get-started/install)
    for your platform of choice.
 2. Switch to the latest version of Flutter by running `flutter channel main`
    and `flutter upgrade` (see [Flutter version](#flutter-version) below).
 3. Ensure Flutter is correctly configured by running `flutter doctor`.
 4. Start the app with `flutter run`, or from your IDE.
+
+Parts of our test suite require an additional dependency:
+
+5. Install SQLite, for example by running `sudo apt install libsqlite3-dev`.
+
+Developing on Windows requires
+an [additional step](docs/setup.md#autocrlf):
+
+6. Run `git config core.autocrlf input`.
+
+For more details and help with unusual configurations,
+see our [full setup guide](docs/setup.md).
 
 
 ### Flutter version
@@ -245,8 +260,7 @@ To update the version bounds:
 * Use `flutter upgrade` to upgrade your local Flutter and Dart.
 * Run `tools/upgrade flutter-local`, which makes a commit updating
   `pubspec.yaml` and `pubspec.lock` to match your local Flutter.
-* Make a quick check that things work: `tools/check`,
-  and do a quick smoke-test of the app.
+* Build and run the app for a quick smoke-check.
 * Send the changes as a PR.
 
 

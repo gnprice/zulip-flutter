@@ -65,8 +65,8 @@ class CombinedFeedNarrow extends Narrow {
   int get hashCode => 'CombinedFeedNarrow'.hashCode;
 }
 
-class StreamNarrow extends Narrow {
-  const StreamNarrow(this.streamId);
+class ChannelNarrow extends Narrow {
+  const ChannelNarrow(this.streamId);
 
   final int streamId;
 
@@ -79,16 +79,16 @@ class StreamNarrow extends Narrow {
   ApiNarrow apiEncode() => [ApiNarrowStream(streamId)];
 
   @override
-  String toString() => 'StreamNarrow($streamId)';
+  String toString() => 'ChannelNarrow($streamId)';
 
   @override
   bool operator ==(Object other) {
-    if (other is! StreamNarrow) return false;
+    if (other is! ChannelNarrow) return false;
     return other.streamId == streamId;
   }
 
   @override
-  int get hashCode => Object.hash('StreamNarrow', streamId);
+  int get hashCode => Object.hash('ChannelNarrow', streamId);
 }
 
 class TopicNarrow extends Narrow implements SendableNarrow {
@@ -204,7 +204,7 @@ class DmNarrow extends Narrow implements SendableNarrow {
     UpdateMessageFlagsMessageDetail detail, {
     required int selfUserId,
   }) {
-    assert(detail.type == MessageType.private);
+    assert(detail.type == MessageType.direct);
     return DmNarrow.withOtherUsers(detail.userIds!, selfUserId: selfUserId);
   }
 
@@ -286,4 +286,60 @@ class DmNarrow extends Narrow implements SendableNarrow {
   int get hashCode => Object.hash('DmNarrow', _key);
 }
 
-// TODO other narrow types: starred, mentioned; searches; arbitrary
+class MentionsNarrow extends Narrow {
+  const MentionsNarrow();
+
+  @override
+  bool containsMessage(Message message) {
+    return message.flags.any((flag) {
+      switch (flag) {
+        case MessageFlag.mentioned:
+        case MessageFlag.wildcardMentioned:
+          return true;
+
+        case MessageFlag.read:
+        case MessageFlag.starred:
+        case MessageFlag.collapsed:
+        case MessageFlag.hasAlertWord:
+        case MessageFlag.historical:
+        case MessageFlag.unknown:
+          return false;
+      }
+    });
+  }
+
+  @override
+  ApiNarrow apiEncode() => [ApiNarrowIs(IsOperand.mentioned)];
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! MentionsNarrow) return false;
+    // Conceptually there's only one value of this type.
+    return true;
+  }
+
+  @override
+  int get hashCode => 'MentionsNarrow'.hashCode;
+}
+
+class StarredMessagesNarrow extends Narrow {
+  const StarredMessagesNarrow();
+
+  @override
+  ApiNarrow apiEncode() => [ApiNarrowIs(IsOperand.starred)];
+
+  @override
+  bool containsMessage(Message message) {
+    return message.flags.contains(MessageFlag.starred);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! StarredMessagesNarrow) return false;
+    // Conceptually there's only one value of this type.
+    return true;
+  }
+
+  @override
+  int get hashCode => 'StarredMessagesNarrow'.hashCode;
+}

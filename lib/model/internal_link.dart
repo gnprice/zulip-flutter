@@ -4,7 +4,7 @@ import 'package:json_annotation/json_annotation.dart';
 import '../api/model/narrow.dart';
 import 'narrow.dart';
 import 'store.dart';
-import 'stream.dart';
+import 'channel.dart';
 
 part 'internal_link.g.dart';
 
@@ -85,7 +85,7 @@ Uri narrowLink(PerAccountStore store, Narrow narrow, {int? nearMessageId}) {
         fragment.write('${element.operand.join(',')}-$suffix');
       case ApiNarrowDm():
         assert(false, 'ApiNarrowDm should have been resolved');
-      case ApiNarrowIsUnread():
+      case ApiNarrowIs():
         fragment.write(element.operand.toString());
       case ApiNarrowMessageId():
         fragment.write(element.operand.toString());
@@ -152,6 +152,7 @@ Narrow? _interpretNarrowSegments(List<String> segments, PerAccountStore store) {
   ApiNarrowStream? streamElement;
   ApiNarrowTopic? topicElement;
   ApiNarrowDm? dmElement;
+  Set<IsOperand> isElementOperands = {};
 
   for (var i = 0; i < segments.length; i += 2) {
     final (operator, negated) = _parseOperator(segments[i]);
@@ -179,6 +180,10 @@ Narrow? _interpretNarrowSegments(List<String> segments, PerAccountStore store) {
         if (dmIds == null) return null;
         dmElement = ApiNarrowDm(dmIds, negated: negated);
 
+      case _NarrowOperator.is_:
+        // It is fine to have duplicates of the same [IsOperand].
+        isElementOperands.add(IsOperand.fromRawString(operand));
+
       case _NarrowOperator.near: // TODO(#82): support for near
       case _NarrowOperator.with_: // TODO(#683): support for with
         continue;
@@ -188,7 +193,24 @@ Narrow? _interpretNarrowSegments(List<String> segments, PerAccountStore store) {
     }
   }
 
-  if (dmElement != null) {
+  if (isElementOperands.isNotEmpty) {
+    if (streamElement != null || topicElement != null || dmElement != null) return null;
+    if (isElementOperands.length > 1) return null;
+    switch (isElementOperands.single) {
+      case IsOperand.mentioned:
+        return const MentionsNarrow();
+      case IsOperand.starred:
+        return const StarredMessagesNarrow();
+      case IsOperand.dm:
+      case IsOperand.private:
+      case IsOperand.alerted:
+      case IsOperand.followed:
+      case IsOperand.resolved:
+      case IsOperand.unread:
+      case IsOperand.unknown:
+        return null;
+    }
+  } else if (dmElement != null) {
     if (streamElement != null || topicElement != null) return null;
     return DmNarrow.withUsers(dmElement.operand, selfUserId: store.selfUserId);
   } else if (streamElement != null) {
@@ -196,7 +218,7 @@ Narrow? _interpretNarrowSegments(List<String> segments, PerAccountStore store) {
     if (topicElement != null) {
       return TopicNarrow(streamId, topicElement.operand);
     } else {
-      return StreamNarrow(streamId);
+      return ChannelNarrow(streamId);
     }
   }
   return null;
@@ -210,6 +232,9 @@ enum _NarrowOperator {
   // cannot use `with` as it is a reserved keyword in Dart
   @JsonValue('with')
   with_,
+  // cannot use `is` as it is a reserved keyword in Dart
+  @JsonValue('is')
+  is_,
   pmWith,
   stream,
   channel,
@@ -245,7 +270,7 @@ enum _NarrowOperator {
 ///
 /// Returns null if the operand has an unexpected shape, or has the old shape
 /// (stream name but no ID) and we don't know of a stream by the given name.
-int? _parseStreamOperand(String operand, StreamStore store) {
+int? _parseStreamOperand(String operand, ChannelStore store) {
   // "New" (2018) format: ${stream_id}-${stream_name} .
   final match = RegExp(r'^(\d+)(?:-.*)?$').firstMatch(operand);
   final newFormatStreamId = (match != null) ? int.parse(match.group(1)!, radix: 10) : null;

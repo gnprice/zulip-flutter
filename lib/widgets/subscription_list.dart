@@ -1,9 +1,9 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 
 import '../api/model/model.dart';
 import '../model/narrow.dart';
 import '../model/unreads.dart';
+import 'app_bar.dart';
 import 'icons.dart';
 import 'message_list.dart';
 import 'page.dart';
@@ -48,6 +48,15 @@ class _SubscriptionListPageState extends State<SubscriptionListPage> with PerAcc
     });
   }
 
+  void _sortSubs(List<Subscription> list) {
+    list.sort((a, b) {
+      if (a.isMuted && !b.isMuted) return 1;
+      if (!a.isMuted && b.isMuted) return -1;
+      // TODO(i18n): add locale-aware sorting
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Design referenced from:
@@ -77,12 +86,11 @@ class _SubscriptionListPageState extends State<SubscriptionListPage> with PerAcc
         unpinned.add(subscription);
       }
     }
-    // TODO(i18n): add locale-aware sorting
-    pinned.sortBy((subscription) => subscription.name.toLowerCase());
-    unpinned.sortBy((subscription) => subscription.name.toLowerCase());
+    _sortSubs(pinned);
+    _sortSubs(unpinned);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Channels")),
+      appBar: ZulipAppBar(title: const Text("Channels")),
       body: SafeArea(
         // Don't pad the bottom here; we want the list content to do that.
         bottom: false,
@@ -113,14 +121,15 @@ class _NoSubscriptionsItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Text("No channels found",
           textAlign: TextAlign.center,
           style: TextStyle(
-            // TODO(#95) need dark-theme color
-            color: const HSLColor.fromAHSL(1.0, 240, 0.1, 0.5).toColor(),
+            color: designVariables.subscriptionListHeaderText,
             fontSize: 18,
             height: (20 / 18),
           ))));
@@ -132,34 +141,34 @@ class _SubscriptionListHeader extends StatelessWidget {
 
   final String label;
 
-  static final _line = Expanded(child: Divider(
-    // TODO(#95) need dark-theme color
-    color: const HSLColor.fromAHSL(0.2, 240, 0.1, 0.5).toColor()));
-
   @override
   Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    final line = Expanded(child: Divider(
+      color: designVariables.subscriptionListHeaderLine));
+
     return SliverToBoxAdapter(
       child: ColoredBox(
-        // TODO(#95) need dark-theme color
-        color: Colors.white,
+        // TODO(design) check if this is the right variable
+        color: designVariables.background,
         child: Row(crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(width: 16),
-            _line,
+            line,
             const SizedBox(width: 8),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 7),
               child: Text(label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  // TODO(#95) need dark-theme color
-                  color: const HSLColor.fromAHSL(1.0, 240, 0.1, 0.5).toColor(),
+                  color: designVariables.subscriptionListHeaderText,
                   fontSize: 14,
                   letterSpacing: proportionalLetterSpacing(context, 0.04, baseFontSize: 14),
                   height: (16 / 14),
                 ))),
             const SizedBox(width: 8),
-            _line,
+            line,
             const SizedBox(width: 16),
           ])));
   }
@@ -180,9 +189,12 @@ class _SubscriptionList extends StatelessWidget {
       itemCount: subscriptions.length,
       itemBuilder: (BuildContext context, int index) {
         final subscription = subscriptions[index];
-        final unreadCount = unreadsModel!.countInStream(subscription.streamId);
-        // TODO(#712): if stream muted, show a dot for unreads
-        return SubscriptionItem(subscription: subscription, unreadCount: unreadCount);
+        final unreadCount = unreadsModel!.countInChannel(subscription.streamId);
+        final showMutedUnreadBadge = unreadCount == 0
+          && unreadsModel!.countInChannelNarrow(subscription.streamId) > 0;
+        return SubscriptionItem(subscription: subscription,
+          unreadCount: unreadCount,
+          showMutedUnreadBadge: showMutedUnreadBadge);
     });
   }
 }
@@ -193,30 +205,37 @@ class SubscriptionItem extends StatelessWidget {
     super.key,
     required this.subscription,
     required this.unreadCount,
+    required this.showMutedUnreadBadge,
   });
 
   final Subscription subscription;
   final int unreadCount;
+  final bool showMutedUnreadBadge;
 
   @override
   Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
     final swatch = colorSwatchFor(context, subscription);
     final hasUnreads = (unreadCount > 0);
+    final opacity = subscription.isMuted ? 0.55 : 1.0;
     return Material(
-      // TODO(#95) need dark-theme color
-      color: Colors.white,
+      // TODO(design) check if this is the right variable
+      color: designVariables.background,
       child: InkWell(
         onTap: () {
           Navigator.push(context,
             MessageListPage.buildRoute(context: context,
-              narrow: StreamNarrow(subscription.streamId)));
+              narrow: ChannelNarrow(subscription.streamId)));
         },
         child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           const SizedBox(width: 16),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 11),
-            child: Icon(size: 18, color: swatch.iconOnPlainBackground,
-              iconDataForStream(subscription))),
+            child: Opacity(
+              opacity: opacity,
+              child: Icon(size: 18, color: swatch.iconOnPlainBackground,
+                iconDataForStream(subscription)))),
           const SizedBox(width: 5),
           Expanded(
             child: Padding(
@@ -224,21 +243,32 @@ class SubscriptionItem extends StatelessWidget {
               // TODO(design): unclear whether bold text is applied to all subscriptions
               //   or only those with unreads:
               //   https://github.com/zulip/zulip-flutter/pull/397#pullrequestreview-1742524205
-              child: Text(
-                style: const TextStyle(
-                  fontSize: 18,
-                  height: (20 / 18),
-                  // TODO(#95) need dark-theme color
-                  color: Color(0xFF262626),
-                ).merge(weightVariableTextStyle(context,
-                    wght: hasUnreads ? 600 : null)),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                subscription.name))),
-          if (unreadCount > 0) ...[
+              child: Opacity(
+                opacity: opacity,
+                child: Text(
+                  style: TextStyle(
+                    fontSize: 18,
+                    height: (20 / 18),
+                    // TODO(design) check if this is the right variable
+                    color: designVariables.labelMenuButton,
+                  ).merge(weightVariableTextStyle(context,
+                      wght: hasUnreads && !subscription.isMuted ? 600 : null)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  subscription.name)))),
+          if (hasUnreads) ...[
             const SizedBox(width: 12),
             // TODO(#747) show @-mention indicator when it applies
-            UnreadCountBadge(count: unreadCount, backgroundColor: swatch, bold: true),
+            Opacity(
+              opacity: opacity,
+              child: UnreadCountBadge(
+                count: unreadCount,
+                backgroundColor: swatch,
+                bold: true)),
+          ] else if (showMutedUnreadBadge) ...[
+            const SizedBox(width: 12),
+            // TODO(#747) show @-mention indicator when it applies
+            const MutedUnreadBadge(),
           ],
           const SizedBox(width: 16),
         ])));

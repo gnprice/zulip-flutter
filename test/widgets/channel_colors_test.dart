@@ -1,81 +1,85 @@
 import 'package:checks/checks.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zulip/widgets/stream_colors.dart';
+import 'package:zulip/widgets/channel_colors.dart';
 
-import 'stream_colors_checks.dart';
+import 'channel_colors_checks.dart';
+import 'colors_checks.dart';
 
 void main() {
-  group('StreamColorSwatches', () {
+  group('ChannelColorSwatches', () {
     test('.light', () {
-      final instance = StreamColorSwatches.light;
+      final instance = ChannelColorSwatches.light;
 
       const base1 = 0xff76ce90;
       final swatch1 = instance.forBaseColor(base1);
-      check(swatch1).equals(StreamColorSwatch.light(base1));
+      check(swatch1).isSameColorSwatchAs(ChannelColorSwatch.light(base1));
       check(instance.forBaseColor(base1)).identicalTo(swatch1);
 
       const base2 = 0xfffae589;
       final swatch2 = instance.forBaseColor(base2);
-      check(swatch2).equals(StreamColorSwatch.light(base2));
+      check(swatch2).isSameColorSwatchAs(ChannelColorSwatch.light(base2));
       check(instance.forBaseColor(base2)).identicalTo(swatch2);
       check(instance.forBaseColor(base1)).identicalTo(swatch1);
     });
 
     // TODO deduplicate with corresponding light-theme test?
     test('.dark', () {
-      final instance = StreamColorSwatches.dark;
+      final instance = ChannelColorSwatches.dark;
 
       const base1 = 0xff76ce90;
       final swatch1 = instance.forBaseColor(base1);
-      check(swatch1).equals(StreamColorSwatch.dark(base1));
+      check(swatch1).isSameColorSwatchAs(ChannelColorSwatch.dark(base1));
       check(instance.forBaseColor(base1)).identicalTo(swatch1);
 
       const base2 = 0xfffae589;
       final swatch2 = instance.forBaseColor(base2);
-      check(swatch2).equals(StreamColorSwatch.dark(base2));
+      check(swatch2).isSameColorSwatchAs(ChannelColorSwatch.dark(base2));
       check(instance.forBaseColor(base2)).identicalTo(swatch2);
       check(instance.forBaseColor(base1)).identicalTo(swatch1);
     });
 
     group('lerp', () {
       test('on identical instances', () {
-        final light = StreamColorSwatches.light;
-        check(StreamColorSwatches.lerp(light, light, 0.5)).identicalTo(light);
+        final light = ChannelColorSwatches.light;
+        check(ChannelColorSwatches.lerp(light, light, 0.5)).identicalTo(light);
 
-        final dark = StreamColorSwatches.dark;
-        check(StreamColorSwatches.lerp(dark, dark, 0.5)).identicalTo(dark);
+        final dark = ChannelColorSwatches.dark;
+        check(ChannelColorSwatches.lerp(dark, dark, 0.5)).identicalTo(dark);
       });
 
       test('from light to dark', () {
-        final instance = StreamColorSwatches
-          .lerp(StreamColorSwatches.light, StreamColorSwatches.dark, 0.4);
+        final instance = ChannelColorSwatches
+          .lerp(ChannelColorSwatches.light, ChannelColorSwatches.dark, 0.4);
 
         const base1 = 0xff76ce90;
         final swatch1 = instance.forBaseColor(base1);
-        check(swatch1).equals(StreamColorSwatch.lerp(
-          StreamColorSwatch.light(base1), StreamColorSwatch.dark(base1), 0.4)!);
+        check(swatch1).isSameColorSwatchAs(ChannelColorSwatch.lerp(
+          ChannelColorSwatch.light(base1), ChannelColorSwatch.dark(base1), 0.4)!);
         check(instance.forBaseColor(base1)).identicalTo(swatch1);
 
         const base2 = 0xfffae589;
         final swatch2 = instance.forBaseColor(base2);
-        check(swatch2).equals(StreamColorSwatch.lerp(
-          StreamColorSwatch.light(base2), StreamColorSwatch.dark(base2), 0.4)!);
+        check(swatch2).isSameColorSwatchAs(ChannelColorSwatch.lerp(
+          ChannelColorSwatch.light(base2), ChannelColorSwatch.dark(base2), 0.4)!);
         check(instance.forBaseColor(base2)).identicalTo(swatch2);
         check(instance.forBaseColor(base1)).identicalTo(swatch1);
       });
     });
   });
 
-  group('StreamColorSwatch', () {
+  group('ChannelColorSwatch', () {
     group('light', () {
       test('base', () {
-        check(StreamColorSwatch.light(0xffffffff)).base.equals(const Color(0xffffffff));
+        check(ChannelColorSwatch.light(0xffffffff))
+          .base.isSameColorAs(const Color(0xffffffff));
       });
 
       test('unreadCountBadgeBackground', () {
         void runCheck(int base, Color expected) {
-          check(StreamColorSwatch.light(base)).unreadCountBadgeBackground.equals(expected);
+          check(ChannelColorSwatch.light(base))
+            .unreadCountBadgeBackground.isSameColorAs(expected);
         }
 
         // Check against everything in ZULIP_ASSIGNMENT_COLORS and EXTREME_COLORS
@@ -137,7 +141,8 @@ void main() {
 
       test('iconOnPlainBackground', () {
         void runCheck(int base, Color expected) {
-          check(StreamColorSwatch.light(base)).iconOnPlainBackground.equals(expected);
+          check(ChannelColorSwatch.light(base))
+            .iconOnPlainBackground.isSameColorAs(expected);
         }
 
         // Check against everything in ZULIP_ASSIGNMENT_COLORS
@@ -178,7 +183,8 @@ void main() {
 
       test('iconOnBarBackground', () {
         void runCheck(int base, Color expected) {
-          check(StreamColorSwatch.light(base)).iconOnBarBackground.equals(expected);
+          check(ChannelColorSwatch.light(base))
+            .iconOnBarBackground.isSameColorAs(expected);
         }
 
         // Check against everything in ZULIP_ASSIGNMENT_COLORS
@@ -219,7 +225,8 @@ void main() {
 
       test('barBackground', () {
         void runCheck(int base, Color expected) {
-          check(StreamColorSwatch.light(base)).barBackground.equals(expected);
+          check(ChannelColorSwatch.light(base))
+            .barBackground.isSameColorAs(expected);
         }
 
         // Check against everything in ZULIP_ASSIGNMENT_COLORS
@@ -261,14 +268,14 @@ void main() {
 
     group('dark', () {
       test('base', () {
-        check(StreamColorSwatch.dark(0xffffffff))
-          .base.equals(const Color(0xffffffff));
+        check(ChannelColorSwatch.dark(0xffffffff))
+          .base.isSameColorAs(const Color(0xffffffff));
       });
 
       test('unreadCountBadgeBackground', () {
         void runCheck(int base, Color expected) {
-          check(StreamColorSwatch.dark(base))
-            .unreadCountBadgeBackground.equals(expected);
+          check(ChannelColorSwatch.dark(base))
+            .unreadCountBadgeBackground.isSameColorAs(expected);
         }
 
         // Check against everything in ZULIP_ASSIGNMENT_COLORS and EXTREME_COLORS
@@ -330,8 +337,8 @@ void main() {
 
       test('iconOnPlainBackground', () {
         void runCheck(int base, Color expected) {
-          check(StreamColorSwatch.dark(base))
-            .iconOnPlainBackground.equals(expected);
+          check(ChannelColorSwatch.dark(base))
+            .iconOnPlainBackground.isSameColorAs(expected);
         }
 
         // Check against everything in ZULIP_ASSIGNMENT_COLORS
@@ -372,8 +379,8 @@ void main() {
 
       test('iconOnBarBackground', () {
         void runCheck(int base, Color expected) {
-          check(StreamColorSwatch.dark(base))
-            .iconOnBarBackground.equals(expected);
+          check(ChannelColorSwatch.dark(base))
+            .iconOnBarBackground.isSameColorAs(expected);
         }
 
         // Check against everything in ZULIP_ASSIGNMENT_COLORS
@@ -414,8 +421,8 @@ void main() {
 
       test('barBackground', () {
         void runCheck(int base, Color expected) {
-          check(StreamColorSwatch.dark(base))
-            .barBackground.equals(expected);
+          check(ChannelColorSwatch.dark(base))
+            .barBackground.isSameColorAs(expected);
         }
 
         // Check against everything in ZULIP_ASSIGNMENT_COLORS
@@ -456,35 +463,35 @@ void main() {
     });
 
     test('lerp (different a, b)', () {
-      final swatchA = StreamColorSwatch.light(0xff76ce90);
-      final swatchB = StreamColorSwatch.dark(0xff76ce90);
+      final swatchA = ChannelColorSwatch.light(0xff76ce90);
+      final swatchB = ChannelColorSwatch.dark(0xff76ce90);
       for (final t in [0.0, 0.5, 1.0, -0.1, 1.1]) {
-        final result = StreamColorSwatch.lerp(swatchA, swatchB, t)!;
-        for (final variant in StreamColorVariant.values) {
+        final result = ChannelColorSwatch.lerp(swatchA, swatchB, t)!;
+        for (final variant in ChannelColorVariant.values) {
           final (subject, expected) = switch (variant) {
-            StreamColorVariant.base => (check(result).base,
+            ChannelColorVariant.base => (check(result).base,
               Color.lerp(swatchA.base, swatchB.base, t)!),
-            StreamColorVariant.unreadCountBadgeBackground => (check(result).unreadCountBadgeBackground,
+            ChannelColorVariant.unreadCountBadgeBackground => (check(result).unreadCountBadgeBackground,
               Color.lerp(swatchA.unreadCountBadgeBackground, swatchB.unreadCountBadgeBackground, t)!),
-            StreamColorVariant.iconOnPlainBackground => (check(result).iconOnPlainBackground,
+            ChannelColorVariant.iconOnPlainBackground => (check(result).iconOnPlainBackground,
               Color.lerp(swatchA.iconOnPlainBackground, swatchB.iconOnPlainBackground, t)!),
-            StreamColorVariant.iconOnBarBackground => (check(result).iconOnBarBackground,
+            ChannelColorVariant.iconOnBarBackground => (check(result).iconOnBarBackground,
               Color.lerp(swatchA.iconOnBarBackground, swatchB.iconOnBarBackground, t)!),
-            StreamColorVariant.barBackground => (check(result).barBackground,
+            ChannelColorVariant.barBackground => (check(result).barBackground,
               Color.lerp(swatchA.barBackground, swatchB.barBackground, t)!),
           };
-          subject.equals(expected);
+          subject.isSameColorAs(expected);
         }
       }
     });
 
     test('lerp (identical a, b)', () {
-      check(StreamColorSwatch.lerp(null, null, 0.0)).isNull();
+      check(ChannelColorSwatch.lerp(null, null, 0.0)).isNull();
 
-      final swatch = StreamColorSwatch.light(0xff76ce90);
-      check(StreamColorSwatch.lerp(swatch, swatch, 0.5)).isNotNull()
+      final swatch = ChannelColorSwatch.light(0xff76ce90);
+      check(ChannelColorSwatch.lerp(swatch, swatch, 0.5)).isNotNull()
         ..identicalTo(swatch)
-        ..base.equals(const Color(0xff76ce90));
+        ..base.isSameColorAs(const Color(0xff76ce90));
     });
   });
 }

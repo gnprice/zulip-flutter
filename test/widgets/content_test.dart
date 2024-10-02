@@ -1,8 +1,9 @@
 import 'package:checks/checks.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
+import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zulip/api/core.dart';
@@ -15,7 +16,6 @@ import 'package:zulip/widgets/message_list.dart';
 import 'package:zulip/widgets/page.dart';
 import 'package:zulip/widgets/store.dart';
 import 'package:zulip/widgets/text.dart';
-import 'package:zulip/widgets/theme.dart';
 
 import '../example_data.dart' as eg;
 import '../flutter_checks.dart';
@@ -28,6 +28,7 @@ import '../test_navigation.dart';
 import 'dialog_checks.dart';
 import 'message_list_checks.dart';
 import 'page_checks.dart';
+import 'test_app.dart';
 
 /// Simulate a nested "inner" span's style by merging all ancestor-span
 /// styles, starting from the root.
@@ -79,6 +80,10 @@ TextStyle? mergedStyleOfSubstring(InlineSpan rootSpan, Pattern substringPattern)
     });
 }
 
+/// A callback that finds some target subspan within the given span,
+/// and reports the target's font size.
+typedef TargetFontSizeFinder = double Function(InlineSpan rootSpan);
+
 void main() {
   // For testing a new content feature:
   //
@@ -112,26 +117,18 @@ void main() {
     List<NavigatorObserver> navObservers = const [],
     bool wrapWithPerAccountStoreWidget = false,
   }) async {
-    Widget widget = child;
-
     if (wrapWithPerAccountStoreWidget) {
       await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
-      widget = PerAccountStoreWidget(accountId: eg.selfAccount.id, child: widget);
     }
 
-    widget = GlobalStoreWidget(child: widget);
     addTearDown(testBinding.reset);
 
     prepareBoringImageHttpClient();
 
-    await tester.pumpWidget(
-      Builder(builder: (context) =>
-        MaterialApp(
-          theme: zulipThemeData(context),
-          localizationsDelegates: ZulipLocalizations.localizationsDelegates,
-          supportedLocales: ZulipLocalizations.supportedLocales,
-          navigatorObservers: navObservers,
-          home: widget)));
+    await tester.pumpWidget(TestZulipApp(
+      accountId: wrapWithPerAccountStoreWidget ? eg.selfAccount.id : null,
+      navigatorObservers: navObservers,
+      child: child));
     await tester.pump(); // global store
     if (wrapWithPerAccountStoreWidget) {
       await tester.pump();
@@ -312,7 +309,23 @@ void main() {
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
+        .deepEquals(expectedImages.map((n) => eg.realmUrl.resolve(n.thumbnailUrl!).toString()));
+    });
+
+    testWidgets('single image no thumbnail', (tester) async {
+      const example = ContentExample.imageSingleNoThumbnail;
+      await prepare(tester, example.html);
+      final expectedImages = (example.expectedNodes[0] as ImageNodeList).images;
+      final images = tester.widgetList<RealmContentNetworkImage>(
+        find.byType(RealmContentNetworkImage));
+      check(images.map((i) => i.src.toString()).toList())
         .deepEquals(expectedImages.map((n) => n.srcUrl));
+    });
+
+    testWidgets('single image loading placeholder', (tester) async {
+      const example = ContentExample.imageSingleLoadingPlaceholder;
+      await prepare(tester, example.html);
+      await tester.ensureVisible(find.byType(CupertinoActivityIndicator));
     });
 
     testWidgets('image with invalid src URL', (tester) async {
@@ -329,6 +342,16 @@ void main() {
 
     testWidgets('multiple images', (tester) async {
       const example = ContentExample.imageCluster;
+      await prepare(tester, example.html);
+      final expectedImages = (example.expectedNodes[1] as ImageNodeList).images;
+      final images = tester.widgetList<RealmContentNetworkImage>(
+        find.byType(RealmContentNetworkImage));
+      check(images.map((i) => i.src.toString()).toList())
+        .deepEquals(expectedImages.map((n) => eg.realmUrl.resolve(n.thumbnailUrl!).toString()));
+    });
+
+    testWidgets('multiple images no thumbnails', (tester) async {
+      const example = ContentExample.imageClusterNoThumbnails;
       await prepare(tester, example.html);
       final expectedImages = (example.expectedNodes[1] as ImageNodeList).images;
       final images = tester.widgetList<RealmContentNetworkImage>(
@@ -461,7 +484,7 @@ void main() {
     testFontWeight('syntax highlighting: non-bold span',
       expectedWght: 400,
       content: plainContent(ContentExample.codeBlockHighlightedShort.html),
-      styleFinder: (WidgetTester tester) {
+      styleFinder: (tester) {
         final root = tester.renderObject<RenderParagraph>(find.textContaining('class')).text;
         return mergedStyleOfSubstring(root, 'class')!;
       });
@@ -469,7 +492,7 @@ void main() {
     testFontWeight('syntax highlighting: bold span',
       expectedWght: 700,
       content: plainContent(ContentExample.codeBlockHighlightedShort.html),
-      styleFinder: (WidgetTester tester) {
+      styleFinder: (tester) {
         final root = tester.renderObject<RenderParagraph>(find.textContaining('A')).text;
         return mergedStyleOfSubstring(root, 'A')!;
       });
@@ -477,9 +500,9 @@ void main() {
 
   testContentSmoke(ContentExample.mathBlock);
 
-  /// Make a [targetFontSizeFinder] for [checkFontSizeRatio],
+  /// Make a [TargetFontSizeFinder] to pass to [checkFontSizeRatio],
   /// from a target [Pattern] (such as a string).
-  mkTargetFontSizeFinderFromPattern(Pattern targetPattern)
+  TargetFontSizeFinder mkTargetFontSizeFinderFromPattern(Pattern targetPattern)
     => (InlineSpan rootSpan)
     => mergedStyleOfSubstring(rootSpan, targetPattern)!.fontSize!;
 
@@ -494,7 +517,7 @@ void main() {
   /// in [GlobalTime].)
   Future<void> checkFontSizeRatio(WidgetTester tester, {
     required String targetHtml,
-    required double Function(InlineSpan rootSpan) targetFontSizeFinder,
+    required TargetFontSizeFinder targetFontSizeFinder,
   }) async {
     await prepareContent(tester, plainContent(
       '<h1>header-plain $targetHtml</h1>\n'
@@ -793,7 +816,7 @@ void main() {
       await tapText(tester, find.text('stream'));
       check(testBinding.takeLaunchUrlCalls()).isEmpty();
       check(pushedRoutes).single.isA<WidgetRoute>()
-        .page.isA<MessageListPage>().narrow.equals(const StreamNarrow(1));
+        .page.isA<MessageListPage>().initNarrow.equals(const ChannelNarrow(1));
     });
 
     testWidgets('invalid internal links are opened in browser', (tester) async {
@@ -858,7 +881,7 @@ void main() {
         final textColor = mergedStyleOfSubstring(textSpan, renderedTextRegexp)!.color;
         check(textColor).isNotNull();
 
-        check(icon).color.equals(textColor!);
+        check(icon).color.isNotNull().isSameColorAs(textColor!);
       });
     }
 
@@ -964,7 +987,7 @@ void main() {
       debugNetworkImageHttpClientProvider = null;
     });
 
-    testWidgets('throws if no `PerAccountStoreWidget` ancestor', (WidgetTester tester) async {
+    testWidgets('throws if no `PerAccountStoreWidget` ancestor', (tester) async {
       await tester.pumpWidget(
         RealmContentNetworkImage(Uri.parse('https://zulip.invalid/path/to/image.png'), filterQuality: FilterQuality.medium));
       check(tester.takeException()).isA<AssertionError>();

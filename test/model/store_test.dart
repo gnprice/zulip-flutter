@@ -8,6 +8,8 @@ import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/api/route/events.dart';
 import 'package:zulip/api/route/messages.dart';
+import 'package:zulip/model/message_list.dart';
+import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/notifications/receive.dart';
 
@@ -162,6 +164,40 @@ void main() {
     // TODO test database gets updated correctly (an integration test with sqlite?)
   });
 
+  group('PerAccountStore.handleEvent', () {
+    // Mostly this method just dispatches to ChannelStore and MessageStore etc.,
+    // and so most of the tests live in the test files for those
+    // (but they call the handleEvent method because it's the entry point).
+
+    group('RealmUserUpdateEvent', () {
+      // TODO write more tests for handling RealmUserUpdateEvent
+
+      test('deliveryEmail', () {
+        final user = eg.user(deliveryEmail: 'a@mail.example');
+        final store = eg.store(initialSnapshot: eg.initialSnapshot(
+          realmUsers: [eg.selfUser, user]));
+
+        User getUser() => store.users[user.userId]!;
+
+        store.handleEvent(RealmUserUpdateEvent(id: 1, userId: user.userId,
+          deliveryEmail: null));
+        check(getUser()).deliveryEmail.equals('a@mail.example');
+
+        store.handleEvent(RealmUserUpdateEvent(id: 1, userId: user.userId,
+          deliveryEmail: const JsonNullable(null)));
+        check(getUser()).deliveryEmail.isNull();
+
+        store.handleEvent(RealmUserUpdateEvent(id: 1, userId: user.userId,
+          deliveryEmail: const JsonNullable('b@mail.example')));
+        check(getUser()).deliveryEmail.equals('b@mail.example');
+
+        store.handleEvent(RealmUserUpdateEvent(id: 1, userId: user.userId,
+          deliveryEmail: const JsonNullable('c@mail.example')));
+        check(getUser()).deliveryEmail.equals('c@mail.example');
+      });
+    });
+  });
+
   group('PerAccountStore.sendMessage', () {
     test('smoke', () async {
       final store = eg.store();
@@ -171,7 +207,7 @@ void main() {
       await store.sendMessage(
         destination: StreamDestination(stream.streamId, 'world'),
         content: 'hello');
-      check(connection.takeLastRequest()).isA<http.Request>()
+      check(connection.takeRequests()).single.isA<http.Request>()
         ..method.equals('POST')
         ..url.path.equals('/api/v1/messages')
         ..bodyFields.deepEquals({
@@ -199,7 +235,7 @@ void main() {
     }
 
     void checkLastRequest() {
-      check(connection.takeLastRequest()).isA<http.Request>()
+      check(connection.takeRequests()).single.isA<http.Request>()
         ..method.equals('POST')
         ..url.path.equals('/api/v1/register');
     }
@@ -303,7 +339,7 @@ void main() {
     }
 
     void checkLastRequest({required int lastEventId}) {
-      check(connection.takeLastRequest()).isA<http.Request>()
+      check(connection.takeRequests()).single.isA<http.Request>()
         ..method.equals('GET')
         ..url.path.equals('/api/v1/events')
         ..url.queryParameters.deepEquals({
@@ -372,10 +408,12 @@ void main() {
       updateMachine.debugAdvanceLoop();
       async.flushMicrotasks();
       await Future<void>.delayed(Duration.zero);
+      check(store).isLoading.isTrue();
 
       // The global store has a new store.
       check(globalStore.perAccountSync(store.accountId)).not((it) => it.identicalTo(store));
       updateFromGlobalStore();
+      check(store).isLoading.isFalse();
 
       // The new UpdateMachine updates the new store.
       updateMachine.debugPauseLoop();
@@ -391,6 +429,32 @@ void main() {
       check(store.userSettings!.twentyFourHourTime).isTrue();
     }));
 
+    test('expired queue disposes registered MessageListView instances', () => awaitFakeAsync((async) async {
+      // Regression test for: https://github.com/zulip/zulip-flutter/issues/810
+      await prepareStore();
+      updateMachine.debugPauseLoop();
+      updateMachine.poll();
+
+      // Make sure there are [MessageListView]s in the message store.
+      MessageListView.init(store: store, narrow: const MentionsNarrow());
+      MessageListView.init(store: store, narrow: const StarredMessagesNarrow());
+      check(store.debugMessageListViews).length.equals(2);
+
+      // Let the server expire the event queue.
+      connection.prepare(httpStatus: 400, json: {
+        'result': 'error', 'code': 'BAD_EVENT_QUEUE_ID',
+        'queue_id': updateMachine.queueId,
+        'msg': 'Bad event queue ID: ${updateMachine.queueId}',
+      });
+      updateMachine.debugAdvanceLoop();
+      async.flushMicrotasks();
+      await Future<void>.delayed(Duration.zero);
+
+      // The old store's [MessageListView]s have been disposed.
+      // (And no exception was thrown; that was #810.)
+      check(store.debugMessageListViews).isEmpty();
+    }));
+
     void checkRetry(void Function() prepareError) {
       awaitFakeAsync((async) async {
         await prepareStore(lastEventId: 1);
@@ -401,8 +465,9 @@ void main() {
         // Make the request, inducing an error in it.
         prepareError();
         updateMachine.debugAdvanceLoop();
-        async.flushMicrotasks();
+        async.elapse(Duration.zero);
         checkLastRequest(lastEventId: 1);
+        check(store).isLoading.isTrue();
 
         // Polling doesn't resume immediately; there's a timer.
         check(async.pendingTimers).length.equals(1);
@@ -418,6 +483,7 @@ void main() {
         async.flushTimers();
         checkLastRequest(lastEventId: 1);
         check(updateMachine.lastEventId).equals(2);
+        check(store).isLoading.isFalse();
       });
     }
 
@@ -449,14 +515,14 @@ void main() {
     }
 
     void checkLastRequestApns({required String token, required String appid}) {
-      check(connection.takeLastRequest()).isA<http.Request>()
+      check(connection.takeRequests()).single.isA<http.Request>()
         ..method.equals('POST')
         ..url.path.equals('/api/v1/users/me/apns_device_token')
         ..bodyFields.deepEquals({'token': token, 'appid': appid});
     }
 
     void checkLastRequestFcm({required String token}) {
-      check(connection.takeLastRequest()).isA<http.Request>()
+      check(connection.takeRequests()).single.isA<http.Request>()
         ..method.equals('POST')
         ..url.path.equals('/api/v1/users/me/android_gcm_reg_id')
         ..bodyFields.deepEquals({'token': token});

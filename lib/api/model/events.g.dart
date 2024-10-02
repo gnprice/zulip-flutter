@@ -138,8 +138,10 @@ RealmUserUpdateEvent _$RealmUserUpdateEventFromJson(
           RealmUserUpdateEvent._readFromPerson(json, 'is_billing_admin')
               as bool?,
       deliveryEmail:
-          RealmUserUpdateEvent._readFromPerson(json, 'delivery_email')
-              as String?,
+          _$JsonConverterFromJson<JsonNullable<String>, JsonNullable<String>>(
+              RealmUserUpdateEvent._readNullableStringFromPerson(
+                  json, 'delivery_email'),
+              const NullableStringJsonConverter().fromJson),
       customProfileField: RealmUserUpdateEvent._readFromPerson(
                   json, 'custom_profile_field') ==
               null
@@ -149,6 +151,8 @@ RealmUserUpdateEvent _$RealmUserUpdateEventFromJson(
                   as Map<String, dynamic>),
       newEmail:
           RealmUserUpdateEvent._readFromPerson(json, 'new_email') as String?,
+      isActive:
+          RealmUserUpdateEvent._readFromPerson(json, 'is_active') as bool?,
     );
 
 Map<String, dynamic> _$RealmUserUpdateEventToJson(
@@ -164,9 +168,13 @@ Map<String, dynamic> _$RealmUserUpdateEventToJson(
       'bot_owner_id': instance.botOwnerId,
       'role': instance.role,
       'is_billing_admin': instance.isBillingAdmin,
-      'delivery_email': instance.deliveryEmail,
+      'delivery_email':
+          _$JsonConverterToJson<JsonNullable<String>, JsonNullable<String>>(
+              instance.deliveryEmail,
+              const NullableStringJsonConverter().toJson),
       'custom_profile_field': instance.customProfileField,
       'new_email': instance.newEmail,
+      'is_active': instance.isActive,
     };
 
 const _$UserRoleEnumMap = {
@@ -178,35 +186,88 @@ const _$UserRoleEnumMap = {
   UserRole.unknown: null,
 };
 
-StreamCreateEvent _$StreamCreateEventFromJson(Map<String, dynamic> json) =>
-    StreamCreateEvent(
+Value? _$JsonConverterFromJson<Json, Value>(
+  Object? json,
+  Value? Function(Json json) fromJson,
+) =>
+    json == null ? null : fromJson(json as Json);
+
+Json? _$JsonConverterToJson<Json, Value>(
+  Value? value,
+  Json? Function(Value value) toJson,
+) =>
+    value == null ? null : toJson(value);
+
+ChannelCreateEvent _$ChannelCreateEventFromJson(Map<String, dynamic> json) =>
+    ChannelCreateEvent(
       id: (json['id'] as num).toInt(),
       streams: (json['streams'] as List<dynamic>)
           .map((e) => ZulipStream.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 
-Map<String, dynamic> _$StreamCreateEventToJson(StreamCreateEvent instance) =>
+Map<String, dynamic> _$ChannelCreateEventToJson(ChannelCreateEvent instance) =>
     <String, dynamic>{
       'id': instance.id,
       'type': instance.type,
       'streams': instance.streams,
     };
 
-StreamDeleteEvent _$StreamDeleteEventFromJson(Map<String, dynamic> json) =>
-    StreamDeleteEvent(
+ChannelDeleteEvent _$ChannelDeleteEventFromJson(Map<String, dynamic> json) =>
+    ChannelDeleteEvent(
       id: (json['id'] as num).toInt(),
       streams: (json['streams'] as List<dynamic>)
           .map((e) => ZulipStream.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 
-Map<String, dynamic> _$StreamDeleteEventToJson(StreamDeleteEvent instance) =>
+Map<String, dynamic> _$ChannelDeleteEventToJson(ChannelDeleteEvent instance) =>
     <String, dynamic>{
       'id': instance.id,
       'type': instance.type,
       'streams': instance.streams,
     };
+
+ChannelUpdateEvent _$ChannelUpdateEventFromJson(Map<String, dynamic> json) =>
+    ChannelUpdateEvent(
+      id: (json['id'] as num).toInt(),
+      streamId: (json['stream_id'] as num).toInt(),
+      name: json['name'] as String,
+      property: $enumDecodeNullable(
+          _$ChannelPropertyNameEnumMap, json['property'],
+          unknownValue: JsonKey.nullForUndefinedEnumValue),
+      value: ChannelUpdateEvent._readValue(json, 'value'),
+      renderedDescription: json['rendered_description'] as String?,
+      historyPublicToSubscribers:
+          json['history_public_to_subscribers'] as bool?,
+      isWebPublic: json['is_web_public'] as bool?,
+    );
+
+Map<String, dynamic> _$ChannelUpdateEventToJson(ChannelUpdateEvent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'stream_id': instance.streamId,
+      'name': instance.name,
+      'property': _$ChannelPropertyNameEnumMap[instance.property],
+      'value': instance.value,
+      'rendered_description': instance.renderedDescription,
+      'history_public_to_subscribers': instance.historyPublicToSubscribers,
+      'is_web_public': instance.isWebPublic,
+    };
+
+const _$ChannelPropertyNameEnumMap = {
+  ChannelPropertyName.name: 'name',
+  ChannelPropertyName.description: 'description',
+  ChannelPropertyName.firstMessageId: 'first_message_id',
+  ChannelPropertyName.inviteOnly: 'invite_only',
+  ChannelPropertyName.messageRetentionDays: 'message_retention_days',
+  ChannelPropertyName.channelPostPolicy: 'stream_post_policy',
+  ChannelPropertyName.canRemoveSubscribersGroup: 'can_remove_subscribers_group',
+  ChannelPropertyName.canRemoveSubscribersGroupId:
+      'can_remove_subscribers_group_id',
+  ChannelPropertyName.streamWeeklyTraffic: 'stream_weekly_traffic',
+};
 
 SubscriptionAddEvent _$SubscriptionAddEventFromJson(
         Map<String, dynamic> json) =>
@@ -421,7 +482,8 @@ DeleteMessageEvent _$DeleteMessageEventFromJson(Map<String, dynamic> json) =>
       messageIds: (json['message_ids'] as List<dynamic>)
           .map((e) => (e as num).toInt())
           .toList(),
-      messageType: $enumDecode(_$MessageTypeEnumMap, json['message_type']),
+      messageType:
+          const MessageTypeConverter().fromJson(json['message_type'] as String),
       streamId: (json['stream_id'] as num?)?.toInt(),
       topic: json['topic'] as String?,
     );
@@ -431,15 +493,10 @@ Map<String, dynamic> _$DeleteMessageEventToJson(DeleteMessageEvent instance) =>
       'id': instance.id,
       'type': instance.type,
       'message_ids': instance.messageIds,
-      'message_type': _$MessageTypeEnumMap[instance.messageType]!,
+      'message_type': const MessageTypeConverter().toJson(instance.messageType),
       'stream_id': instance.streamId,
       'topic': instance.topic,
     };
-
-const _$MessageTypeEnumMap = {
-  MessageType.stream: 'stream',
-  MessageType.private: 'private',
-};
 
 UpdateMessageFlagsAddEvent _$UpdateMessageFlagsAddEventFromJson(
         Map<String, dynamic> json) =>
@@ -494,7 +551,7 @@ Map<String, dynamic> _$UpdateMessageFlagsRemoveEventToJson(
 UpdateMessageFlagsMessageDetail _$UpdateMessageFlagsMessageDetailFromJson(
         Map<String, dynamic> json) =>
     UpdateMessageFlagsMessageDetail(
-      type: $enumDecode(_$MessageTypeEnumMap, json['type']),
+      type: const MessageTypeConverter().fromJson(json['type'] as String),
       mentioned: json['mentioned'] as bool?,
       userIds: (json['user_ids'] as List<dynamic>?)
           ?.map((e) => (e as num).toInt())
@@ -506,12 +563,67 @@ UpdateMessageFlagsMessageDetail _$UpdateMessageFlagsMessageDetailFromJson(
 Map<String, dynamic> _$UpdateMessageFlagsMessageDetailToJson(
         UpdateMessageFlagsMessageDetail instance) =>
     <String, dynamic>{
-      'type': _$MessageTypeEnumMap[instance.type]!,
+      'type': const MessageTypeConverter().toJson(instance.type),
       'mentioned': instance.mentioned,
       'user_ids': instance.userIds,
       'stream_id': instance.streamId,
       'topic': instance.topic,
     };
+
+SubmessageEvent _$SubmessageEventFromJson(Map<String, dynamic> json) =>
+    SubmessageEvent(
+      id: (json['id'] as num).toInt(),
+      msgType: $enumDecode(_$SubmessageTypeEnumMap, json['msg_type'],
+          unknownValue: SubmessageType.unknown),
+      content: json['content'] as String,
+      messageId: (json['message_id'] as num).toInt(),
+      senderId: (json['sender_id'] as num).toInt(),
+      submessageId: (json['submessage_id'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$SubmessageEventToJson(SubmessageEvent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'msg_type': _$SubmessageTypeEnumMap[instance.msgType]!,
+      'content': instance.content,
+      'message_id': instance.messageId,
+      'sender_id': instance.senderId,
+      'submessage_id': instance.submessageId,
+    };
+
+const _$SubmessageTypeEnumMap = {
+  SubmessageType.widget: 'widget',
+  SubmessageType.unknown: 'unknown',
+};
+
+TypingEvent _$TypingEventFromJson(Map<String, dynamic> json) => TypingEvent(
+      id: (json['id'] as num).toInt(),
+      op: $enumDecode(_$TypingOpEnumMap, json['op']),
+      messageType:
+          const MessageTypeConverter().fromJson(json['message_type'] as String),
+      senderId: (TypingEvent._readSenderId(json, 'sender_id') as num).toInt(),
+      recipientIds: TypingEvent._recipientIdsFromJson(json['recipients']),
+      streamId: (json['stream_id'] as num?)?.toInt(),
+      topic: json['topic'] as String?,
+    );
+
+Map<String, dynamic> _$TypingEventToJson(TypingEvent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'op': instance.op,
+      'message_type': const MessageTypeConverter().toJson(instance.messageType),
+      'sender_id': instance.senderId,
+      'recipients': instance.recipientIds,
+      'stream_id': instance.streamId,
+      'topic': instance.topic,
+    };
+
+const _$TypingOpEnumMap = {
+  TypingOp.start: 'start',
+  TypingOp.stop: 'stop',
+};
 
 ReactionEvent _$ReactionEventFromJson(Map<String, dynamic> json) =>
     ReactionEvent(
@@ -557,3 +669,8 @@ Map<String, dynamic> _$HeartbeatEventToJson(HeartbeatEvent instance) =>
       'id': instance.id,
       'type': instance.type,
     };
+
+const _$MessageTypeEnumMap = {
+  MessageType.stream: 'stream',
+  MessageType.direct: 'direct',
+};

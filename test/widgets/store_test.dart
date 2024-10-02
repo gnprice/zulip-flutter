@@ -48,7 +48,7 @@ extension MyWidgetWithMixinStateChecks on Subject<MyWidgetWithMixinState> {
 void main() {
   TestZulipBinding.ensureInitialized();
 
-  testWidgets('GlobalStoreWidget', (WidgetTester tester) async {
+  testWidgets('GlobalStoreWidget', (tester) async {
     addTearDown(testBinding.reset);
 
     GlobalStore? globalStore;
@@ -156,6 +156,8 @@ void main() {
     await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
 
     Future<void> pumpWithParams({required bool light, required int accountId}) async {
+      // TODO use [TestZulipApp]
+      //   (seeing some extraneous dep changes when trying that)
       await tester.pumpWidget(
         MaterialApp(
           theme: light ? ThemeData.light() : ThemeData.dark(),

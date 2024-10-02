@@ -182,16 +182,16 @@ Future<SendMessageResult> sendMessage(
   final supportsTypeDirect = connection.zulipFeatureLevel! >= 174; // TODO(server-7)
   final supportsReadBySender = connection.zulipFeatureLevel! >= 236; // TODO(server-8)
   return connection.post('sendMessage', SendMessageResult.fromJson, 'messages', {
-    if (destination is StreamDestination) ...{
-      'type': RawParameter('stream'),
-      'to': destination.streamId,
-      'topic': RawParameter(destination.topic),
-    } else if (destination is DmDestination) ...{
-      'type': supportsTypeDirect ? RawParameter('direct') : RawParameter('private'),
-      'to': destination.userIds,
-    } else ...(
-      throw Exception('impossible destination') // TODO(dart-3) show this statically
-    ),
+    ...(switch (destination) {
+      StreamDestination() => {
+        'type': RawParameter('stream'),
+        'to': destination.streamId,
+        'topic': RawParameter(destination.topic),
+      },
+      DmDestination() => {
+        'type': supportsTypeDirect ? RawParameter('direct') : RawParameter('private'),
+        'to': destination.userIds,
+      }}),
     'content': RawParameter(content),
     if (queueId != null) 'queue_id': queueId, // TODO should this use RawParameter?
     if (localId != null) 'local_id': localId, // TODO should this use RawParameter?
@@ -219,14 +219,16 @@ Future<SendMessageResult> sendMessage(
 /// Which conversation to send a message to, in [sendMessage].
 ///
 /// This is either a [StreamDestination] or a [DmDestination].
-sealed class MessageDestination {}
+sealed class MessageDestination {
+  const MessageDestination();
+}
 
 /// A conversation in a stream, for specifying to [sendMessage].
 ///
 /// The server accepts a stream name as an alternative to a stream ID,
 /// but this binding currently doesn't.
 class StreamDestination extends MessageDestination {
-  StreamDestination(this.streamId, this.topic);
+  const StreamDestination(this.streamId, this.topic);
 
   final int streamId;
   final String topic;
@@ -237,7 +239,7 @@ class StreamDestination extends MessageDestination {
 /// The server accepts a list of Zulip API emails as an alternative to
 /// a list of user IDs, but this binding currently doesn't.
 class DmDestination extends MessageDestination {
-  DmDestination({required this.userIds});
+  const DmDestination({required this.userIds});
 
   final List<int> userIds;
 }
@@ -262,9 +264,10 @@ Future<UploadFileResult> uploadFile(
   required Stream<List<int>> content,
   required int length,
   required String filename,
+  required String? contentType,
 }) {
   return connection.postFileFromStream('uploadFile', UploadFileResult.fromJson, 'user_uploads',
-    content, length, filename: filename);
+    content, length, filename: filename, contentType: contentType);
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)

@@ -1,13 +1,21 @@
 import 'package:device_info_plus/device_info_plus.dart' as device_info_plus;
+import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:firebase_core/firebase_core.dart' as firebase_core;
 import 'package:firebase_messaging/firebase_messaging.dart' as firebase_messaging;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:image_picker/image_picker.dart' as image_picker;
+import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
+import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 
 import '../host/android_notifications.dart';
+import '../log.dart';
 import '../widgets/store.dart';
 import 'store.dart';
+
+export 'package:file_picker/file_picker.dart' show FilePickerResult, FileType, PlatformFile;
+export 'package:image_picker/image_picker.dart' show ImageSource, XFile;
 
 /// Alias for [url_launcher.LaunchMode].
 typedef UrlLaunchMode = url_launcher.LaunchMode;
@@ -101,8 +109,34 @@ abstract class ZulipBinding {
   /// Provides device and operating system information,
   /// via package:device_info_plus.
   ///
+  /// The returned Future resolves to null if an error is
+  /// encountered while fetching the data.
+  ///
   /// This wraps [device_info_plus.DeviceInfoPlugin.deviceInfo].
-  Future<BaseDeviceInfo> deviceInfo();
+  Future<BaseDeviceInfo?> get deviceInfo;
+
+  /// Provides device and operating system information,
+  /// via package:device_info_plus.
+  ///
+  /// This is the value [deviceInfo] resolved to,
+  /// or null if that hasn't resolved yet.
+  BaseDeviceInfo? get syncDeviceInfo;
+
+  /// Provides application package information,
+  /// via package:package_info_plus.
+  ///
+  /// The returned Future resolves to null if an error is
+  /// encountered while fetching the data.
+  ///
+  /// This wraps [package_info_plus.PackageInfo.fromPlatform].
+  Future<PackageInfo?> get packageInfo;
+
+  /// Provides application package information,
+  /// via package:package_info_plus.
+  ///
+  /// This is the value [packageInfo] resolved to,
+  /// or null if that hasn't resolved yet.
+  PackageInfo? get syncPackageInfo;
 
   /// Initialize Firebase, to use for notifications.
   ///
@@ -124,22 +158,60 @@ abstract class ZulipBinding {
 
   /// Wraps the [AndroidNotificationHostApi] constructor.
   AndroidNotificationHostApi get androidNotificationHost;
+
+  /// Pick files from the media library, via package:file_picker.
+  ///
+  /// This wraps [file_picker.pickFiles].
+  Future<file_picker.FilePickerResult?> pickFiles({
+    bool allowMultiple,
+    bool withReadStream,
+    file_picker.FileType type,
+  });
+
+  /// Pick files from the camera or media library, via package:image_picker.
+  ///
+  /// This wraps [image_picker.pickImage].
+  Future<image_picker.XFile?> pickImage({
+    required image_picker.ImageSource source,
+    bool requestFullMetadata,
+  });
+
+  /// Enables or disables keeping the screen on, via package:wakelock_plus.
+  ///
+  /// This wraps [wakelock_plus.WakelockPlus.toggle].
+  ///
+  /// Despite the name, this does not involve Android's "wake locks".
+  /// The implementation sets FLAG_KEEP_SCREEN_ON on Android:
+  ///   https://developer.android.com/develop/background-work/background-tasks/awake/screen-on
+  ///   https://github.com/fluttercommunity/wakelock_plus/blob/5ca5243e7894830ce289fc367bc5fdec27c7f0cf/wakelock_plus/android/src/main/kotlin/dev/fluttercommunity/plus/wakelock/Wakelock.kt
+  /// and idleTimerDisabled on iOS:
+  ///   https://developer.apple.com/documentation/uikit/uiapplication/1623070-idletimerdisabled
+  ///   https://github.com/fluttercommunity/wakelock_plus/blob/5ca5243e7894830ce289fc367bc5fdec27c7f0cf/wakelock_plus/ios/Classes/WakelockPlusPlugin.m
+  Future<void> toggleWakelock({required bool enable});
 }
 
 /// Like [device_info_plus.BaseDeviceInfo], but without things we don't use.
 abstract class BaseDeviceInfo {
-  BaseDeviceInfo();
+  const BaseDeviceInfo();
 }
 
 /// Like [device_info_plus.AndroidDeviceInfo], but without things we don't use.
 class AndroidDeviceInfo extends BaseDeviceInfo {
+  /// The Android version string, Build.VERSION.RELEASE, e.g. "14".
+  ///
+  /// Upstream documents this as an opaque string with no particular structure,
+  /// but e.g. on stock Android 14 it's "14".
+  ///
+  /// See: https://developer.android.com/reference/android/os/Build.VERSION#RELEASE
+  final String release;
+
   /// The Android SDK version.
   ///
   /// Possible values are defined in:
   ///   https://developer.android.com/reference/android/os/Build.VERSION_CODES.html
   final int sdkInt;
 
-  AndroidDeviceInfo({required this.sdkInt});
+  const AndroidDeviceInfo({required this.release, required this.sdkInt});
 }
 
 /// Like [device_info_plus.IosDeviceInfo], but without things we don't use.
@@ -149,7 +221,84 @@ class IosDeviceInfo extends BaseDeviceInfo {
   /// See: https://developer.apple.com/documentation/uikit/uidevice/1620043-systemversion
   final String systemVersion;
 
-  IosDeviceInfo({required this.systemVersion});
+  const IosDeviceInfo({required this.systemVersion});
+}
+
+/// Like [device_info_plus.MacOsDeviceInfo], but without things we don't use.
+class MacOsDeviceInfo extends BaseDeviceInfo {
+  /// See: https://developer.apple.com/documentation/foundation/operatingsystemversion/1414662-majorversion
+  final int majorVersion;
+
+  /// See: https://developer.apple.com/documentation/foundation/operatingsystemversion/1413801-minorversion
+  final int minorVersion;
+
+  /// See: https://developer.apple.com/documentation/foundation/operatingsystemversion/1415564-patchversion
+  final int patchVersion;
+
+  const MacOsDeviceInfo({
+    required this.majorVersion,
+    required this.minorVersion,
+    required this.patchVersion,
+  });
+}
+
+/// Like [device_info_plus.WindowsDeviceInfo], currently only used to
+/// determine if we're on Windows.
+// TODO Determine a method to identify the Windows version.
+//  Currently, we do not include Windows version information because
+//  Windows OS does not provide a straightforward way to obtain
+//  recognizable version information.
+//  Here's an example of `WindowsDeviceInfo` data[1]. Based on that
+//  data, there are two possible approaches to identify the Windows
+//  version:
+//    - One approach is to use a combination of the majorVersion,
+//      minorVersion, and buildNumber fields. However, this data does
+//      not directly correspond to recognizable Windows versions
+//      (for example major=10, minor=0, build=22631 actually represents
+//      "Windows 11, 23H2"). Refer to the link in this comment[2] for
+//      Chromium's implementation of parsing Windows version numbers.
+//    - Another approach is to use the productName field. While this
+//      field contains the Windows version, it also includes extraneous
+//      information. For example, some productName strings are:
+//      "Windows 11 Pro" and "Windows 10 Home Single Language", which
+//      makes it less ideal.
+//  [1]: https://gist.github.com/rajveermalviya/58b3add437280cc7f8356f3697099b7c
+//  [2]: https://github.com/zulip/zulip-flutter/pull/724#discussion_r1628318991
+class WindowsDeviceInfo implements BaseDeviceInfo {
+  const WindowsDeviceInfo();
+}
+
+/// Like [device_info_plus.LinuxDeviceInfo], but without things we don't use.
+class LinuxDeviceInfo implements BaseDeviceInfo {
+  /// The operating system name, 'NAME' field in /etc/os-release.
+  ///
+  /// Examples: 'Fedora', 'Debian GNU/Linux', or just 'Linux'.
+  ///
+  /// See: https://www.freedesktop.org/software/systemd/man/latest/os-release.html#NAME=
+  final String name;
+
+  /// The operating system version, 'VERSION_ID' field in /etc/os-release.
+  ///
+  /// This string contains only the version number and excludes the
+  /// OS name and version codenames.
+  ///
+  /// Examples: '17', '11.04'.
+  ///
+  /// See: https://www.freedesktop.org/software/systemd/man/latest/os-release.html#VERSION_ID=
+  final String? versionId;
+
+  const LinuxDeviceInfo({required this.name, required this.versionId});
+}
+
+/// Like [package_info_plus.PackageInfo], but without things we don't use.
+class PackageInfo {
+  final String version;
+  final String buildNumber;
+
+  const PackageInfo({
+    required this.version,
+    required this.buildNumber,
+  });
 }
 
 /// A concrete binding for use in the live application.
@@ -161,6 +310,11 @@ class IosDeviceInfo extends BaseDeviceInfo {
 /// Methods wrapping a plugin, like [launchUrl], invoke the actual
 /// underlying plugin method.
 class LiveZulipBinding extends ZulipBinding {
+  LiveZulipBinding() {
+    _deviceInfo = _prefetchDeviceInfo();
+    _packageInfo = _prefetchPackageInfo();
+  }
+
   /// Initialize the binding if necessary, and ensure it is a [LiveZulipBinding].
   static LiveZulipBinding ensureInitialized() {
     if (ZulipBinding._instance == null) {
@@ -196,13 +350,53 @@ class LiveZulipBinding extends ZulipBinding {
   }
 
   @override
-  Future<BaseDeviceInfo> deviceInfo() async {
-    final deviceInfo = await device_info_plus.DeviceInfoPlugin().deviceInfo;
-    return switch (deviceInfo) {
-      device_info_plus.AndroidDeviceInfo(:var version)   => AndroidDeviceInfo(sdkInt: version.sdkInt),
-      device_info_plus.IosDeviceInfo(:var systemVersion) => IosDeviceInfo(systemVersion: systemVersion),
-      _                                                  => throw UnimplementedError(),
-    };
+  Future<BaseDeviceInfo?> get deviceInfo => _deviceInfo;
+  late Future<BaseDeviceInfo?> _deviceInfo;
+
+  @override
+  BaseDeviceInfo? get syncDeviceInfo => _syncDeviceInfo;
+  BaseDeviceInfo? _syncDeviceInfo;
+
+  Future<BaseDeviceInfo?> _prefetchDeviceInfo() async {
+    try {
+      final info = await device_info_plus.DeviceInfoPlugin().deviceInfo;
+      _syncDeviceInfo = switch (info) {
+        device_info_plus.AndroidDeviceInfo() => AndroidDeviceInfo(release: info.version.release,
+                                                                  sdkInt: info.version.sdkInt),
+        device_info_plus.IosDeviceInfo()     => IosDeviceInfo(systemVersion: info.systemVersion),
+        device_info_plus.MacOsDeviceInfo()   => MacOsDeviceInfo(majorVersion: info.majorVersion,
+                                                                minorVersion: info.minorVersion,
+                                                                patchVersion: info.patchVersion),
+        device_info_plus.WindowsDeviceInfo() => const WindowsDeviceInfo(),
+        device_info_plus.LinuxDeviceInfo()   => LinuxDeviceInfo(name: info.name,
+                                                                versionId: info.versionId),
+        _                                    => throw UnimplementedError(),
+      };
+    } catch (e, st) {
+      assert(debugLog('Failed to prefetch device info: $e\n$st')); // TODO(log)
+    }
+    return _syncDeviceInfo;
+  }
+
+  @override
+  Future<PackageInfo?> get packageInfo => _packageInfo;
+  late Future<PackageInfo?> _packageInfo;
+
+  @override
+  PackageInfo? get syncPackageInfo => _syncPackageInfo;
+  PackageInfo? _syncPackageInfo;
+
+  Future<PackageInfo?> _prefetchPackageInfo() async {
+    try {
+      final info = await package_info_plus.PackageInfo.fromPlatform();
+      _syncPackageInfo = PackageInfo(
+        version: info.version,
+        buildNumber: info.buildNumber,
+      );
+    } catch (e, st) {
+      assert(debugLog('Failed to prefetch package info: $e\n$st')); // TODO(log)
+    }
+    return _syncPackageInfo;
   }
 
   @override
@@ -231,4 +425,31 @@ class LiveZulipBinding extends ZulipBinding {
 
   @override
   AndroidNotificationHostApi get androidNotificationHost => AndroidNotificationHostApi();
+
+  @override
+  Future<file_picker.FilePickerResult?> pickFiles({
+    bool allowMultiple = false,
+    bool withReadStream = false,
+    file_picker.FileType type = file_picker.FileType.any,
+  }) async {
+    return file_picker.FilePicker.platform.pickFiles(
+      allowMultiple: allowMultiple,
+      withReadStream: withReadStream,
+      type: type,
+    );
+  }
+
+  @override
+  Future<image_picker.XFile?> pickImage({
+    required image_picker.ImageSource source,
+    bool requestFullMetadata = true,
+  }) async {
+    return image_picker.ImagePicker()
+      .pickImage(source: source, requestFullMetadata: requestFullMetadata);
+  }
+
+  @override
+  Future<void> toggleWakelock({required bool enable}) async {
+    return wakelock_plus.WakelockPlus.toggle(enable: enable);
+  }
 }

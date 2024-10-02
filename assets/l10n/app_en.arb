@@ -51,6 +51,10 @@
   "@actionSheetOptionCopyMessageLink": {
     "description": "Label for copy message link button on action sheet."
   },
+  "actionSheetOptionMarkAsUnread": "Mark as unread from here",
+  "@actionSheetOptionMarkAsUnread":  {
+    "description": "Label for mark as unread button on action sheet."
+  },
   "actionSheetOptionShare": "Share",
   "@actionSheetOptionShare":  {
     "description": "Label for share button on action sheet."
@@ -180,6 +184,10 @@
   "@successMessageLinkCopied": {
     "description": "Message when link of a message was copied to the user's system clipboard."
   },
+  "errorBannerDeactivatedDmLabel": "You cannot send messages to deactivated users.",
+  "@errorBannerDeactivatedDmLabel": {
+    "description": "Label text for error banner when sending a message to one or multiple deactivated users."
+  },
   "composeBoxAttachFilesTooltip": "Attach files",
   "@composeBoxAttachFilesTooltip": {
     "description": "Tooltip for compose box icon to attach a file to the message."
@@ -211,11 +219,11 @@
   "@composeBoxSelfDmContentHint": {
     "description": "Hint text for content input when sending a message to yourself."
   },
-  "composeBoxStreamContentHint": "Message #{stream} > {topic}",
-  "@composeBoxStreamContentHint": {
+  "composeBoxChannelContentHint": "Message #{channel} > {topic}",
+  "@composeBoxChannelContentHint": {
     "description": "Hint text for content input when sending a message to a channel",
     "placeholders": {
-      "stream": {"type": "String", "example": "channel name"},
+      "channel": {"type": "String", "example": "channel name"},
       "topic": {"type": "String", "example": "topic name"}
     }
   },
@@ -223,15 +231,15 @@
   "@composeBoxSendTooltip":  {
     "description": "Tooltip for send button in compose box."
   },
-  "composeBoxUnknownStreamName": "(unknown channel)",
-  "@composeBoxUnknownStreamName": {
+  "composeBoxUnknownChannelName": "(unknown channel)",
+  "@composeBoxUnknownChannelName": {
     "description": "Replacement name for channel when it cannot be found in the store."
   },
   "composeBoxTopicHintText": "Topic",
   "@composeBoxTopicHintText":  {
     "description": "Hint text for topic input widget in compose box."
   },
-  "composeBoxUploadingFilename": "Uploading {filename}...",
+  "composeBoxUploadingFilename": "Uploading {filename}…",
   "@composeBoxUploadingFilename": {
     "description": "Placeholder in compose box showing the specified file is currently uploading.",
     "placeholders": {
@@ -284,6 +292,10 @@
   "errorDialogTitle": "Error",
   "@errorDialogTitle": {
     "description": "Generic title for error dialog."
+  },
+  "snackBarDetails": "Details",
+  "@snackBarDetails": {
+    "description": "Button label for snack bar button that opens a dialog with more details."
   },
   "lightboxCopyLinkTooltip": "Copy link",
   "@lightboxCopyLinkTooltip": {
@@ -352,8 +364,8 @@
   "@topicValidationErrorMandatoryButEmpty": {
     "description": "Topic validation error when topic is required but was empty."
   },
-  "subscribedToNStreams": "Subscribed to {num, plural, =0{no channels} =1{1 channel} other{{num} channels}}",
-  "@subscribedToNStreams": {
+  "subscribedToNChannels": "Subscribed to {num, plural, =0{no channels} =1{1 channel} other{{num} channels}}",
+  "@subscribedToNChannels": {
     "description": "Test page label showing number of channels user is subscribed to.",
     "placeholders": {
       "num": {"type": "int", "example": "4"}
@@ -424,13 +436,28 @@
       "num": {"type": "int", "example": "4"}
     }
   },
-  "markAsReadInProgress": "Marking messages as read...",
+  "markAsReadInProgress": "Marking messages as read…",
   "@markAsReadInProgress": {
     "description": "Progress message when marking messages as read."
   },
   "errorMarkAsReadFailedTitle": "Mark as read failed",
   "@errorMarkAsReadFailedTitle": {
     "description": "Error title when mark as read action failed."
+  },
+  "markAsUnreadComplete": "Marked {num, plural, =1{1 message} other{{num} messages}} as unread.",
+  "@markAsUnreadComplete": {
+    "description": "Message when marking messages as unread has completed.",
+    "placeholders": {
+      "num": {"type": "int", "example": "4"}
+    }
+  },
+  "markAsUnreadInProgress": "Marking messages as unread…",
+  "@markAsUnreadInProgress": {
+    "description": "Progress message when marking messages as unread."
+  },
+  "errorMarkAsUnreadFailedTitle": "Mark as unread failed",
+  "@errorMarkAsUnreadFailedTitle": {
+    "description": "Error title when mark as unread action failed."
   },
   "today": "Today",
   "@today": {
@@ -472,6 +499,14 @@
   "@combinedFeedPageTitle": {
     "description": "Title for the page of combined feed."
   },
+  "mentionsPageTitle": "Mentions",
+  "@mentionsPageTitle": {
+    "description": "Title for the page of @-mentions."
+  },
+  "starredMessagesPageTitle": "Starred messages",
+  "@starredMessagesPageTitle": {
+    "description": "Title for the page of starred messages."
+  },
   "notifGroupDmConversationLabel": "{senderFullName} to you and {numOthers, plural, =1{1 other} other{{numOthers} others}}",
   "@notifGroupDmConversationLabel": {
     "description": "Label for a group DM conversation notification.",
@@ -479,5 +514,44 @@
       "senderFullName": {"type": "String", "example": "Alice"},
       "numOthers": {"type": "int", "example": "4"}
     }
+  },
+  "notifSelfUser": "You",
+  "@notifSelfUser": {
+    "description": "Display name for the user themself, to show after replying in an Android notification"
+  },
+  "onePersonTyping": "{typist} is typing…",
+  "@onePersonTyping": {
+    "description": "Text to display when there is one user typing.",
+    "placeholders": {
+      "typist": {"type": "String", "example": "Alice"}
+    }
+  },
+  "twoPeopleTyping": "{typist} and {otherTypist} are typing…",
+  "@twoPeopleTyping": {
+    "description": "Text to display when there are two users typing.",
+    "placeholders": {
+      "typist": {"type": "String", "example": "Alice"},
+      "otherTypist": {"type": "String", "example": "Bob"}
+    }
+  },
+  "manyPeopleTyping": "Several people are typing…",
+  "@manyPeopleTyping": {
+    "description": "Text to display when there are multiple users typing."
+  },
+  "messageIsEditedLabel": "EDITED",
+  "@messageIsEditedLabel": {
+    "description": "Label for an edited message. (Use ALL CAPS for cased alphabets: Latin, Greek, Cyrillic, etc.)"
+  },
+  "messageIsMovedLabel": "MOVED",
+  "@messageIsMovedLabel": {
+    "description": "Label for a moved message. (Use ALL CAPS for cased alphabets: Latin, Greek, Cyrillic, etc.)"
+  },
+  "pollWidgetQuestionMissing": "No question.",
+  "@pollWidgetQuestionMissing": {
+    "description": "Text to display for a poll when the question is missing"
+  },
+  "pollWidgetOptionsMissing": "This poll has no options yet.",
+  "@pollWidgetOptionsMissing": {
+    "description": "Text to display for a poll when it has no options"
   }
 }

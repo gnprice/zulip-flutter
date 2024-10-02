@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' hide Person;
 import 'package:test/fake.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:zulip/host/android_notifications.dart';
@@ -70,8 +69,12 @@ class TestZulipBinding extends ZulipBinding {
     _resetLaunchUrl();
     _resetCloseInAppWebView();
     _resetDeviceInfo();
+    _resetPackageInfo();
     _resetFirebase();
     _resetNotifications();
+    _resetPickFiles();
+    _resetPickImage();
+    _resetWakelock();
   }
 
   /// The current global store offered to a [GlobalStoreWidget].
@@ -204,20 +207,33 @@ class TestZulipBinding extends ZulipBinding {
     _closeInAppWebViewCallCount++;
   }
 
-  /// The value that `ZulipBinding.instance.deviceInfo()` should return.
-  ///
-  /// See also [takeDeviceInfoCalls].
+  /// The value that `ZulipBinding.instance.deviceInfo` should return.
   BaseDeviceInfo deviceInfoResult = _defaultDeviceInfoResult;
-  static final _defaultDeviceInfoResult = AndroidDeviceInfo(sdkInt: 33);
+  static const _defaultDeviceInfoResult = AndroidDeviceInfo(sdkInt: 33, release: '13');
 
   void _resetDeviceInfo() {
     deviceInfoResult = _defaultDeviceInfoResult;
   }
 
   @override
-  Future<BaseDeviceInfo> deviceInfo() {
-    return Future(() => deviceInfoResult);
+  Future<BaseDeviceInfo?> get deviceInfo async => deviceInfoResult;
+
+  @override
+  BaseDeviceInfo? get syncDeviceInfo => deviceInfoResult;
+
+  /// The value that `ZulipBinding.instance.packageInfo` should return.
+  PackageInfo packageInfoResult = _defaultPackageInfo;
+  static const _defaultPackageInfo = PackageInfo(version: '0.0.1', buildNumber: '1');
+
+  void _resetPackageInfo() {
+    packageInfoResult = _defaultPackageInfo;
   }
+
+  @override
+  Future<PackageInfo?> get packageInfo async => packageInfoResult;
+
+  @override
+  PackageInfo? get syncPackageInfo => packageInfoResult;
 
   void _resetFirebase() {
     _firebaseInitialized = false;
@@ -270,6 +286,101 @@ class TestZulipBinding extends ZulipBinding {
   @override
   FakeAndroidNotificationHostApi get androidNotificationHost {
     return (_androidNotificationHostApi ??= FakeAndroidNotificationHostApi());
+  }
+
+  /// The value that `ZulipBinding.instance.pickFiles()` should return.
+  ///
+  /// See also [takePickFilesCalls].
+  FilePickerResult? pickFilesResult;
+
+  void _resetPickFiles() {
+    pickFilesResult = null;
+    _pickFilesCalls = null;
+  }
+
+  /// Consume the log of calls made to `ZulipBinding.instance.pickFiles()`.
+  ///
+  /// This returns a list of the arguments to all calls made
+  /// to `ZulipBinding.instance.pickFiles()` since the last call to
+  /// either this method or [reset].
+  ///
+  /// See also [pickFilesResult].
+  List<({
+    bool? allowMultiple,
+    bool? withReadStream,
+    FileType? type,
+  })> takePickFilesCalls() {
+    final result = _pickFilesCalls;
+    _pickFilesCalls = null;
+    return result ?? [];
+  }
+  List<({
+    bool? allowMultiple,
+    bool? withReadStream,
+    FileType? type,
+  })>? _pickFilesCalls;
+
+  @override
+  Future<FilePickerResult?> pickFiles({
+    bool? allowMultiple,
+    bool? withReadStream,
+    FileType? type,
+  }) async {
+    (_pickFilesCalls ??= []).add((allowMultiple: allowMultiple, withReadStream: withReadStream, type: type));
+    return pickFilesResult;
+  }
+
+  /// The value that `ZulipBinding.instance.pickImage()` should return.
+  ///
+  /// See also [takePickImageCalls].
+  XFile? pickImageResult;
+
+  void _resetPickImage() {
+    pickImageResult = null;
+    _pickImageCalls = null;
+  }
+
+  /// Consume the log of calls made to `ZulipBinding.instance.pickImage()`.
+  ///
+  /// This returns a list of the arguments to all calls made
+  /// to `ZulipBinding.instance.pickImage()` since the last call to
+  /// either this method or [reset].
+  ///
+  /// See also [pickImageResult].
+  List<({
+    ImageSource source,
+    bool requestFullMetadata,
+  })> takePickImageCalls() {
+    final result = _pickImageCalls;
+    _pickImageCalls = null;
+    return result ?? [];
+  }
+  List<({
+    ImageSource source,
+    bool requestFullMetadata,
+  })>? _pickImageCalls;
+
+  @override
+  Future<XFile?> pickImage({
+    required ImageSource source,
+    bool requestFullMetadata = true,
+  }) async {
+    (_pickImageCalls ??= []).add((source: source, requestFullMetadata: requestFullMetadata));
+    return pickImageResult;
+  }
+
+  /// Returns the current status of wakelock, which can be
+  /// changed via [toggleWakelock].
+  bool get wakelockEnabled => _wakelockEnabled;
+  bool _wakelockEnabled = false;
+
+  void _resetWakelock() {
+    _wakelockEnabled = false;
+  }
+
+  @override
+  Future<void> toggleWakelock({required bool enable}) async {
+    _wakelockEnabled = enable;
   }
 }
 
@@ -416,34 +527,6 @@ class FakeFlutterLocalNotificationsPlugin extends Fake implements FlutterLocalNo
     return true;
   }
 
-  FlutterLocalNotificationsPlatform? _platform;
-
-  @override
-  T? resolvePlatformSpecificImplementation<T extends FlutterLocalNotificationsPlatform>() {
-    // This follows the logic of the base class's implementation,
-    // but supplies our fakes for the per-platform classes.
-    assert(initializationSettings != null);
-    assert(T != FlutterLocalNotificationsPlatform);
-    if (kIsWeb) return null;
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        assert(_platform == null || _platform is FakeAndroidFlutterLocalNotificationsPlugin);
-        if (T != AndroidFlutterLocalNotificationsPlugin) return null;
-        return (_platform ??= FakeAndroidFlutterLocalNotificationsPlugin()) as T?;
-
-      case TargetPlatform.iOS:
-        assert(_platform == null || _platform is FakeIOSFlutterLocalNotificationsPlugin);
-        if (T != IOSFlutterLocalNotificationsPlugin) return null;
-        return (_platform ??= FakeIOSFlutterLocalNotificationsPlugin()) as T?;
-
-      case TargetPlatform.linux:
-      case TargetPlatform.macOS:
-      case TargetPlatform.windows:
-      case TargetPlatform.fuchsia:
-        return null;
-    }
-  }
-
   /// The value to be returned by [getNotificationAppLaunchDetails].
   NotificationAppLaunchDetails? appLaunchDetails;
 
@@ -459,28 +542,23 @@ class FakeFlutterLocalNotificationsPlugin extends Fake implements FlutterLocalNo
   }
 }
 
-class FakeAndroidFlutterLocalNotificationsPlugin extends Fake implements AndroidFlutterLocalNotificationsPlugin {
+class FakeAndroidNotificationHostApi implements AndroidNotificationHostApi {
   /// Consume the log of calls made to [createNotificationChannel].
   ///
   /// This returns a list of the arguments to all calls made
   /// to [createNotificationChannel] since the last call to this method.
-  List<AndroidNotificationChannel> takeCreatedChannels() {
+  List<NotificationChannel> takeCreatedChannels() {
     final result = _createdChannels;
     _createdChannels = [];
     return result;
   }
-  List<AndroidNotificationChannel> _createdChannels = [];
+  List<NotificationChannel> _createdChannels = [];
 
   @override
-  Future<void> createNotificationChannel(AndroidNotificationChannel notificationChannel) async {
-    _createdChannels.add(notificationChannel);
+  Future<void> createNotificationChannel(NotificationChannel channel) async {
+    _createdChannels.add(channel);
   }
-}
 
-class FakeIOSFlutterLocalNotificationsPlugin extends Fake implements IOSFlutterLocalNotificationsPlugin {
-}
-
-class FakeAndroidNotificationHostApi implements AndroidNotificationHostApi {
   /// Consume the log of calls made to [notify].
   ///
   /// This returns a list of the arguments to all calls made
@@ -491,6 +569,17 @@ class FakeAndroidNotificationHostApi implements AndroidNotificationHostApi {
     return result;
   }
   List<AndroidNotificationHostApiNotifyCall> _notifyCalls = [];
+
+  Iterable<StatusBarNotification> get activeNotifications => _activeNotifications.values;
+  final Map<(int, String?), StatusBarNotification> _activeNotifications = {};
+
+  final Map<String, MessagingStyle?> _activeNotificationsMessagingStyle = {};
+
+  /// Clears all active notifications that have been created via [notify].
+  void clearActiveNotifications() {
+    _activeNotifications.clear();
+    _activeNotificationsMessagingStyle.clear();
+  }
 
   @override
   Future<void> notify({
@@ -506,6 +595,8 @@ class FakeAndroidNotificationHostApi implements AndroidNotificationHostApi {
     String? groupKey,
     InboxStyle? inboxStyle,
     bool? isGroupSummary,
+    MessagingStyle? messagingStyle,
+    int? number,
     String? smallIconResourceName,
   }) async {
     _notifyCalls.add((
@@ -521,8 +612,55 @@ class FakeAndroidNotificationHostApi implements AndroidNotificationHostApi {
       groupKey: groupKey,
       inboxStyle: inboxStyle,
       isGroupSummary: isGroupSummary,
+      messagingStyle: messagingStyle,
+      number: number,
       smallIconResourceName: smallIconResourceName,
     ));
+
+    if (tag != null) {
+      _activeNotifications[(id, tag)] = StatusBarNotification(
+        id: id,
+        notification: Notification(group: groupKey ?? '', extras: extras ?? {}),
+        tag: tag);
+
+      _activeNotificationsMessagingStyle[tag] = messagingStyle == null
+        ? null
+        : MessagingStyle(
+            user: messagingStyle.user,
+            conversationTitle: messagingStyle.conversationTitle,
+            isGroupConversation: messagingStyle.isGroupConversation,
+            messages: messagingStyle.messages.map((message) =>
+              MessagingStyleMessage(
+                text: message!.text,
+                timestampMs: message.timestampMs,
+                person: Person(
+                  key: message.person.key,
+                  name: message.person.name,
+                  iconBitmap: null)),
+            ).toList(growable: false));
+    }
+  }
+
+  @override
+  Future<MessagingStyle?> getActiveNotificationMessagingStyleByTag(String tag) async =>
+    _activeNotificationsMessagingStyle[tag];
+
+  @override
+  Future<List<StatusBarNotification?>> getActiveNotifications({required List<String?> desiredExtras}) async {
+    return _activeNotifications.values.map((statusNotif) {
+      final notificationExtras = statusNotif.notification.extras;
+      statusNotif.notification.extras = Map.fromEntries(
+        desiredExtras
+          .map((key) => MapEntry(key, notificationExtras[key]))
+          .where((entry) => entry.value != null)
+      );
+      return statusNotif;
+    }).toList(growable: false);
+  }
+
+  @override
+  Future<void> cancel({String? tag, required int id}) async {
+    _activeNotifications.remove((id, tag));
   }
 }
 
@@ -539,5 +677,7 @@ typedef AndroidNotificationHostApiNotifyCall = ({
   String? groupKey,
   InboxStyle? inboxStyle,
   bool? isGroupSummary,
+  MessagingStyle? messagingStyle,
+  int? number,
   String? smallIconResourceName,
 });

@@ -1,8 +1,8 @@
+import 'package:flutter/widgets.dart';
 
-import 'package:flutter/material.dart';
-
-import 'stream_colors.dart';
+import 'channel_colors.dart';
 import 'text.dart';
+import 'theme.dart';
 
 /// A widget to display a given number of unreads in a conversation.
 ///
@@ -21,7 +21,7 @@ class UnreadCountBadge extends StatelessWidget {
 
   /// The badge's background color.
   ///
-  /// Pass a [StreamColorSwatch] if this badge represents messages in one
+  /// Pass a [ChannelColorSwatch] if this badge represents messages in one
   /// specific stream. The appropriate color from the swatch will be used.
   ///
   /// If null, the default neutral background will be used.
@@ -29,11 +29,12 @@ class UnreadCountBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
     final effectiveBackgroundColor = switch (backgroundColor) {
-      StreamColorSwatch(unreadCountBadgeBackground: var color) => color,
+      ChannelColorSwatch(unreadCountBadgeBackground: var color) => color,
       Color() => backgroundColor,
-      // TODO(#95) need dark-theme color
-      null => const Color.fromRGBO(102, 102, 153, 0.15),
+      null => designVariables.bgCounterUnread,
     };
 
     return DecoratedBox(
@@ -44,24 +45,30 @@ class UnreadCountBadge extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(4, 0, 4, 1),
         child: Text(
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             height: (18 / 16),
-            fontFeatures: [FontFeature.enable('smcp')], // small caps
-
-            // From the Figma:
-            //   https://www.figma.com/file/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?type=design&node-id=171-12359&mode=design&t=JKrw76SGUF51nSJG-0
-            // TODO or, when background is stream-colored, follow Vlad's replit?
-            //     https://replit.com/@VladKorobov/zulip-sidebar#script.js
-            //   which would mean:
-            //   - in light mode use `Color.fromRGBO(0, 0, 0, 0.9)`
-            //   - in dark mode use `Color.fromRGBO(255, 255, 255, 0.9)`
-            //   The web app doesn't (yet?) use stream-colored unread markers
-            //   so we can't take direction from there.
-            // TODO(#95) need dark-theme color
-            color: Color(0xFF222222),
+            fontFeatures: const [FontFeature.enable('smcp')], // small caps
+            color: backgroundColor is ChannelColorSwatch
+              ? designVariables.unreadCountBadgeTextForChannel
+              : designVariables.labelCounterUnread,
           ).merge(weightVariableTextStyle(context,
               wght: bold ? 600 : null)),
           count.toString())));
+  }
+}
+
+class MutedUnreadBadge extends StatelessWidget {
+  const MutedUnreadBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      margin: const EdgeInsetsDirectional.only(end: 3),
+      decoration: BoxDecoration(
+        color: const HSLColor.fromAHSL(0.5, 0, 0, 0.8).toColor(),
+        shape: BoxShape.circle));
   }
 }

@@ -9,7 +9,7 @@ import '../api/model/events.dart';
 import '../log.dart';
 import 'algorithms.dart';
 import 'narrow.dart';
-import 'stream.dart';
+import 'channel.dart';
 
 /// The view-model for unread messages.
 ///
@@ -30,7 +30,6 @@ import 'stream.dart';
 ///   https://chat.zulip.org/#narrow/stream/412-api-documentation/topic/unreads.3A.20messages.20from.20muted.20users.3F/near/1660912
 /// For that reason, consumers of this model may wish to filter out messages in
 /// unsubscribed streams and messages sent by muted users.
-// TODO handle moved messages
 // TODO When [oldUnreadsMissing], if you load a message list with very old unreads,
 //   sync to those unreads, because the user has shown an interest in them.
 // TODO When loading a message list with stream messages, check all the stream
@@ -39,16 +38,16 @@ class Unreads extends ChangeNotifier {
   factory Unreads({
     required UnreadMessagesSnapshot initial,
     required int selfUserId,
-    required StreamStore streamStore,
+    required ChannelStore channelStore,
   }) {
     final streams = <int, Map<String, QueueList<int>>>{};
     final dms = <DmNarrow, QueueList<int>>{};
     final mentions = Set.of(initial.mentions);
 
-    for (final unreadStreamSnapshot in initial.streams) {
-      final streamId = unreadStreamSnapshot.streamId;
-      final topic = unreadStreamSnapshot.topic;
-      (streams[streamId] ??= {})[topic] = QueueList.from(unreadStreamSnapshot.unreadMessageIds);
+    for (final unreadChannelSnapshot in initial.channels) {
+      final streamId = unreadChannelSnapshot.streamId;
+      final topic = unreadChannelSnapshot.topic;
+      (streams[streamId] ??= {})[topic] = QueueList.from(unreadChannelSnapshot.unreadMessageIds);
     }
 
     for (final unreadDmSnapshot in initial.dms) {
@@ -63,7 +62,7 @@ class Unreads extends ChangeNotifier {
     }
 
     return Unreads._(
-      streamStore: streamStore,
+      channelStore: channelStore,
       streams: streams,
       dms: dms,
       mentions: mentions,
@@ -73,7 +72,7 @@ class Unreads extends ChangeNotifier {
   }
 
   Unreads._({
-    required this.streamStore,
+    required this.channelStore,
     required this.streams,
     required this.dms,
     required this.mentions,
@@ -81,7 +80,7 @@ class Unreads extends ChangeNotifier {
     required this.selfUserId,
   });
 
-  final StreamStore streamStore;
+  final ChannelStore channelStore;
 
   // TODO excluded for now; would need to handle nuances around muting etc.
   // int count;
@@ -136,7 +135,7 @@ class Unreads extends ChangeNotifier {
     }
     for (final MapEntry(key: streamId, value: topics) in streams.entries) {
       for (final MapEntry(key: topic, value: messageIds) in topics.entries) {
-        if (streamStore.isTopicVisible(streamId, topic)) {
+        if (channelStore.isTopicVisible(streamId, topic)) {
           c = c + messageIds.length;
         }
       }
@@ -144,42 +143,42 @@ class Unreads extends ChangeNotifier {
     return c;
   }
 
-  /// The "strict" unread count for this stream,
-  /// using [StreamStore.isTopicVisible].
+  /// The "strict" unread count for this channel,
+  /// using [ChannelStore.isTopicVisible].
   ///
-  /// If the stream is muted, this will count only topics that are
+  /// If the channel is muted, this will count only topics that are
   /// actively unmuted.
   ///
   /// For a count that's appropriate in UI contexts that are focused
-  /// specifically on this stream, see [countInStreamNarrow].
+  /// specifically on this channel, see [countInChannelNarrow].
   // TODO(#370): maintain this count incrementally, rather than recomputing from scratch
-  int countInStream(int streamId) {
+  int countInChannel(int streamId) {
     final topics = streams[streamId];
     if (topics == null) return 0;
     int c = 0;
     for (final entry in topics.entries) {
-      if (streamStore.isTopicVisible(streamId, entry.key)) {
+      if (channelStore.isTopicVisible(streamId, entry.key)) {
         c = c + entry.value.length;
       }
     }
     return c;
   }
 
-  /// The "broad" unread count for this stream,
-  /// using [StreamStore.isTopicVisibleInStream].
+  /// The "broad" unread count for this channel,
+  /// using [ChannelStore.isTopicVisibleInStream].
   ///
   /// This includes topics that have no visibility policy of their own,
-  /// even if the stream itself is muted.
+  /// even if the channel itself is muted.
   ///
   /// For a count that's appropriate in UI contexts that are not already
-  /// focused on this stream, see [countInStream].
+  /// focused on this channel, see [countInChannel].
   // TODO(#370): maintain this count incrementally, rather than recomputing from scratch
-  int countInStreamNarrow(int streamId) {
+  int countInChannelNarrow(int streamId) {
     final topics = streams[streamId];
     if (topics == null) return 0;
     int c = 0;
     for (final entry in topics.entries) {
-      if (streamStore.isTopicVisibleInStream(streamId, entry.key)) {
+      if (channelStore.isTopicVisibleInStream(streamId, entry.key)) {
         c = c + entry.value.length;
       }
     }
@@ -193,16 +192,25 @@ class Unreads extends ChangeNotifier {
 
   int countInDmNarrow(DmNarrow narrow) => dms[narrow]?.length ?? 0;
 
+  int countInMentionsNarrow() => mentions.length;
+
+  // TODO: Implement unreads handling.
+  int countInStarredMessagesNarrow() => 0;
+
   int countInNarrow(Narrow narrow) {
     switch (narrow) {
       case CombinedFeedNarrow():
         return countInCombinedFeedNarrow();
-      case StreamNarrow():
-        return countInStreamNarrow(narrow.streamId);
+      case ChannelNarrow():
+        return countInChannelNarrow(narrow.streamId);
       case TopicNarrow():
         return countInTopicNarrow(narrow.streamId, narrow.topic);
       case DmNarrow():
         return countInDmNarrow(narrow);
+      case MentionsNarrow():
+        return countInMentionsNarrow();
+      case StarredMessagesNarrow():
+        return countInStarredMessagesNarrow();
     }
   }
 
@@ -272,8 +280,7 @@ class Unreads extends ChangeNotifier {
         madeAnyUpdate |= mentions.add(messageId);
     }
 
-    // (Moved messages will be handled here;
-    // the TODO for that is just above the class declaration.)
+    // TODO(#901) handle moved messages
 
     if (madeAnyUpdate) {
       notifyListeners();
@@ -288,7 +295,7 @@ class Unreads extends ChangeNotifier {
         final streamId = event.streamId!;
         final topic = event.topic!;
         _removeAllInStreamTopic(messageIdsSet, streamId, topic);
-      case MessageType.private:
+      case MessageType.direct:
         _slowRemoveAllInDms(messageIdsSet);
     }
 
@@ -363,7 +370,7 @@ class Unreads extends ChangeNotifier {
                   final topics = (newlyUnreadInStreams[detail.streamId!] ??= {});
                   final messageIds = (topics[detail.topic!] ??= QueueList());
                   messageIds.add(messageId);
-                case MessageType.private:
+                case MessageType.direct:
                   final narrow = DmNarrow.ofUpdateMessageFlagsMessageDetail(selfUserId: selfUserId,
                     detail);
                   (newlyUnreadInDms[narrow] ??= QueueList())

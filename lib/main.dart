@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'licenses.dart';
 import 'log.dart';
@@ -13,8 +13,8 @@ void main() {
     return true;
   }());
   LicenseRegistry.addLicense(additionalLicenses);
-  LiveZulipBinding.ensureInitialized();
   WidgetsFlutterBinding.ensureInitialized();
+  LiveZulipBinding.ensureInitialized();
   NotificationService.instance.start();
   runApp(const ZulipApp());
 }

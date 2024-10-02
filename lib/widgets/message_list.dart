@@ -2,19 +2,20 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_color_models/flutter_color_models.dart';
 import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 import 'package:intl/intl.dart';
 
 import '../api/model/model.dart';
-import '../api/model/narrow.dart';
-import '../api/route/messages.dart';
 import '../model/message_list.dart';
 import '../model/narrow.dart';
 import '../model/store.dart';
+import '../model/typing_status.dart';
 import 'action_sheet.dart';
+import 'actions.dart';
+import 'app_bar.dart';
 import 'compose_box.dart';
 import 'content.dart';
-import 'dialog.dart';
 import 'emoji_reaction.dart';
 import 'icons.dart';
 import 'page.dart';
@@ -24,66 +25,243 @@ import 'store.dart';
 import 'text.dart';
 import 'theme.dart';
 
+/// Message-list styles that differ between light and dark themes.
+class MessageListTheme extends ThemeExtension<MessageListTheme> {
+  MessageListTheme.light() :
+    this._(
+      dateSeparator: Colors.black,
+      dateSeparatorText: const HSLColor.fromAHSL(0.75, 0, 0, 0.15).toColor(),
+      dmRecipientHeaderBg: const HSLColor.fromAHSL(1, 46, 0.35, 0.93).toColor(),
+      messageTimestamp: const HSLColor.fromAHSL(0.8, 0, 0, 0.2).toColor(),
+      recipientHeaderText: const HSLColor.fromAHSL(1, 0, 0, 0.15).toColor(),
+      senderBotIcon: const HSLColor.fromAHSL(1, 180, 0.08, 0.65).toColor(),
+      senderName: const HSLColor.fromAHSL(1, 0, 0, 0.2).toColor(),
+      streamMessageBgDefault: Colors.white,
+      streamRecipientHeaderChevronRight: Colors.black.withValues(alpha: 0.3),
+
+      // From the Figma mockup at:
+      //   https://www.figma.com/file/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=132-9684
+      // See discussion about design at:
+      //   https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/flutter.3A.20unread.20marker/near/1658008
+      // (Web uses a left-to-right gradient from hsl(217deg 64% 59%) to transparent,
+      // in both light and dark theme.)
+      unreadMarker: const HSLColor.fromAHSL(1, 227, 0.78, 0.59).toColor(),
+
+      unreadMarkerGap: Colors.white.withValues(alpha: 0.6),
+
+      // TODO(design) this seems ad-hoc; is there a better color?
+      unsubscribedStreamRecipientHeaderBg: const Color(0xfff5f5f5),
+    );
+
+  MessageListTheme.dark() :
+    this._(
+      dateSeparator: Colors.white,
+      dateSeparatorText: const HSLColor.fromAHSL(0.75, 0, 0, 1).toColor(),
+      dmRecipientHeaderBg: const HSLColor.fromAHSL(1, 46, 0.15, 0.2).toColor(),
+      messageTimestamp: const HSLColor.fromAHSL(0.8, 0, 0, 0.85).toColor(),
+      recipientHeaderText: const HSLColor.fromAHSL(0.8, 0, 0, 1).toColor(),
+      senderBotIcon: const HSLColor.fromAHSL(1, 180, 0.05, 0.5).toColor(),
+      senderName: const HSLColor.fromAHSL(0.85, 0, 0, 1).toColor(),
+      streamMessageBgDefault: const HSLColor.fromAHSL(1, 0, 0, 0.15).toColor(),
+      streamRecipientHeaderChevronRight: Colors.white.withValues(alpha: 0.3),
+
+      // 0.75 opacity from here:
+      //   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=807-33998&m=dev
+      // Discussion, some weeks after the discussion linked on the light variant:
+      //   https://github.com/zulip/zulip-flutter/pull/317#issuecomment-1784311663
+      // where Vlad includes screenshots that look like they're from there.
+      unreadMarker: const HSLColor.fromAHSL(0.75, 227, 0.78, 0.59).toColor(),
+
+      unreadMarkerGap: Colors.transparent,
+
+      // TODO(design) this is ad-hoc and untested; is there a better color?
+      unsubscribedStreamRecipientHeaderBg: const Color(0xff0a0a0a),
+    );
+
+  MessageListTheme._({
+    required this.dateSeparator,
+    required this.dateSeparatorText,
+    required this.dmRecipientHeaderBg,
+    required this.messageTimestamp,
+    required this.recipientHeaderText,
+    required this.senderBotIcon,
+    required this.senderName,
+    required this.streamMessageBgDefault,
+    required this.streamRecipientHeaderChevronRight,
+    required this.unreadMarker,
+    required this.unreadMarkerGap,
+    required this.unsubscribedStreamRecipientHeaderBg,
+  });
+
+  /// The [MessageListTheme] from the context's active theme.
+  ///
+  /// The [ThemeData] must include [MessageListTheme] in [ThemeData.extensions].
+  static MessageListTheme of(BuildContext context) {
+    final theme = Theme.of(context);
+    final extension = theme.extension<MessageListTheme>();
+    assert(extension != null);
+    return extension!;
+  }
+
+  final Color dateSeparator;
+  final Color dateSeparatorText;
+  final Color dmRecipientHeaderBg;
+  final Color messageTimestamp;
+  final Color recipientHeaderText;
+  final Color senderBotIcon;
+  final Color senderName;
+  final Color streamMessageBgDefault;
+  final Color streamRecipientHeaderChevronRight;
+  final Color unreadMarker;
+  final Color unreadMarkerGap;
+  final Color unsubscribedStreamRecipientHeaderBg;
+
+  @override
+  MessageListTheme copyWith({
+    Color? dateSeparator,
+    Color? dateSeparatorText,
+    Color? dmRecipientHeaderBg,
+    Color? messageTimestamp,
+    Color? recipientHeaderText,
+    Color? senderBotIcon,
+    Color? senderName,
+    Color? streamMessageBgDefault,
+    Color? streamRecipientHeaderChevronRight,
+    Color? unreadMarker,
+    Color? unreadMarkerGap,
+    Color? unsubscribedStreamRecipientHeaderBg,
+  }) {
+    return MessageListTheme._(
+      dateSeparator: dateSeparator ?? this.dateSeparator,
+      dateSeparatorText: dateSeparatorText ?? this.dateSeparatorText,
+      dmRecipientHeaderBg: dmRecipientHeaderBg ?? this.dmRecipientHeaderBg,
+      messageTimestamp: messageTimestamp ?? this.messageTimestamp,
+      recipientHeaderText: recipientHeaderText ?? this.recipientHeaderText,
+      senderBotIcon: senderBotIcon ?? this.senderBotIcon,
+      senderName: senderName ?? this.senderName,
+      streamMessageBgDefault: streamMessageBgDefault ?? this.streamMessageBgDefault,
+      streamRecipientHeaderChevronRight: streamRecipientHeaderChevronRight ?? this.streamRecipientHeaderChevronRight,
+      unreadMarker: unreadMarker ?? this.unreadMarker,
+      unreadMarkerGap: unreadMarkerGap ?? this.unreadMarkerGap,
+      unsubscribedStreamRecipientHeaderBg: unsubscribedStreamRecipientHeaderBg ?? this.unsubscribedStreamRecipientHeaderBg,
+    );
+  }
+
+  @override
+  MessageListTheme lerp(MessageListTheme other, double t) {
+    if (identical(this, other)) {
+      return this;
+    }
+    return MessageListTheme._(
+      dateSeparator: Color.lerp(dateSeparator, other.dateSeparator, t)!,
+      dateSeparatorText: Color.lerp(dateSeparatorText, other.dateSeparatorText, t)!,
+      dmRecipientHeaderBg: Color.lerp(streamMessageBgDefault, other.dmRecipientHeaderBg, t)!,
+      messageTimestamp: Color.lerp(messageTimestamp, other.messageTimestamp, t)!,
+      recipientHeaderText: Color.lerp(recipientHeaderText, other.recipientHeaderText, t)!,
+      senderBotIcon: Color.lerp(senderBotIcon, other.senderBotIcon, t)!,
+      senderName: Color.lerp(senderName, other.senderName, t)!,
+      streamMessageBgDefault: Color.lerp(streamMessageBgDefault, other.streamMessageBgDefault, t)!,
+      streamRecipientHeaderChevronRight: Color.lerp(streamRecipientHeaderChevronRight, other.streamRecipientHeaderChevronRight, t)!,
+      unreadMarker: Color.lerp(unreadMarker, other.unreadMarker, t)!,
+      unreadMarkerGap: Color.lerp(unreadMarkerGap, other.unreadMarkerGap, t)!,
+      unsubscribedStreamRecipientHeaderBg: Color.lerp(unsubscribedStreamRecipientHeaderBg, other.unsubscribedStreamRecipientHeaderBg, t)!,
+    );
+  }
+}
+
+/// The interface for the state of a [MessageListPage].
+///
+/// To obtain one of these, see [MessageListPage.ancestorOf].
+abstract class MessageListPageState {
+  /// The narrow for this page's message list.
+  Narrow get narrow;
+
+  /// The controller for this [MessageListPage]'s compose box,
+  /// if this [MessageListPage] offers a compose box.
+  ComposeBoxController? get composeBoxController;
+}
+
 class MessageListPage extends StatefulWidget {
-  const MessageListPage({super.key, required this.narrow});
+  const MessageListPage({super.key, required this.initNarrow});
 
   static Route<void> buildRoute({int? accountId, BuildContext? context,
       required Narrow narrow}) {
     return MaterialAccountWidgetRoute(accountId: accountId, context: context,
-      page: MessageListPage(narrow: narrow));
+      page: MessageListPage(initNarrow: narrow));
   }
 
-  /// A [ComposeBoxController], if this [MessageListPage] offers a compose box.
+  /// The [MessageListPageState] above this context in the tree.
   ///
   /// Uses the inefficient [BuildContext.findAncestorStateOfType];
   /// don't call this in a build method.
-  static ComposeBoxController? composeBoxControllerOf(BuildContext context) {
-    final messageListPageState = context.findAncestorStateOfType<_MessageListPageState>();
-    assert(messageListPageState != null, 'No MessageListPage ancestor');
-    return messageListPageState!._composeBoxKey.currentState;
+  // If we do find ourselves wanting this in a build method, it won't be hard
+  // to enable that: we'd just need to add an [InheritedWidget] here.
+  static MessageListPageState ancestorOf(BuildContext context) {
+    final state = context.findAncestorStateOfType<_MessageListPageState>();
+    assert(state != null, 'No MessageListPage ancestor');
+    return state!;
   }
 
-  final Narrow narrow;
+  final Narrow initNarrow;
 
   @override
   State<MessageListPage> createState() => _MessageListPageState();
 }
 
-// TODO(design) this seems ad-hoc; is there a better color?
-const _kUnsubscribedStreamRecipientHeaderColor = Color(0xfff5f5f5);
+class _MessageListPageState extends State<MessageListPage> implements MessageListPageState {
+  @override
+  late Narrow narrow;
 
-class _MessageListPageState extends State<MessageListPage> {
+  @override
+  ComposeBoxController? get composeBoxController => _composeBoxKey.currentState;
+
   final GlobalKey<ComposeBoxController> _composeBoxKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    narrow = widget.initNarrow;
+  }
+
+  void _narrowChanged(Narrow newNarrow) {
+    setState(() {
+      narrow = newNarrow;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
+    final messageListTheme = MessageListTheme.of(context);
 
     final Color? appBarBackgroundColor;
     bool removeAppBarBottomBorder = false;
-    switch(widget.narrow) {
+    switch(narrow) {
       case CombinedFeedNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
         appBarBackgroundColor = null; // i.e., inherit
 
-      case StreamNarrow(:final streamId):
+      case ChannelNarrow(:final streamId):
       case TopicNarrow(:final streamId):
         final subscription = store.subscriptions[streamId];
         appBarBackgroundColor = subscription != null
           ? colorSwatchFor(context, subscription).barBackground
-          : _kUnsubscribedStreamRecipientHeaderColor;
+          : messageListTheme.unsubscribedStreamRecipientHeaderBg;
         // All recipient headers will match this color; remove distracting line
         // (but are recipient headers even needed for topic narrows?)
         removeAppBarBottomBorder = true;
 
       case DmNarrow():
-        appBarBackgroundColor = _kDmRecipientHeaderColor;
+        appBarBackgroundColor = messageListTheme.dmRecipientHeaderBg;
         // All recipient headers will match this color; remove distracting line
         // (but are recipient headers even needed?)
         removeAppBarBottomBorder = true;
     }
 
     return Scaffold(
-      appBar: AppBar(title: MessageListAppBarTitle(narrow: widget.narrow),
+      appBar: ZulipAppBar(
+        title: MessageListAppBarTitle(narrow: narrow),
         backgroundColor: appBarBackgroundColor,
         shape: removeAppBarBottomBorder
           ? const Border()
@@ -105,15 +283,13 @@ class _MessageListPageState extends State<MessageListPage> {
               context: context,
 
               // The compose box, when present, pads the bottom inset.
-              // TODO this copies the details of when the compose box is shown;
-              //   if those details get complicated, refactor to avoid copying.
               // TODO(#311) If we have a bottom nav, it will pad the bottom
               //   inset, and this should always be true.
-              removeBottom: widget.narrow is! CombinedFeedNarrow,
+              removeBottom: ComposeBox.hasComposeBox(narrow),
 
               child: Expanded(
-                child: MessageList(narrow: widget.narrow))),
-            ComposeBox(controllerKey: _composeBoxKey, narrow: widget.narrow),
+                child: MessageList(narrow: narrow, onNarrowChanged: _narrowChanged))),
+            ComposeBox(controllerKey: _composeBoxKey, narrow: narrow),
           ]))));
   }
 }
@@ -150,7 +326,13 @@ class MessageListAppBarTitle extends StatelessWidget {
       case CombinedFeedNarrow():
         return Text(zulipLocalizations.combinedFeedPageTitle);
 
-      case StreamNarrow(:var streamId):
+      case MentionsNarrow():
+        return Text(zulipLocalizations.mentionsPageTitle);
+
+      case StarredMessagesNarrow():
+        return Text(zulipLocalizations.starredMessagesPageTitle);
+
+      case ChannelNarrow(:var streamId):
         final store = PerAccountStoreWidget.of(context);
         final stream = store.streams[streamId];
         final streamName = stream?.name ?? '(unknown channel)';
@@ -188,9 +370,10 @@ const _kShortMessageHeight = 80;
 const kFetchMessagesBufferPixels = (kMessageListFetchBatchSize / 2) * _kShortMessageHeight;
 
 class MessageList extends StatefulWidget {
-  const MessageList({super.key, required this.narrow});
+  const MessageList({super.key, required this.narrow, required this.onNarrowChanged});
 
   final Narrow narrow;
+  final void Function(Narrow newNarrow) onNarrowChanged;
 
   @override
   State<StatefulWidget> createState() => _MessageListState();
@@ -227,6 +410,11 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
   }
 
   void _modelChanged() {
+    if (model!.narrow != widget.narrow) {
+      // A message move event occurred, where propagate mode is
+      // [PropagateMode.changeAll] or [PropagateMode.changeLater].
+      widget.onNarrowChanged(model!.narrow);
+    }
     setState(() {
       // The actual state lives in the [MessageListView] model.
       // This method was called because that just changed.
@@ -326,9 +514,9 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
           final valueKey = key as ValueKey<int>;
           final index = model!.findItemWithMessageId(valueKey.value);
           if (index == -1) return null;
-          return length - 1 - (index - 2);
+          return length - 1 - (index - 3);
         },
-        childCount: length + 2,
+        childCount: length + 3,
         (context, i) {
           // To reinforce that the end of the feed has been reached:
           //   https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/flutter.3A.20Mark-as-read/near/1680603
@@ -336,11 +524,13 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
 
           if (i == 1) return MarkAsReadWidget(narrow: widget.narrow);
 
-          final data = model!.items[length - 1 - (i - 2)];
+          if (i == 2) return TypingStatusWidget(narrow: widget.narrow);
+
+          final data = model!.items[length - 1 - (i - 3)];
           return _buildItem(data, i);
         }));
 
-    if (widget.narrow is CombinedFeedNarrow) {
+    if (!ComposeBox.hasComposeBox(widget.narrow)) {
       // TODO(#311) If we have a bottom nav, it will pad the bottom
       //   inset, and this shouldn't be necessary
       sliver = SliverSafeArea(sliver: sliver);
@@ -433,52 +623,105 @@ class ScrollToBottomButton extends StatelessWidget {
         tooltip: "Scroll to bottom",
         icon: const Icon(Icons.expand_circle_down_rounded),
         iconSize: 40,
-        color: const HSLColor.fromAHSL(0.5,240,0.96,0.68).toColor(),
+        // Web has the same color in light and dark mode.
+        color: const HSLColor.fromAHSL(0.5, 240, 0.96, 0.68).toColor(),
         onPressed: _navigateToBottom));
   }
 }
 
-class MarkAsReadWidget extends StatelessWidget {
+class TypingStatusWidget extends StatefulWidget {
+  const TypingStatusWidget({super.key, required this.narrow});
+
+  final Narrow narrow;
+
+  @override
+  State<StatefulWidget> createState() => _TypingStatusWidgetState();
+}
+
+class _TypingStatusWidgetState extends State<TypingStatusWidget> with PerAccountStoreAwareStateMixin<TypingStatusWidget> {
+  TypingStatus? model;
+
+  @override
+  void onNewStore() {
+    model?.removeListener(_modelChanged);
+    model = PerAccountStoreWidget.of(context).typingStatus
+      ..addListener(_modelChanged);
+  }
+
+  @override
+  void dispose() {
+    model?.removeListener(_modelChanged);
+    super.dispose();
+  }
+
+  void _modelChanged() {
+    setState(() {
+      // The actual state lives in [model].
+      // This method was called because that just changed.
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final narrow = widget.narrow;
+    if (narrow is! SendableNarrow) return const SizedBox();
+
+    final store = PerAccountStoreWidget.of(context);
+    final localizations = ZulipLocalizations.of(context);
+    final typistIds = model!.typistIdsInNarrow(narrow);
+    if (typistIds.isEmpty) return const SizedBox();
+    final text = switch (typistIds.length) {
+      1 => localizations.onePersonTyping(
+        store.users[typistIds.first]?.fullName ?? localizations.unknownUserName),
+      2 => localizations.twoPeopleTyping(
+        store.users[typistIds.first]?.fullName ?? localizations.unknownUserName,
+        store.users[typistIds.last]?.fullName  ?? localizations.unknownUserName),
+      _ => localizations.manyPeopleTyping,
+    };
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 16, top: 2),
+      child: Text(text,
+        style: const TextStyle(
+          // Web has the same color in light and dark mode.
+          color: HslColor(0, 0, 53),
+          fontStyle: FontStyle.italic)));
+  }
+}
+
+class MarkAsReadWidget extends StatefulWidget {
   const MarkAsReadWidget({super.key, required this.narrow});
 
   final Narrow narrow;
 
+  @override
+  State<MarkAsReadWidget> createState() => _MarkAsReadWidgetState();
+}
+
+class _MarkAsReadWidgetState extends State<MarkAsReadWidget> {
+  bool _loading = false;
+
   void _handlePress(BuildContext context) async {
     if (!context.mounted) return;
-
-    final store = PerAccountStoreWidget.of(context);
-    final connection = store.connection;
-    final useLegacy = connection.zulipFeatureLevel! < 155;
-
-    try {
-      await markNarrowAsRead(context, narrow, useLegacy);
-    } catch (e) {
-      if (!context.mounted) return;
-      final zulipLocalizations = ZulipLocalizations.of(context);
-      await showErrorDialog(context: context,
-        title: zulipLocalizations.errorMarkAsReadFailedTitle,
-        message: e.toString()); // TODO(#741): extract user-facing message better
-      return;
-    }
-    if (!context.mounted) return;
-    if (narrow is CombinedFeedNarrow && !useLegacy) {
-      PerAccountStoreWidget.of(context).unreads.handleAllMessagesReadSuccess();
-    }
+    setState(() => _loading = true);
+    await markNarrowAsRead(context, widget.narrow);
+    setState(() => _loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final zulipLocalizations = ZulipLocalizations.of(context);
     final store = PerAccountStoreWidget.of(context);
-    final unreadCount = store.unreads.countInNarrow(narrow);
+    final unreadCount = store.unreads.countInNarrow(widget.narrow);
     final areMessagesRead = unreadCount == 0;
+
+    final messageListTheme = MessageListTheme.of(context);
 
     return IgnorePointer(
       ignoring: areMessagesRead,
-      child: AnimatedOpacity(
-        opacity: areMessagesRead ? 0 : 1,
-        duration: Duration(milliseconds: areMessagesRead ? 2000 : 300),
-        curve: Curves.easeOut,
+      child: MarkAsReadAnimation(
+        loading: _loading,
+        hidden: areMessagesRead,
         child: SizedBox(width: double.infinity,
           // Design referenced from:
           //   https://www.figma.com/file/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?type=design&node-id=132-9684&mode=design&t=jJwHzloKJ0TMOG4M-0
@@ -487,26 +730,74 @@ class MarkAsReadWidget extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10 - ((48 - 38) / 2)),
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
-                // TODO(#95) need dark-theme colors (foreground and background)
-                backgroundColor: _UnreadMarker.color,
+                splashFactory: NoSplash.splashFactory,
                 minimumSize: const Size.fromHeight(38),
                 textStyle:
                   // Restate [FilledButton]'s default, which inherits from
                   // [zulipTypography]…
                   Theme.of(context).textTheme.labelLarge!
-                  // …then clobber some attributes to follow Figma:
-                  .merge(TextStyle(
-                    fontSize: 18,
-                    letterSpacing: proportionalLetterSpacing(context,
-                      kButtonTextLetterSpacingProportion, baseFontSize: 18),
-                    height: (23 / 18))
-                  .merge(weightVariableTextStyle(context, wght: 400))),
+                    // …then clobber some attributes to follow Figma:
+                    .merge(TextStyle(
+                      fontSize: 18,
+                      letterSpacing: proportionalLetterSpacing(context,
+                        kButtonTextLetterSpacingProportion, baseFontSize: 18),
+                      height: (23 / 18))
+                    .merge(weightVariableTextStyle(context, wght: 400))),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+              ).copyWith(
+                // Give the buttons a constant color regardless of whether their
+                // state is disabled, pressed, etc.  We handle those states
+                // separately, via MarkAsReadAnimation.
+                foregroundColor: const WidgetStatePropertyAll(Colors.white),
+                iconColor: const WidgetStatePropertyAll(Colors.white),
+                backgroundColor: WidgetStatePropertyAll(messageListTheme.unreadMarker),
               ),
-              onPressed: () => _handlePress(context),
+              onPressed: _loading ? null : () => _handlePress(context),
               icon: const Icon(Icons.playlist_add_check),
-              label: Text(zulipLocalizations.markAllAsReadLabel))))),
-    );
+              label: Text(zulipLocalizations.markAllAsReadLabel))))));
+  }
+}
+
+class MarkAsReadAnimation extends StatefulWidget {
+  final bool loading;
+  final bool hidden;
+  final Widget child;
+
+  const MarkAsReadAnimation({
+    super.key,
+    required this.loading,
+    required this.hidden,
+    required this.child
+  });
+
+  @override
+  State<MarkAsReadAnimation> createState() => _MarkAsReadAnimationState();
+}
+
+class _MarkAsReadAnimationState extends State<MarkAsReadAnimation> {
+  bool _isPressed = false;
+
+  void _setIsPressed(bool isPressed) {
+    setState(() {
+      _isPressed = isPressed;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _setIsPressed(true),
+      onTapUp: (_) => _setIsPressed(false),
+      onTapCancel: () => _setIsPressed(false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        child: AnimatedOpacity(
+          opacity: widget.hidden ? 0 : widget.loading ? 0.5 : 1,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOut,
+          child: widget.child)));
   }
 }
 
@@ -516,12 +807,26 @@ class RecipientHeader extends StatelessWidget {
   final Message message;
   final Narrow narrow;
 
+  static bool _containsDifferentChannels(Narrow narrow) {
+    switch (narrow) {
+      case CombinedFeedNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
+        return true;
+
+      case ChannelNarrow():
+      case TopicNarrow():
+      case DmNarrow():
+        return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final message = this.message;
     return switch (message) {
       StreamMessage() => StreamMessageRecipientHeader(message: message,
-        showStream: narrow is CombinedFeedNarrow),
+        showStream: _containsDifferentChannels(narrow)),
       DmMessage() => DmRecipientHeader(message: message),
     };
   }
@@ -532,35 +837,37 @@ class DateSeparator extends StatelessWidget {
 
   final Message message;
 
-  // TODO(#95) in dark theme, use white, following web
-  static const _line = BorderSide(width: 0, color: Colors.black);
-
   @override
   Widget build(BuildContext context) {
     // This makes the small-caps text vertically centered,
     // to align with the vertically centered divider lines.
     const textBottomPadding = 2.0;
 
-    return ColoredBox(color: Colors.white,
+    final messageListTheme = MessageListTheme.of(context);
+
+    final line = BorderSide(width: 0, color: messageListTheme.dateSeparator);
+
+    // TODO(#681) use different color for DM messages
+    return ColoredBox(color: messageListTheme.streamMessageBgDefault,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
         child: Row(children: [
-          const Expanded(
+          Expanded(
             child: SizedBox(height: 0,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   border: Border(
-                    bottom: _line))))),
+                    bottom: line))))),
           Padding(padding: const EdgeInsets.fromLTRB(2, 0, 2, textBottomPadding),
             child: DateText(
               fontSize: 16,
               height: (16 / 16),
               timestamp: message.timestamp)),
-          const SizedBox(height: 0, width: 12,
+          SizedBox(height: 0, width: 12,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 border: Border(
-                  bottom: _line)))),
+                  bottom: line)))),
         ])),
     );
   }
@@ -581,13 +888,14 @@ class MessageItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message = item.message;
+    final messageListTheme = MessageListTheme.of(context);
     return StickyHeaderItem(
       allowOverflow: !item.isLastInBlock,
       header: header,
       child: _UnreadMarker(
         isRead: message.flags.contains(MessageFlag.read),
         child: ColoredBox(
-          color: Colors.white,
+          color: messageListTheme.streamMessageBgDefault,
           child: Column(children: [
             MessageWithPossibleSender(item: item),
             if (trailingWhitespace != null && item.isLastInBlock) SizedBox(height: trailingWhitespace!),
@@ -602,21 +910,9 @@ class _UnreadMarker extends StatelessWidget {
   final bool isRead;
   final Widget child;
 
-  // The color hsl(227deg 78% 59%) comes from the Figma mockup at:
-  //   https://www.figma.com/file/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=132-9684
-  // See discussion about design at:
-  //   https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/flutter.3A.20unread.20marker/near/1658008
-  // TODO(#95) use opacity 0.75 in dark theme? Discussion, a few weeks after the
-  //   above-linked discussion:
-  //     https://github.com/zulip/zulip-flutter/pull/317#issuecomment-1784311663
-  //   where Vlad includes screenshots that look like they're from the Figma here:
-  //     https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=807-33998&t=81Z9nyeJmsdmLgq4-0
-  // (Web uses a left-to-right gradient from hsl(217deg 64% 59%) to transparent,
-  // in both light and dark theme.)
-  static final color = const HSLColor.fromAHSL(1, 227, 0.78, 0.59).toColor();
-
   @override
   Widget build(BuildContext context) {
+    final messageListTheme = MessageListTheme.of(context);
     return Stack(
       children: [
         child,
@@ -633,12 +929,10 @@ class _UnreadMarker extends StatelessWidget {
             curve: Curves.easeOut,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: color,
-                // TODO(#95): Don't show this extra border in dark mode, see:
-                //   https://github.com/zulip/zulip-flutter/pull/317#issuecomment-1784311663
+                color: messageListTheme.unreadMarker,
                 border: Border(left: BorderSide(
                   width: 1,
-                  color: Colors.white.withOpacity(0.6))))))),
+                  color: messageListTheme.unreadMarkerGap)))))),
       ]);
   }
 }
@@ -662,6 +956,8 @@ class StreamMessageRecipientHeader extends StatelessWidget {
 
     final topic = message.topic;
 
+    final messageListTheme = MessageListTheme.of(context);
+
     final subscription = store.subscriptions[message.streamId];
     final Color backgroundColor;
     final Color iconColor;
@@ -670,8 +966,8 @@ class StreamMessageRecipientHeader extends StatelessWidget {
       backgroundColor = swatch.barBackground;
       iconColor = swatch.iconOnBarBackground;
     } else {
-      backgroundColor = _kUnsubscribedStreamRecipientHeaderColor;
-      iconColor = _kRecipientHeaderTextColor;
+      backgroundColor = messageListTheme.unsubscribedStreamRecipientHeaderBg;
+      iconColor = messageListTheme.recipientHeaderText;
     }
 
     final Widget streamWidget;
@@ -679,12 +975,14 @@ class StreamMessageRecipientHeader extends StatelessWidget {
       streamWidget = const SizedBox(width: 16);
     } else {
       final stream = store.streams[message.streamId];
-      final streamName = stream?.name ?? message.displayRecipient; // TODO(log) if missing
+      final streamName = stream?.name
+        ?? message.displayRecipient
+        ?? '(unknown channel)'; // TODO(log)
 
       streamWidget = GestureDetector(
         onTap: () => Navigator.push(context,
           MessageListPage.buildRoute(context: context,
-            narrow: StreamNarrow(message.streamId))),
+            narrow: ChannelNarrow(message.streamId))),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -709,7 +1007,7 @@ class StreamMessageRecipientHeader extends StatelessWidget {
               // Icon is 16px wide here so horizontal padding is 1px.
               padding: const EdgeInsets.symmetric(horizontal: 1),
               child: Icon(size: 16,
-                color: Colors.black.withOpacity(0.3),
+                color: messageListTheme.streamRecipientHeaderChevronRight,
                 ZulipIcons.chevron_right)),
           ]));
     }
@@ -761,12 +1059,14 @@ class DmRecipientHeader extends StatelessWidget {
       title = zulipLocalizations.messageListGroupYouWithYourself;
     }
 
+    final messageListTheme = MessageListTheme.of(context);
+
     return GestureDetector(
       onTap: () => Navigator.push(context,
         MessageListPage.buildRoute(context: context,
           narrow: DmNarrow.ofMessage(message, selfUserId: store.selfUserId))),
       child: ColoredBox(
-        color: _kDmRecipientHeaderColor,
+        color: messageListTheme.dmRecipientHeaderBg,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 11),
           child: Row(
@@ -775,7 +1075,7 @@ class DmRecipientHeader extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Icon(
-                  color: _kRecipientHeaderTextColor,
+                  color: messageListTheme.recipientHeaderText,
                   size: 16,
                   ZulipIcons.user)),
               Expanded(
@@ -787,19 +1087,14 @@ class DmRecipientHeader extends StatelessWidget {
   }
 }
 
-// TODO(#95): web uses different color in dark mode
-// --color-background-private-message-header in web/styles/app_variables.css
-final _kDmRecipientHeaderColor = const HSLColor.fromAHSL(1, 46, 0.35, 0.93).toColor();
-
 TextStyle recipientHeaderTextStyle(BuildContext context) {
   return TextStyle(
-    color: _kRecipientHeaderTextColor,
+    color: MessageListTheme.of(context).recipientHeaderText,
     fontSize: 16,
     letterSpacing: proportionalLetterSpacing(context, 0.02, baseFontSize: 16),
     height: (18 / 16),
   ).merge(weightVariableTextStyle(context, wght: 600));
 }
-final _kRecipientHeaderTextColor = const HSLColor.fromAHSL(1, 0, 0, 0.15).toColor();
 
 class RecipientHeaderDate extends StatelessWidget {
   const RecipientHeaderDate({super.key, required this.message});
@@ -834,10 +1129,11 @@ class DateText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final messageListTheme = MessageListTheme.of(context);
     final zulipLocalizations = ZulipLocalizations.of(context);
     return Text(
       style: TextStyle(
-        color: const HSLColor.fromAHSL(0.75, 0, 0, 0.15).toColor(),
+        color: messageListTheme.dateSeparatorText,
         fontSize: fontSize,
         height: height,
         // This is equivalent to css `all-small-caps`, see:
@@ -896,12 +1192,11 @@ class MessageWithPossibleSender extends StatelessWidget {
 
   final MessageListMessageItem item;
 
-  // TODO(#95) unchanged in dark theme?
-  static final _starColor = const HSLColor.fromAHSL(0.5, 47, 1, 0.41).toColor();
-
   @override
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
+    final messageListTheme = MessageListTheme.of(context);
+    final designVariables = DesignVariables.of(context);
 
     final message = item.message;
     final sender = store.users[message.senderId];
@@ -928,31 +1223,39 @@ class MessageWithPossibleSender extends StatelessWidget {
                   Flexible(
                     child: Text(message.senderFullName, // TODO get from user data
                       style: TextStyle(
-                        fontFamily: 'Source Sans 3',
                         fontSize: 18,
                         height: (22 / 18),
-                        color: const HSLColor.fromAHSL(1, 0, 0, 0.2).toColor(),
+                        color: messageListTheme.senderName,
                       ).merge(weightVariableTextStyle(context, wght: 600)),
                       overflow: TextOverflow.ellipsis)),
                   if (sender?.isBot ?? false) ...[
                     const SizedBox(width: 5),
-                    const Icon(
+                    Icon(
                       ZulipIcons.bot,
                       size: 15,
-                      color: Color.fromARGB(255, 159, 173, 173),
+                      color: messageListTheme.senderBotIcon,
                     ),
                   ],
                 ]))),
           const SizedBox(width: 4),
           Text(time,
             style: TextStyle(
-              color: _kMessageTimestampColor,
-              fontFamily: 'Source Sans 3',
+              color: messageListTheme.messageTimestamp,
               fontSize: 16,
               height: (18 / 16),
               fontFeatures: const [FontFeature.enable('c2sc'), FontFeature.enable('smcp')],
             ).merge(weightVariableTextStyle(context))),
         ]);
+    }
+
+    final localizations = ZulipLocalizations.of(context);
+    String? editStateText;
+    switch (message.editState) {
+      case MessageEditState.edited:
+        editStateText = localizations.messageIsEditedLabel;
+      case MessageEditState.moved:
+        editStateText = localizations.messageIsMovedLabel;
+      case MessageEditState.none:
     }
 
     return GestureDetector(
@@ -964,152 +1267,35 @@ class MessageWithPossibleSender extends StatelessWidget {
           if (senderRow != null)
             Padding(padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
               child: senderRow),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: localizedTextBaseline(context),
+            children: [
+              const SizedBox(width: 16),
+              Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   MessageContent(message: message, content: item.content),
                   if ((message.reactions?.total ?? 0) > 0)
-                    ReactionChipsList(messageId: message.id, reactions: message.reactions!)
+                    ReactionChipsList(messageId: message.id, reactions: message.reactions!),
+                  if (editStateText != null)
+                    Text(editStateText,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        color: designVariables.labelEdited,
+                        fontSize: 12,
+                        height: (12 / 12),
+                        letterSpacing: proportionalLetterSpacing(
+                          context, 0.05, baseFontSize: 12))),
                 ])),
-            SizedBox(width: 16,
-              child: message.flags.contains(MessageFlag.starred)
-                // TODO(#157): fix how star marker aligns with message content
-                // Design from Figma at:
-                //   https://www.figma.com/file/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=813%3A28817&mode=dev .
-                ? Padding(padding: const EdgeInsets.only(top: 4),
-                    child: Icon(ZulipIcons.star_filled, size: 16, color: _starColor))
-                : null),
-          ]),
+              SizedBox(width: 16,
+                child: message.flags.contains(MessageFlag.starred)
+                  ? Icon(ZulipIcons.star_filled, size: 16, color: designVariables.star)
+                  : null),
+            ]),
         ])));
   }
 }
 
 // TODO web seems to ignore locale in formatting time, but we could do better
 final _kMessageTimestampFormat = DateFormat('h:mm aa', 'en_US');
-
-// TODO(#95) need dark-theme color (this one comes from the Figma)
-final _kMessageTimestampColor = const HSLColor.fromAHSL(1, 0, 0, 0.5).toColor();
-
-Future<void> markNarrowAsRead(
-  BuildContext context,
-  Narrow narrow,
-  bool useLegacy, // TODO(server-6)
-) async {
-  final store = PerAccountStoreWidget.of(context);
-  final connection = store.connection;
-  if (useLegacy) {
-    return await _legacyMarkNarrowAsRead(context, narrow);
-  }
-
-  // Compare web's `mark_all_as_read` in web/src/unread_ops.js
-  // and zulip-mobile's `markAsUnreadFromMessage` in src/action-sheets/index.js .
-  final zulipLocalizations = ZulipLocalizations.of(context);
-  final scaffoldMessenger = ScaffoldMessenger.of(context);
-  // Use [AnchorCode.oldest], because [AnchorCode.firstUnread]
-  // will be the oldest non-muted unread message, which would
-  // result in muted unreads older than the first unread not
-  // being processed.
-  Anchor anchor = AnchorCode.oldest;
-  int responseCount = 0;
-  int updatedCount = 0;
-
-  // Include `is:unread` in the narrow.  That has a database index, so
-  // this can be an important optimization in narrows with a lot of history.
-  // The server applies the same optimization within the (deprecated)
-  // specialized endpoints for marking messages as read; see
-  // `do_mark_stream_messages_as_read` in `zulip:zerver/actions/message_flags.py`.
-  final apiNarrow = narrow.apiEncode()..add(ApiNarrowIsUnread());
-
-  while (true) {
-    final result = await updateMessageFlagsForNarrow(connection,
-      anchor: anchor,
-      // [AnchorCode.oldest] is an anchor ID lower than any valid
-      // message ID; and follow-up requests will have already
-      // processed the anchor ID, so we just want this to be
-      // unconditionally false.
-      includeAnchor: false,
-      // There is an upper limit of 5000 messages per batch
-      // (numBefore + numAfter <= 5000) enforced on the server.
-      // See `update_message_flags_in_narrow` in zerver/views/message_flags.py .
-      // zulip-mobile uses `numAfter` of 5000, but web uses 1000
-      // for more responsive feedback. See zulip@f0d87fcf6.
-      numBefore: 0,
-      numAfter: 1000,
-      narrow: apiNarrow,
-      op: UpdateMessageFlagsOp.add,
-      flag: MessageFlag.read);
-    if (!context.mounted) {
-      scaffoldMessenger.clearSnackBars();
-      return;
-    }
-    responseCount++;
-    updatedCount += result.updatedCount;
-
-    if (result.foundNewest) {
-      if (responseCount > 1) {
-        // We previously showed an in-progress [SnackBar], so say we're done.
-        // There may be a backlog of [SnackBar]s accumulated in the queue
-        // so be sure to clear them out here.
-        scaffoldMessenger
-          ..clearSnackBars()
-          ..showSnackBar(SnackBar(behavior: SnackBarBehavior.floating,
-              content: Text(zulipLocalizations.markAsReadComplete(updatedCount))));
-      }
-      return;
-    }
-
-    if (result.lastProcessedId == null) {
-      // No messages were in the range of the request.
-      // This should be impossible given that `foundNewest` was false
-      // (and that our `numAfter` was positive.)
-      await showErrorDialog(context: context,
-        title: zulipLocalizations.errorMarkAsReadFailedTitle,
-        message: zulipLocalizations.errorInvalidResponse);
-      return;
-    }
-    anchor = NumericAnchor(result.lastProcessedId!);
-
-    // The task is taking a while, so tell the user we're working on it.
-    // No need to say how many messages, as the [MarkAsUnread] widget
-    // should follow along.
-    // TODO: Ideally we'd have a progress widget here that showed up based
-    //   on actual time elapsed -- so it could appear before the first
-    //   batch returns, if that takes a while -- and that then stuck
-    //   around continuously until the task ends. For now we use a
-    //   series of [SnackBar]s, which may feel a bit janky.
-    //   There is complexity in tracking the status of each [SnackBar],
-    //   due to having no way to determine which is currently active,
-    //   or if there is an active one at all.  Resetting the [SnackBar] here
-    //   results in the same message popping in and out and the user experience
-    //   is better for now if we allow them to run their timer through
-    //   and clear the backlog later.
-    scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating,
-      content: Text(zulipLocalizations.markAsReadInProgress)));
-  }
-}
-
-Future<void> _legacyMarkNarrowAsRead(BuildContext context, Narrow narrow) async {
-  final store = PerAccountStoreWidget.of(context);
-  final connection = store.connection;
-  switch (narrow) {
-    case CombinedFeedNarrow():
-      await markAllAsRead(connection);
-    case StreamNarrow(:final streamId):
-      await markStreamAsRead(connection, streamId: streamId);
-    case TopicNarrow(:final streamId, :final topic):
-      await markTopicAsRead(connection, streamId: streamId, topicName: topic);
-    case DmNarrow():
-      final unreadDms = store.unreads.dms[narrow];
-      // Silently ignore this race-condition as the outcome
-      // (no unreads in this narrow) was the desired end-state
-      // of pushing the button.
-      if (unreadDms == null) return;
-      await updateMessageFlags(connection,
-        messages: unreadDms,
-        op: UpdateMessageFlagsOp.add,
-        flag: MessageFlag.read);
-  }
-}

@@ -3,7 +3,9 @@ import 'package:json_annotation/json_annotation.dart';
 import 'events.dart';
 import 'initial_snapshot.dart';
 import 'reaction.dart';
+import 'submessage.dart';
 
+export 'json.dart' show JsonNullable;
 export 'reaction.dart';
 
 part 'model.g.dart';
@@ -187,24 +189,30 @@ enum Emojiset {
 /// in <https://zulip.com/api/register-queue>.
 @JsonSerializable(fieldRename: FieldRename.snake)
 class User {
+  // When adding a field to this class:
+  //  * If a [RealmUserUpdateEvent] can update it, be sure to add
+  //    that case to [RealmUserUpdateEvent] and its handler.
+  //  * If the field can never change for a given Zulip user, mark it final.
+  //  * (If it can change but [RealmUserUpdateEvent] doesn't cover that,
+  //    then that's a bug in the API; raise it in `#api design`.)
+
   final int userId;
-  @JsonKey(name: 'delivery_email')
-  String? deliveryEmailStaleDoNotUse; // TODO see [RealmUserUpdateEvent.deliveryEmail]
+  String? deliveryEmail;
   String email;
   String fullName;
-  String dateJoined;
+  final String dateJoined;
   bool isActive; // Really sometimes absent in /register, but we normalize that away; see [InitialSnapshot.realmUsers].
-  bool isOwner;
-  bool isAdmin;
-  bool isGuest;
+  // bool isOwner; // obsoleted by [role]; ignore
+  // bool isAdmin; // obsoleted by [role]; ignore
+  // bool isGuest; // obsoleted by [role]; ignore
   bool? isBillingAdmin; // TODO(server-5)
-  bool isBot;
-  int? botType; // TODO enum
+  final bool isBot;
+  final int? botType; // TODO enum
   int? botOwnerId;
   @JsonKey(unknownEnumValue: UserRole.unknown)
   UserRole role;
   String timezone;
-  String? avatarUrl; // TODO distinguish null from missing https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/flutter.3A.20omitted.20vs.2E.20null.20in.20JSON/near/1551759
+  String? avatarUrl; // TODO(#255) distinguish null from missing, as a `JsonNullable<String>?`
   int avatarVersion;
 
   // null for bots, which don't have custom profile fields.
@@ -214,7 +222,7 @@ class User {
   Map<int, ProfileFieldUserData>? profileData;
 
   @JsonKey(readValue: _readIsSystemBot)
-  bool isSystemBot;
+  final bool isSystemBot;
 
   static Map<String, dynamic>? _readProfileData(Map<dynamic, dynamic> json, String key) {
     final value = (json[key] as Map<String, dynamic>?);
@@ -235,14 +243,11 @@ class User {
 
   User({
     required this.userId,
-    required this.deliveryEmailStaleDoNotUse,
+    required this.deliveryEmail,
     required this.email,
     required this.fullName,
     required this.dateJoined,
     required this.isActive,
-    required this.isOwner,
-    required this.isAdmin,
-    required this.isGuest,
     required this.isBillingAdmin,
     required this.isBot,
     required this.botType,
@@ -308,29 +313,37 @@ enum UserRole{
 /// in <https://zulip.com/api/register-queue>.
 @JsonSerializable(fieldRename: FieldRename.snake)
 class ZulipStream {
+  // When adding a field to this class:
+  //  * Add it to [ChannelPropertyName] too, or add a comment there explaining
+  //    why there isn't a corresponding value in that enum.
+  //  * If the field can never change for a given Zulip stream, mark it final.
+  //    Otherwise, make sure it gets updated on [ChannelUpdateEvent].
+  //  * (If it can change but [ChannelUpdateEvent] doesn't cover that,
+  //    then that's a bug in the API; raise it in `#api design`.)
+
   final int streamId;
-  final String name;
-  final String description;
-  final String renderedDescription;
+  String name;
+  String description;
+  String renderedDescription;
 
   final int dateCreated;
-  final int? firstMessageId;
+  int? firstMessageId;
 
-  final bool inviteOnly;
-  final bool isWebPublic; // present since 2.1, according to /api/changelog
-  final bool historyPublicToSubscribers;
-  final int? messageRetentionDays;
-
-  final StreamPostPolicy streamPostPolicy;
-  // final bool isAnnouncementOnly; // deprecated for `streamPostPolicy`; ignore
+  bool inviteOnly;
+  bool isWebPublic; // present since 2.1, according to /api/changelog
+  bool historyPublicToSubscribers;
+  int? messageRetentionDays;
+  @JsonKey(name: 'stream_post_policy')
+  ChannelPostPolicy channelPostPolicy;
+  // final bool isAnnouncementOnly; // deprecated for `channelPostPolicy`; ignore
 
   // TODO(server-6): `canRemoveSubscribersGroupId` added in FL 142
   // TODO(server-8): in FL 197 renamed to `canRemoveSubscribersGroup`
   @JsonKey(readValue: _readCanRemoveSubscribersGroup)
-  final int? canRemoveSubscribersGroup;
+  int? canRemoveSubscribersGroup;
 
   // TODO(server-8): added in FL 199, was previously only on [Subscription] objects
-  final int? streamWeeklyTraffic;
+  int? streamWeeklyTraffic;
 
   static int? _readCanRemoveSubscribersGroup(Map<dynamic, dynamic> json, String key) {
     return (json[key] as int?)
@@ -348,7 +361,7 @@ class ZulipStream {
     required this.isWebPublic,
     required this.historyPublicToSubscribers,
     required this.messageRetentionDays,
-    required this.streamPostPolicy,
+    required this.channelPostPolicy,
     required this.canRemoveSubscribersGroup,
     required this.streamWeeklyTraffic,
   });
@@ -359,25 +372,65 @@ class ZulipStream {
   Map<String, dynamic> toJson() => _$ZulipStreamToJson(this);
 }
 
+/// The name of a property of [ZulipStream] that gets updated
+/// through [ChannelUpdateEvent.property].
+///
+/// In Zulip event-handling code (for [ChannelUpdateEvent]),
+/// we switch exhaustively on a value of this type
+/// to ensure that every property in [ZulipStream] responds to the event.
+@JsonEnum(fieldRename: FieldRename.snake, alwaysCreate: true)
+enum ChannelPropertyName {
+  // streamId is immutable
+  name,
+  description,
+  // renderedDescription is updated via its own [ChannelUpdateEvent] field
+  // dateCreated is immutable
+  firstMessageId,
+  inviteOnly,
+  // isWebPublic is updated via its own [ChannelUpdateEvent] field
+  // historyPublicToSubscribers is updated via its own [ChannelUpdateEvent] field
+  messageRetentionDays,
+  @JsonValue('stream_post_policy')
+  channelPostPolicy,
+  canRemoveSubscribersGroup,
+  canRemoveSubscribersGroupId, // TODO(server-8): remove, replaced by canRemoveSubscribersGroup
+  streamWeeklyTraffic;
+
+  /// Get a [ChannelPropertyName] from a raw, snake-case string we recognize, else null.
+  ///
+  /// Example:
+  ///   'invite_only' -> ChannelPropertyName.inviteOnly
+  static ChannelPropertyName? fromRawString(String raw) => _byRawString[raw];
+
+  // _$…EnumMap is thanks to `alwaysCreate: true` and `fieldRename: FieldRename.snake`
+  static final _byRawString = _$ChannelPropertyNameEnumMap
+    .map((key, value) => MapEntry(value, key));
+}
+
 /// Policy for which users can post to the stream.
 ///
 /// For docs, search for "stream_post_policy"
 /// in <https://zulip.com/api/get-stream-by-id>
 @JsonEnum(valueField: 'apiValue')
-enum StreamPostPolicy {
+enum ChannelPostPolicy {
   any(apiValue: 1),
   administrators(apiValue: 2),
   fullMembers(apiValue: 3),
   moderators(apiValue: 4),
   unknown(apiValue: null);
 
-  const StreamPostPolicy({
+  const ChannelPostPolicy({
     required this.apiValue,
   });
 
   final int? apiValue;
 
   int? toJson() => apiValue;
+
+  static ChannelPostPolicy fromApiValue(int value) => _byApiValue[value]!;
+
+  static final _byApiValue = _$ChannelPostPolicyEnumMap
+    .map((key, value) => MapEntry(value, key));
 }
 
 /// As in `subscriptions` in the initial snapshot.
@@ -419,7 +472,7 @@ class Subscription extends ZulipStream {
     required super.isWebPublic,
     required super.historyPublicToSubscribers,
     required super.messageRetentionDays,
-    required super.streamPostPolicy,
+    required super.channelPostPolicy,
     required super.canRemoveSubscribersGroup,
     required super.streamWeeklyTraffic,
     required this.desktopNotifications,
@@ -454,6 +507,35 @@ enum UserTopicVisibilityPolicy {
   int? toJson() => apiValue;
 }
 
+/// Convert a Unicode emoji's Zulip "emoji code" into the
+/// actual Unicode code points.
+///
+/// The argument corresponds to [Reaction.emojiCode] when [Reaction.emojiType]
+/// is [ReactionType.unicodeEmoji].  For docs, see:
+///   https://zulip.com/api/add-reaction#parameter-reaction_type
+///
+/// In addition to reactions, these appear in Zulip content HTML;
+/// see [UnicodeEmojiNode.emojiUnicode].
+String? tryParseEmojiCodeToUnicode(String emojiCode) {
+  // Ported from: https://github.com/zulip/zulip-mobile/blob/c979530d6804db33310ed7d14a4ac62017432944/src/emoji/data.js#L108-L112
+  // which refers to a comment in the server implementation:
+  //   https://github.com/zulip/zulip/blob/63c9296d5339517450f79f176dc02d77b08020c8/zerver/models.py#L3235-L3242
+  // In addition to what's in the doc linked above, that comment adds:
+  //
+  // > For examples, see "non_qualified" or "unified" in the following data,
+  // > with "non_qualified" taking precedence when both present:
+  // >   https://raw.githubusercontent.com/iamcal/emoji-data/a8174c74675355c8c6a9564516b2e961fe7257ef/emoji_pretty.json
+  // > [link fixed to permalink; original comment says "master" for the commit]
+  try {
+    return String.fromCharCodes(emojiCode.split('-')
+      .map((hex) => int.parse(hex, radix: 16)));
+  } on FormatException { // thrown by `int.parse`
+    return null;
+  } on ArgumentError { // thrown by `String.fromCharCodes`
+    return null;
+  }
+}
+
 /// As in the get-messages response.
 ///
 /// https://zulip.com/api/get-messages#response
@@ -464,6 +546,9 @@ sealed class Message {
   final String contentType;
 
   // final List<MessageEditHistory> editHistory; // TODO handle
+  @JsonKey(readValue: MessageEditState._readFromMessage, fromJson: Message._messageEditStateFromJson)
+  MessageEditState editState;
+
   final int id;
   bool isMeMessage;
   int? lastEditTimestamp;
@@ -477,8 +562,10 @@ sealed class Message {
   final int senderId;
   final String senderRealmStr;
   @JsonKey(name: 'subject')
-  final String topic;
-  // final List<string> submessages; // TODO handle
+  String topic;
+  /// Poll data if "submessages" describe a poll, `null` otherwise.
+  @JsonKey(name: 'submessages', readValue: _readPoll, fromJson: Poll.fromJson, toJson: Poll.toJson)
+  Poll? poll;
   final int timestamp;
   String get type;
 
@@ -490,8 +577,14 @@ sealed class Message {
   @JsonKey(name: 'match_subject')
   final String? matchTopic;
 
-  static Reactions? _reactionsFromJson(dynamic json) {
-    final list = (json as List<dynamic>);
+  static MessageEditState _messageEditStateFromJson(Object? json) {
+    // This is a no-op so that [MessageEditState._readFromMessage]
+    // can return the enum value directly.
+    return json as MessageEditState;
+  }
+
+  static Reactions? _reactionsFromJson(Object? json) {
+    final list = (json as List<Object?>);
     return list.isNotEmpty ? Reactions.fromJson(list) : null;
   }
 
@@ -499,15 +592,23 @@ sealed class Message {
     return value ?? [];
   }
 
-  static List<MessageFlag> _flagsFromJson(dynamic json) {
-    final list = json as List<dynamic>;
+  static List<MessageFlag> _flagsFromJson(Object? json) {
+    final list = json as List<Object?>;
     return list.map((raw) => MessageFlag.fromRawString(raw as String)).toList();
+  }
+
+  static Poll? _readPoll(Map<Object?, Object?> json, String key) {
+    return Submessage.parseSubmessagesJson(
+      json['submessages'] as List<Object?>? ?? [],
+      messageSenderId: (json['sender_id'] as num).toInt(),
+    );
   }
 
   Message({
     required this.client,
     required this.content,
     required this.contentType,
+    required this.editState,
     required this.id,
     required this.isMeMessage,
     required this.lastEditTimestamp,
@@ -566,13 +667,18 @@ class StreamMessage extends Message {
   @JsonKey(includeToJson: true)
   String get type => 'stream';
 
-  final String displayRecipient;
-  final int streamId;
+  // This is not nullable API-wise, but if the message moves across channels,
+  // [displayRecipient] still refers to the original channel and it has to be
+  // invalidated.
+  @JsonKey(required: true, disallowNullValue: true)
+  String? displayRecipient;
+  int streamId;
 
   StreamMessage({
     required super.client,
     required super.content,
     required super.contentType,
+    required super.editState,
     required super.id,
     required super.isMeMessage,
     required super.lastEditTimestamp,
@@ -675,6 +781,7 @@ class DmMessage extends Message {
     required super.client,
     required super.content,
     required super.contentType,
+    required super.editState,
     required super.id,
     required super.isMeMessage,
     required super.lastEditTimestamp,
@@ -697,4 +804,79 @@ class DmMessage extends Message {
 
   @override
   Map<String, dynamic> toJson() => _$DmMessageToJson(this);
+}
+
+enum MessageEditState {
+  none,
+  edited,
+  moved;
+
+  // Adapted from the shared code:
+  //   https://github.com/zulip/zulip/blob/1fac99733/web/shared/src/resolved_topic.ts
+  // The canonical resolved-topic prefix.
+  static const String _resolvedTopicPrefix = '✔ ';
+
+  /// Whether the given topic move reflected either a "resolve topic"
+  /// or "unresolve topic" operation.
+  ///
+  /// The Zulip "resolved topics" feature is implemented by renaming the topic;
+  /// but for purposes of [Message.editState], we want to ignore such renames.
+  /// This method identifies topic moves that should be ignored in that context.
+  static bool topicMoveWasResolveOrUnresolve(String topic, String prevTopic) {
+    if (topic.startsWith(_resolvedTopicPrefix)
+        && topic.substring(_resolvedTopicPrefix.length) == prevTopic) {
+      return true;
+    }
+
+    if (prevTopic.startsWith(_resolvedTopicPrefix)
+        && prevTopic.substring(_resolvedTopicPrefix.length) == topic) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static MessageEditState _readFromMessage(Map<dynamic, dynamic> json, String key) {
+    // Adapted from `analyze_edit_history` in the web app:
+    //   https://github.com/zulip/zulip/blob/c31cebbf68a93927d41e9947427c2dd4d46503e3/web/src/message_list_view.js#L68-L118
+    final editHistory = json['edit_history'] as List<dynamic>?;
+    final lastEditTimestamp = json['last_edit_timestamp'] as int?;
+    if (editHistory == null) {
+      return (lastEditTimestamp != null)
+        ? MessageEditState.edited
+        : MessageEditState.none;
+    }
+
+    // Edit history should never be empty whenever it is present
+    assert(editHistory.isNotEmpty);
+
+    bool hasMoved = false;
+    for (final entry in editHistory) {
+      if (entry['prev_content'] != null) {
+        return MessageEditState.edited;
+      }
+
+      if (entry['prev_stream'] != null) {
+        hasMoved = true;
+        continue;
+      }
+
+      // TODO(server-5) prev_subject was the old name of prev_topic on pre-5.0 servers
+      final prevTopic = (entry['prev_topic'] ?? entry['prev_subject']) as String?;
+      final topic = entry['topic'] as String?;
+      if (prevTopic != null) {
+        // TODO(server-5) pre-5.0 servers do not have the 'topic' field
+        if (topic == null) {
+          hasMoved = true;
+        } else {
+          hasMoved |= !topicMoveWasResolveOrUnresolve(topic, prevTopic);
+        }
+      }
+    }
+
+    if (hasMoved) return MessageEditState.moved;
+
+    // This can happen when a topic is resolved but nothing else has been edited
+    return MessageEditState.none;
+  }
 }

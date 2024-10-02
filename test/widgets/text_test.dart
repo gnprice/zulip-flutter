@@ -2,12 +2,11 @@ import 'package:checks/checks.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zulip/widgets/app.dart';
-import 'package:zulip/widgets/page.dart';
 import 'package:zulip/widgets/text.dart';
 
 import '../flutter_checks.dart';
 import '../model/binding.dart';
+import 'test_app.dart';
 
 // From trying the options on an iPhone 13 Pro running iOS 16.6.1:
 const kTextScaleFactors = <double>[
@@ -34,11 +33,11 @@ void main() {
       return result;
     }
 
-    matchesFontFamilies(Subject<TextStyle> it) => it
+    void matchesFontFamilies(Subject<TextStyle> it) => it
       ..fontFamily.equals(kDefaultFontFamily)
       ..fontFamilyFallback.isNotNull().deepEquals(defaultFontFamilyFallback);
 
-    matchesWeight(FontWeight weight) => (Subject<TextStyle> it) => it
+    Condition<TextStyle> matchesWeight(FontWeight weight) => (Subject<TextStyle> it) => it
       ..fontWeight.equals(weight)
       ..fontVariations.isNotNull().contains(
           FontVariation('wght', wghtFromFontWeight(weight)));
@@ -95,12 +94,15 @@ void main() {
       required List<FontVariation> expectedFontVariations,
       required FontWeight expectedFontWeight,
     }) async {
-      testWidgets(description, (WidgetTester tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: MediaQuery(
-              data: MediaQueryData(boldText: platformRequestsBold),
-              child: Builder(builder: (context) => Text('', style: styleBuilder(context))))));
+      testWidgets(description, (tester) async {
+        addTearDown(testBinding.reset);
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+          FakeAccessibilityFeatures(boldText: platformRequestsBold);
+        addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+        await tester.pumpWidget(TestZulipApp(
+          child: Builder(builder: (context) =>
+            Text('', style: styleBuilder(context)))));
+        await tester.pump();
 
         final TextStyle? style = tester.widget<Text>(find.byType(Text)).style;
         check(style)
@@ -183,14 +185,15 @@ void main() {
       required double expectedWght,
       required FontWeight expectedFontWeight,
     }) async {
-      testWidgets(description, (WidgetTester tester) async {
+      testWidgets(description, (tester) async {
+        addTearDown(testBinding.reset);
         tester.platformDispatcher.accessibilityFeaturesTestValue =
           FakeAccessibilityFeatures(boldText: platformRequestsBold);
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(builder: (context) =>
-              Text('', style: makeStyle(context)))));
+        await tester.pumpWidget(TestZulipApp(
+          child: Builder(builder: (context) =>
+            Text('', style: makeStyle(context)))));
+        await tester.pump();
 
         final TextStyle? style = tester.widget<Text>(find.byType(Text)).style;
 
@@ -304,7 +307,7 @@ void main() {
   });
 
   test('wghtFromTextStyle', () {
-    doCheck(TextStyle style, double? expected) {
+    void doCheck(TextStyle style, double? expected) {
       check(wghtFromTextStyle(style)).equals(expected);
     }
 
@@ -342,15 +345,16 @@ void main() {
       double? ambientTextScaleFactor,
       required double expected,
     }) async {
-      testWidgets(description, (WidgetTester tester) async {
+      testWidgets(description, (tester) async {
+        addTearDown(testBinding.reset);
         if (ambientTextScaleFactor != null) {
           tester.platformDispatcher.textScaleFactorTestValue = ambientTextScaleFactor;
           addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
         }
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(builder: (context) => Text('',
-              style: TextStyle(letterSpacing: getValue(context))))));
+        await tester.pumpWidget(TestZulipApp(
+          child: Builder(builder: (context) => Text('',
+            style: TextStyle(letterSpacing: getValue(context))))));
+        await tester.pump();
 
         final TextStyle? style = tester.widget<Text>(find.byType(Text)).style;
         final actualLetterSpacing = style!.letterSpacing!;
@@ -397,13 +401,10 @@ void main() {
         addTearDown(tester.platformDispatcher.clearLocaleTestValue);
         addTearDown(tester.platformDispatcher.clearLocalesTestValue);
 
-        await tester.pumpWidget(const ZulipApp());
+        await tester.pumpWidget(TestZulipApp(
+          child: Builder(builder: (context) =>
+            Text('123', style: TextStyle(textBaseline: localizedTextBaseline(context))))));
         await tester.pump();
-
-        final navigator = await ZulipApp.navigator;
-        navigator.push(MaterialWidgetRoute(page: Builder(builder: (context) =>
-          Text('123', style: TextStyle(textBaseline: localizedTextBaseline(context))))));
-        await tester.pumpAndSettle();
 
         final TextStyle? style = tester.widget<Text>(find.text('123')).style;
         final actualTextBaseline = style!.textBaseline!;

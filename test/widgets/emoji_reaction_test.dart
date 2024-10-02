@@ -1,70 +1,67 @@
 import 'dart:io' as io;
 import 'dart:io';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_checks/flutter_checks.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/emoji_reaction.dart';
-import 'package:zulip/widgets/store.dart';
 
 import '../example_data.dart' as eg;
+import '../flutter_checks.dart';
 import '../model/binding.dart';
 import '../model/test_store.dart';
 import '../test_images.dart';
+import 'test_app.dart';
 import 'text_test.dart';
 
 void main() {
   TestZulipBinding.ensureInitialized();
 
+  late PerAccountStore store;
+
+  Future<void> prepare() async {
+    addTearDown(testBinding.reset);
+    await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
+    store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
+
+    await store.addUser(eg.selfUser);
+
+    // TODO do this more centrally, or put in reusable helper
+    final Future<ByteData> font = rootBundle.load('assets/Source_Sans_3/SourceSans3VF-Upright.otf');
+    final fontLoader = FontLoader('Source Sans 3')..addFont(font);
+    await fontLoader.load();
+  }
+
+  Future<void> setupChipsInBox(WidgetTester tester, {
+    required List<Reaction> reactions,
+    double width = 245.0, // (seen in context on an iPhone 13 Pro)
+  }) async {
+    final message = eg.streamMessage(reactions: reactions);
+
+    await tester.pumpWidget(TestZulipApp(accountId: eg.selfAccount.id,
+      child: Center(
+        child: ColoredBox(
+          color: Colors.white,
+          child: SizedBox(
+            width: width,
+            child: ReactionChipsList(
+              messageId: message.id,
+              reactions: message.reactions!,
+            ))))));
+    await tester.pumpAndSettle(); // global store, per-account store
+
+    final reactionChipsList = tester.element(find.byType(ReactionChipsList));
+    check(reactionChipsList).size.isNotNull().width.equals(width);
+  }
+
   group('ReactionChipsList', () {
-    late PerAccountStore store;
-
-    Future<void> prepare() async {
-      addTearDown(testBinding.reset);
-      await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
-      store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
-
-      await store.addUser(eg.selfUser);
-
-      // TODO do this more centrally, or put in reusable helper
-      final Future<ByteData> font = rootBundle.load('assets/Source_Sans_3/SourceSans3VF-Upright.otf');
-      final fontLoader = FontLoader('Source Sans 3')..addFont(font);
-      await fontLoader.load();
-    }
-
-    Future<void> setupChipsInBox(WidgetTester tester, {
-      required List<Reaction> reactions,
-      double? width,
-      TextDirection? textDirection,
-    }) async {
-      final message = eg.streamMessage(reactions: reactions);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Directionality(
-            textDirection: textDirection ?? TextDirection.ltr,
-            child: GlobalStoreWidget(
-              child: PerAccountStoreWidget(
-                accountId: eg.selfAccount.id,
-                child: Center(
-                  child: ColoredBox(
-                    color: Colors.white,
-                    child: SizedBox(
-                      width: width ?? 245.0, // (seen in context on an iPhone 13 Pro)
-                      child: ReactionChipsList(
-                        messageId: message.id,
-                        reactions: message.reactions!,
-                      )))))))));
-
-      // global store, per-account store
-      await tester.pumpAndSettle();
-    }
-
     // Smoke tests under various conditions.
     for (final displayEmojiReactionUsers in [true, false]) {
       for (final emojiset in [Emojiset.text, Emojiset.google]) {
@@ -99,6 +96,15 @@ void main() {
                 tester.platformDispatcher.textScaleFactorTestValue = textScaleFactor;
                 addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
+                final locale = switch (textDirection) {
+                  TextDirection.ltr => const Locale('en'),
+                  TextDirection.rtl => const Locale('ar'),
+                };
+                tester.platformDispatcher.localeTestValue = locale;
+                tester.platformDispatcher.localesTestValue = [locale];
+                addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+                addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+
                 await prepare();
 
                 await store.addUsers(users);
@@ -119,7 +125,12 @@ void main() {
                   ..statusCode = HttpStatus.ok
                   ..content = kSolidBlueAvatar;
 
-                await setupChipsInBox(tester, textDirection: textDirection, reactions: reactions);
+                await setupChipsInBox(tester, reactions: reactions);
+
+                final reactionChipsList = tester.element(find.byType(ReactionChipsList));
+                check(MediaQuery.of(reactionChipsList))
+                  .textScaler.equals(TextScaler.linear(textScaleFactor));
+                check(Directionality.of(reactionChipsList)).equals(textDirection);
 
                 // TODO(upstream) Do these in an addTearDown, once we can:
                 //   https://github.com/flutter/flutter/issues/123189
@@ -156,10 +167,8 @@ void main() {
             final users = [user1, user2, user3, user4, user5];
 
             final realmEmoji = <String, RealmEmojiItem>{
-              '181': RealmEmojiItem(id: '181', name: 'twocents', authorId: 7,
-                  deactivated: false, sourceUrl: '/foo/2', stillUrl: null),
-              '182': RealmEmojiItem(id: '182', name: 'threecents', authorId: 7,
-                  deactivated: false, sourceUrl: '/foo/3', stillUrl: null),
+              '181': eg.realmEmojiItem(emojiCode: '181', emojiName: 'twocents'),
+              '182': eg.realmEmojiItem(emojiCode: '182', emojiName: 'threecents'),
             };
 
             runSmokeTest('same reaction, different users, with one unknown user', [
@@ -204,6 +213,50 @@ void main() {
         }
       }
     }
+  });
+
+  testWidgets('Smoke test for light/dark/lerped', (tester) async {
+    await prepare();
+    await store.addUsers([eg.selfUser, eg.otherUser]);
+
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    await setupChipsInBox(tester, reactions: [
+      Reaction.fromJson({
+        'user_id': eg.selfUser.userId,
+        'emoji_name': 'smile', 'emoji_code': '1f642', 'reaction_type': 'unicode_emoji'}),
+      Reaction.fromJson({
+        'user_id': eg.otherUser.userId,
+        'emoji_name': 'tada', 'emoji_code': '1f389', 'reaction_type': 'unicode_emoji'}),
+    ]);
+
+    Color? backgroundColor(String emojiName) {
+      final material = tester.widget<Material>(find.descendant(
+        of: find.byTooltip(emojiName), matching: find.byType(Material)));
+      return material.color;
+    }
+
+    check(backgroundColor('smile')).isNotNull()
+      .isSameColorAs(EmojiReactionTheme.light().bgSelected);
+    check(backgroundColor('tada')).isNotNull()
+      .isSameColorAs(EmojiReactionTheme.light().bgUnselected);
+
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    await tester.pump();
+
+    await tester.pump(kThemeAnimationDuration * 0.4);
+    final expectedLerped = EmojiReactionTheme.light().lerp(EmojiReactionTheme.dark(), 0.4);
+    check(backgroundColor('smile')).isNotNull()
+      .isSameColorAs(expectedLerped.bgSelected);
+    check(backgroundColor('tada')).isNotNull()
+      .isSameColorAs(expectedLerped.bgUnselected);
+
+    await tester.pump(kThemeAnimationDuration * 0.6);
+    check(backgroundColor('smile')).isNotNull()
+      .isSameColorAs(EmojiReactionTheme.dark().bgSelected);
+    check(backgroundColor('tada')).isNotNull()
+      .isSameColorAs(EmojiReactionTheme.dark().bgUnselected);
   });
 
   // TODO more tests:

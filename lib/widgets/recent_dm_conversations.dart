@@ -4,11 +4,13 @@ import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 import '../model/narrow.dart';
 import '../model/recent_dm_conversations.dart';
 import '../model/unreads.dart';
+import 'app_bar.dart';
 import 'content.dart';
 import 'icons.dart';
 import 'message_list.dart';
 import 'page.dart';
 import 'store.dart';
+import 'theme.dart';
 import 'unread_count_badge.dart';
 
 class RecentDmConversationsPage extends StatefulWidget {
@@ -57,7 +59,8 @@ class _RecentDmConversationsPageState extends State<RecentDmConversationsPage> w
     final zulipLocalizations = ZulipLocalizations.of(context);
     final sorted = model!.sorted;
     return Scaffold(
-      appBar: AppBar(title: Text(zulipLocalizations.recentDmConversationsPageTitle)),
+      appBar: ZulipAppBar(
+        title: Text(zulipLocalizations.recentDmConversationsPageTitle)),
       body: SafeArea(
         // Don't pad the bottom here; we want the list content to do that.
         bottom: false,
@@ -91,6 +94,8 @@ class RecentDmConversationsItem extends StatelessWidget {
     final store = PerAccountStoreWidget.of(context);
     final selfUser = store.users[store.selfUserId]!;
 
+    final designVariables = DesignVariables.of(context);
+
     final String title;
     final Widget avatar;
     switch (narrow.otherRecipientIds) { // TODO dedupe with DM items in [InboxPage]
@@ -109,16 +114,14 @@ class RecentDmConversationsItem extends StatelessWidget {
         //   new Intl.ListFormat('ja').format(['Chris', 'Greg', 'Alya'])
         //   // 'Chris、Greg、Alya'
         title = narrow.otherRecipientIds.map((id) => store.users[id]?.fullName ?? '(unknown user)').join(', ');
-        // TODO(#95) need dark-theme color
-        avatar = ColoredBox(color: const Color(0x33808080),
+        avatar = ColoredBox(color: designVariables.groupDmConversationIconBg,
           child: Center(
-            // TODO(#95) need dark-theme color
-            child: Icon(ZulipIcons.group_dm, color: Colors.black.withOpacity(0.5))));
+            child: Icon(color: designVariables.groupDmConversationIcon,
+              ZulipIcons.group_dm)));
     }
 
     return Material(
-      // TODO(#95) need dark-theme color
-      color: Colors.white,
+      color: designVariables.background, // TODO(design) check if this is the right variable
       child: InkWell(
         onTap: () {
           Navigator.push(context,
@@ -132,11 +135,11 @@ class RecentDmConversationsItem extends StatelessWidget {
             Expanded(child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   height: (20 / 17),
-                  // TODO(#95) need dark-theme color
-                  color: Color(0xFF222222),
+                  // TODO(design) check if this is the right variable
+                  color: designVariables.labelMenuButton,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

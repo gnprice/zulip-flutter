@@ -20,10 +20,13 @@ import '../log.dart';
 import '../notifications/receive.dart';
 import 'autocomplete.dart';
 import 'database.dart';
+import 'emoji.dart';
 import 'message.dart';
 import 'message_list.dart';
 import 'recent_dm_conversations.dart';
-import 'stream.dart';
+import 'recent_senders.dart';
+import 'channel.dart';
+import 'typing_status.dart';
 import 'unreads.dart';
 
 export 'package:drift/drift.dart' show Value;
@@ -200,7 +203,7 @@ abstract class GlobalStore extends ChangeNotifier {
 /// This class does not attempt to poll an event queue
 /// to keep the data up to date.  For that behavior, see
 /// [UpdateMachine].
-class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
+class PerAccountStore extends ChangeNotifier with EmojiStore, ChannelStore, MessageStore {
   /// Construct a store for the user's data, starting from the given snapshot.
   ///
   /// The global store must already have been updated with
@@ -225,15 +228,18 @@ class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
     connection ??= globalStore.apiConnectionFromAccount(account);
     assert(connection.zulipFeatureLevel == account.zulipFeatureLevel);
 
-    final streams = StreamStoreImpl(initialSnapshot: initialSnapshot);
+    final realmUrl = account.realmUrl;
+    final channels = ChannelStoreImpl(initialSnapshot: initialSnapshot);
     return PerAccountStore._(
       globalStore: globalStore,
       connection: connection,
-      realmUrl: account.realmUrl,
+      realmUrl: realmUrl,
       maxFileUploadSizeMib: initialSnapshot.maxFileUploadSizeMib,
       realmDefaultExternalAccounts: initialSnapshot.realmDefaultExternalAccounts,
-      realmEmoji: initialSnapshot.realmEmoji,
       customProfileFields: _sortCustomProfileFields(initialSnapshot.customProfileFields),
+      emailAddressVisibility: initialSnapshot.emailAddressVisibility,
+      emoji: EmojiStoreImpl(
+        realmUrl: realmUrl, realmEmoji: initialSnapshot.realmEmoji),
       accountId: accountId,
       selfUserId: account.userId,
       userSettings: initialSnapshot.userSettings,
@@ -242,15 +248,20 @@ class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
         .followedBy(initialSnapshot.realmNonActiveUsers)
         .followedBy(initialSnapshot.crossRealmBots)
         .map((user) => MapEntry(user.userId, user))),
-      streams: streams,
+      typingStatus: TypingStatus(
+        selfUserId: account.userId,
+        typingStartedExpiryPeriod: Duration(milliseconds: initialSnapshot.serverTypingStartedExpiryPeriodMilliseconds),
+      ),
+      channels: channels,
       messages: MessageStoreImpl(),
       unreads: Unreads(
         initial: initialSnapshot.unreadMsgs,
         selfUserId: account.userId,
-        streamStore: streams,
+        channelStore: channels,
       ),
       recentDmConversationsView: RecentDmConversationsView(
         initial: initialSnapshot.recentPrivateConversations, selfUserId: account.userId),
+      recentSenders: RecentSenders(),
     );
   }
 
@@ -260,21 +271,26 @@ class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
     required this.realmUrl,
     required this.maxFileUploadSizeMib,
     required this.realmDefaultExternalAccounts,
-    required this.realmEmoji,
     required this.customProfileFields,
+    required this.emailAddressVisibility,
+    required EmojiStoreImpl emoji,
     required this.accountId,
     required this.selfUserId,
     required this.userSettings,
     required this.users,
-    required StreamStoreImpl streams,
+    required this.typingStatus,
+    required ChannelStoreImpl channels,
     required MessageStoreImpl messages,
     required this.unreads,
     required this.recentDmConversationsView,
+    required this.recentSenders,
   }) : assert(selfUserId == globalStore.getAccount(accountId)!.userId),
        assert(realmUrl == globalStore.getAccount(accountId)!.realmUrl),
        assert(realmUrl == connection.realmUrl),
+       assert(emoji.realmUrl == realmUrl),
        _globalStore = globalStore,
-       _streams = streams,
+       _emoji = emoji,
+       _channels = channels,
        _messages = messages;
 
   ////////////////////////////////////////////////////////////////
@@ -285,6 +301,15 @@ class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
 
   final GlobalStore _globalStore;
   final ApiConnection connection; // TODO(#135): update zulipFeatureLevel with events
+
+  bool get isLoading => _isLoading;
+  bool _isLoading = false;
+  @visibleForTesting
+  set isLoading(bool value) {
+    if (_isLoading == value) return;
+    _isLoading = value;
+    notifyListeners();
+  }
 
   ////////////////////////////////
   // Data attached to the realm or the server.
@@ -300,8 +325,27 @@ class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
   String get zulipVersion => account.zulipVersion;
   final int maxFileUploadSizeMib; // No event for this.
   final Map<String, RealmDefaultExternalAccount> realmDefaultExternalAccounts;
-  Map<String, RealmEmojiItem> realmEmoji;
   List<CustomProfileField> customProfileFields;
+  /// For docs, please see [InitialSnapshot.emailAddressVisibility].
+  final EmailAddressVisibility? emailAddressVisibility; // TODO(#668): update this realm setting
+
+  ////////////////////////////////
+  // The realm's repertoire of available emoji.
+
+  @override
+  Map<String, RealmEmojiItem> get realmEmoji => _emoji.realmEmoji;
+
+  @override
+  EmojiDisplay emojiDisplayFor({
+    required ReactionType emojiType,
+    required String emojiCode,
+    required String emojiName
+  }) {
+    return _emoji.emojiDisplayFor(
+      emojiType: emojiType, emojiCode: emojiCode, emojiName: emojiName);
+  }
+
+  EmojiStoreImpl _emoji;
 
   ////////////////////////////////
   // Data attached to the self-account on the realm.
@@ -319,23 +363,25 @@ class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
 
   final Map<int, User> users;
 
+  final TypingStatus typingStatus;
+
   ////////////////////////////////
   // Streams, topics, and stuff about them.
 
   @override
-  Map<int, ZulipStream> get streams => _streams.streams;
+  Map<int, ZulipStream> get streams => _channels.streams;
   @override
-  Map<String, ZulipStream> get streamsByName => _streams.streamsByName;
+  Map<String, ZulipStream> get streamsByName => _channels.streamsByName;
   @override
-  Map<int, Subscription> get subscriptions => _streams.subscriptions;
+  Map<int, Subscription> get subscriptions => _channels.subscriptions;
   @override
   UserTopicVisibilityPolicy topicVisibilityPolicy(int streamId, String topic) =>
-    _streams.topicVisibilityPolicy(streamId, topic);
+    _channels.topicVisibilityPolicy(streamId, topic);
+  @override
+  Map<int, Map<String, UserTopicVisibilityPolicy>> get debugTopicVisibility =>
+    _channels.debugTopicVisibility;
 
-  final StreamStoreImpl _streams;
-
-  @visibleForTesting
-  StreamStoreImpl get debugStreamStore => _streams;
+  final ChannelStoreImpl _channels;
 
   ////////////////////////////////
   // Messages, and summaries of messages.
@@ -355,11 +401,16 @@ class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
     // TODO(#650) notify [recentDmConversationsView] of the just-fetched messages
   }
 
+  @override
+  Set<MessageListView> get debugMessageListViews => _messages.debugMessageListViews;
+
   final MessageStoreImpl _messages;
 
   final Unreads unreads;
 
   final RecentDmConversationsView recentDmConversationsView;
+
+  final RecentSenders recentSenders;
 
   ////////////////////////////////
   // Other digests of data.
@@ -383,116 +434,148 @@ class PerAccountStore extends ChangeNotifier with StreamStore, MessageStore {
     recentDmConversationsView.dispose();
     unreads.dispose();
     _messages.dispose();
+    typingStatus.dispose();
     super.dispose();
   }
 
   Future<void> handleEvent(Event event) async {
-    if (event is HeartbeatEvent) {
-      assert(debugLog("server event: heartbeat"));
-    } else if (event is RealmEmojiUpdateEvent) {
-      assert(debugLog("server event: realm_emoji/update"));
-      realmEmoji = event.realmEmoji;
-      notifyListeners();
-    } else if (event is AlertWordsEvent) {
-      assert(debugLog("server event: alert_words"));
-      // We don't yet store this data, so there's nothing to update.
-    } else if (event is UserSettingsUpdateEvent) {
-      assert(debugLog("server event: user_settings/update ${event.property?.name ?? '[unrecognized]'}"));
-      if (event.property == null) {
-        // unrecognized setting; do nothing
-        return;
-      }
-      switch (event.property!) {
-        case UserSettingName.twentyFourHourTime:
-          userSettings?.twentyFourHourTime        = event.value as bool;
-        case UserSettingName.displayEmojiReactionUsers:
-          userSettings?.displayEmojiReactionUsers = event.value as bool;
-        case UserSettingName.emojiset:
-          userSettings?.emojiset                  = event.value as Emojiset;
-      }
-      notifyListeners();
-    } else if (event is CustomProfileFieldsEvent) {
-      assert(debugLog("server event: custom_profile_fields"));
-      customProfileFields = _sortCustomProfileFields(event.fields);
-      notifyListeners();
-    } else if (event is RealmUserAddEvent) {
-      assert(debugLog("server event: realm_user/add"));
-      users[event.person.userId] = event.person;
-      notifyListeners();
-    } else if (event is RealmUserRemoveEvent) {
-      assert(debugLog("server event: realm_user/remove"));
-      users.remove(event.userId);
-      autocompleteViewManager.handleRealmUserRemoveEvent(event);
-      notifyListeners();
-    } else if (event is RealmUserUpdateEvent) {
-      assert(debugLog("server event: realm_user/update"));
-      final user = users[event.userId];
-      if (user == null) {
-        return; // TODO log
-      }
-      if (event.fullName != null)       user.fullName                   = event.fullName!;
-      if (event.avatarUrl != null)      user.avatarUrl                  = event.avatarUrl!;
-      if (event.avatarVersion != null)  user.avatarVersion              = event.avatarVersion!;
-      if (event.timezone != null)       user.timezone                   = event.timezone!;
-      if (event.botOwnerId != null)     user.botOwnerId                 = event.botOwnerId!;
-      if (event.role != null)           user.role                       = event.role!;
-      if (event.isBillingAdmin != null) user.isBillingAdmin             = event.isBillingAdmin!;
-      if (event.deliveryEmail != null)  user.deliveryEmailStaleDoNotUse = event.deliveryEmail!;
-      if (event.newEmail != null)       user.email                      = event.newEmail!;
-      if (event.customProfileField != null) {
-        final profileData = (user.profileData ??= {});
-        final update = event.customProfileField!;
-        if (update.value != null) {
-          profileData[update.id] = ProfileFieldUserData(value: update.value!, renderedValue: update.renderedValue);
-        } else {
-          profileData.remove(update.id);
+    switch (event) {
+      case HeartbeatEvent():
+        assert(debugLog("server event: heartbeat"));
+
+      case RealmEmojiUpdateEvent():
+        assert(debugLog("server event: realm_emoji/update"));
+        _emoji.handleRealmEmojiUpdateEvent(event);
+        notifyListeners();
+
+      case AlertWordsEvent():
+        assert(debugLog("server event: alert_words"));
+        // We don't yet store this data, so there's nothing to update.
+
+      case UserSettingsUpdateEvent():
+        assert(debugLog("server event: user_settings/update ${event.property?.name ?? '[unrecognized]'}"));
+        if (event.property == null) {
+          // unrecognized setting; do nothing
+          return;
         }
-        if (profileData.isEmpty) {
-          // null is equivalent to `{}` for efficiency; see [User._readProfileData].
-          user.profileData = null;
+        switch (event.property!) {
+          case UserSettingName.twentyFourHourTime:
+            userSettings?.twentyFourHourTime        = event.value as bool;
+          case UserSettingName.displayEmojiReactionUsers:
+            userSettings?.displayEmojiReactionUsers = event.value as bool;
+          case UserSettingName.emojiset:
+            userSettings?.emojiset                  = event.value as Emojiset;
         }
-      }
-      autocompleteViewManager.handleRealmUserUpdateEvent(event);
-      notifyListeners();
-    } else if (event is StreamEvent) {
-      assert(debugLog("server event: stream/${event.op}"));
-      _streams.handleStreamEvent(event);
-      notifyListeners();
-    } else if (event is SubscriptionEvent) {
-      assert(debugLog("server event: subscription/${event.op}"));
-      _streams.handleSubscriptionEvent(event);
-      notifyListeners();
-    } else if (event is UserTopicEvent) {
-      assert(debugLog("server event: user_topic"));
-      _streams.handleUserTopicEvent(event);
-      notifyListeners();
-    } else if (event is MessageEvent) {
-      assert(debugLog("server event: message ${jsonEncode(event.message.toJson())}"));
-      _messages.handleMessageEvent(event);
-      unreads.handleMessageEvent(event);
-      recentDmConversationsView.handleMessageEvent(event);
-      // When adding anything here (to handle [MessageEvent]),
-      // it probably belongs in [reconcileMessages] too.
-    } else if (event is UpdateMessageEvent) {
-      assert(debugLog("server event: update_message ${event.messageId}"));
-      _messages.handleUpdateMessageEvent(event);
-      unreads.handleUpdateMessageEvent(event);
-    } else if (event is DeleteMessageEvent) {
-      assert(debugLog("server event: delete_message ${event.messageIds}"));
-      _messages.handleDeleteMessageEvent(event);
-      unreads.handleDeleteMessageEvent(event);
-    } else if (event is UpdateMessageFlagsEvent) {
-      assert(debugLog("server event: update_message_flags/${event.op} ${event.flag.toJson()}"));
-      _messages.handleUpdateMessageFlagsEvent(event);
-      unreads.handleUpdateMessageFlagsEvent(event);
-    } else if (event is ReactionEvent) {
-      assert(debugLog("server event: reaction/${event.op}"));
-      _messages.handleReactionEvent(event);
-    } else if (event is UnexpectedEvent) {
-      assert(debugLog("server event: ${jsonEncode(event.toJson())}")); // TODO log better
-    } else {
-      // TODO(dart-3): Use a sealed class / pattern-matching to exclude this.
-      throw Exception("Event object of impossible type: ${event.toString()}");
+        notifyListeners();
+
+      case CustomProfileFieldsEvent():
+        assert(debugLog("server event: custom_profile_fields"));
+        customProfileFields = _sortCustomProfileFields(event.fields);
+        notifyListeners();
+
+      case RealmUserAddEvent():
+        assert(debugLog("server event: realm_user/add"));
+        users[event.person.userId] = event.person;
+        notifyListeners();
+
+      case RealmUserRemoveEvent():
+        assert(debugLog("server event: realm_user/remove"));
+        users.remove(event.userId);
+        autocompleteViewManager.handleRealmUserRemoveEvent(event);
+        notifyListeners();
+
+      case RealmUserUpdateEvent():
+        assert(debugLog("server event: realm_user/update"));
+        final user = users[event.userId];
+        if (user == null) {
+          return; // TODO log
+        }
+        if (event.fullName != null)       user.fullName       = event.fullName!;
+        if (event.avatarUrl != null)      user.avatarUrl      = event.avatarUrl!;
+        if (event.avatarVersion != null)  user.avatarVersion  = event.avatarVersion!;
+        if (event.timezone != null)       user.timezone       = event.timezone!;
+        if (event.botOwnerId != null)     user.botOwnerId     = event.botOwnerId!;
+        if (event.role != null)           user.role           = event.role!;
+        if (event.isBillingAdmin != null) user.isBillingAdmin = event.isBillingAdmin!;
+        if (event.deliveryEmail != null)  user.deliveryEmail  = event.deliveryEmail!.value;
+        if (event.newEmail != null)       user.email          = event.newEmail!;
+        if (event.isActive != null)       user.isActive       = event.isActive!;
+        if (event.customProfileField != null) {
+          final profileData = (user.profileData ??= {});
+          final update = event.customProfileField!;
+          if (update.value != null) {
+            profileData[update.id] = ProfileFieldUserData(value: update.value!, renderedValue: update.renderedValue);
+          } else {
+            profileData.remove(update.id);
+          }
+          if (profileData.isEmpty) {
+            // null is equivalent to `{}` for efficiency; see [User._readProfileData].
+            user.profileData = null;
+          }
+        }
+        autocompleteViewManager.handleRealmUserUpdateEvent(event);
+        notifyListeners();
+
+      case ChannelEvent():
+        assert(debugLog("server event: stream/${event.op}"));
+        _channels.handleChannelEvent(event);
+        notifyListeners();
+
+      case SubscriptionEvent():
+        assert(debugLog("server event: subscription/${event.op}"));
+        _channels.handleSubscriptionEvent(event);
+        notifyListeners();
+
+      case UserTopicEvent():
+        assert(debugLog("server event: user_topic"));
+        _messages.handleUserTopicEvent(event);
+        // Update _channels last, so other handlers can compare to the old value.
+        _channels.handleUserTopicEvent(event);
+        notifyListeners();
+
+      case MessageEvent():
+        assert(debugLog("server event: message ${jsonEncode(event.message.toJson())}"));
+        _messages.handleMessageEvent(event);
+        unreads.handleMessageEvent(event);
+        recentDmConversationsView.handleMessageEvent(event);
+        recentSenders.handleMessage(event.message); // TODO(#824)
+        // When adding anything here (to handle [MessageEvent]),
+        // it probably belongs in [reconcileMessages] too.
+
+      case UpdateMessageEvent():
+        assert(debugLog("server event: update_message ${event.messageId}"));
+        _messages.handleUpdateMessageEvent(event);
+        unreads.handleUpdateMessageEvent(event);
+
+      case DeleteMessageEvent():
+        assert(debugLog("server event: delete_message ${event.messageIds}"));
+        // This should be called before [_messages.handleDeleteMessageEvent(event)],
+        // as we need to know about each message for [event.messageIds],
+        // specifically, their `senderId`s. By calling this after the
+        // aforementioned line, we'll lose reference to those messages.
+        recentSenders.handleDeleteMessageEvent(event, messages);
+        _messages.handleDeleteMessageEvent(event);
+        unreads.handleDeleteMessageEvent(event);
+
+      case UpdateMessageFlagsEvent():
+        assert(debugLog("server event: update_message_flags/${event.op} ${event.flag.toJson()}"));
+        _messages.handleUpdateMessageFlagsEvent(event);
+        unreads.handleUpdateMessageFlagsEvent(event);
+
+      case SubmessageEvent():
+        assert(debugLog("server event: submessage ${event.content}"));
+        _messages.handleSubmessageEvent(event);
+
+      case TypingEvent():
+        assert(debugLog("server event: typing/${event.op} ${event.messageType}"));
+        typingStatus.handleTypingEvent(event);
+
+      case ReactionEvent():
+        assert(debugLog("server event: reaction/${event.op}"));
+        _messages.handleReactionEvent(event);
+
+      case UnexpectedEvent():
+        assert(debugLog("server event: ${jsonEncode(event.toJson())}")); // TODO log better
     }
   }
 
@@ -711,7 +794,7 @@ class UpdateMachine {
   }
 
   void poll() async {
-    final backoffMachine = BackoffMachine();
+    BackoffMachine? backoffMachine;
 
     while (true) {
       if (_debugLoopSignal != null) {
@@ -727,6 +810,7 @@ class UpdateMachine {
         result = await getEvents(store.connection,
           queueId: queueId, lastEventId: lastEventId);
       } catch (e) {
+        store.isLoading = true;
         switch (e) {
           case ZulipApiException(code: 'BAD_EVENT_QUEUE_ID'):
             assert(debugLog('Lost event queue for $store.  Replacing…'));
@@ -739,8 +823,7 @@ class UpdateMachine {
             assert(debugLog('Transient error polling event queue for $store: $e\n'
                 'Backing off, then will retry…'));
             // TODO tell user if transient polling errors persist
-            // TODO reset to short backoff eventually
-            await backoffMachine.wait();
+            await (backoffMachine ??= BackoffMachine()).wait();
             assert(debugLog('… Backoff wait complete, retrying poll.'));
             continue;
 
@@ -748,11 +831,29 @@ class UpdateMachine {
             assert(debugLog('Error polling event queue for $store: $e\n'
                 'Backing off and retrying even though may be hopeless…'));
             // TODO tell user on non-transient error in polling
-            await backoffMachine.wait();
+            await (backoffMachine ??= BackoffMachine()).wait();
             assert(debugLog('… Backoff wait complete, retrying poll.'));
             continue;
         }
       }
+
+      // After one successful request, we reset backoff to its initial state.
+      // That way if the user is off the network and comes back on, the app
+      // doesn't wind up in a state where it's slow to recover the next time
+      // one request fails.
+      //
+      // This does mean that if the server is having trouble and handling some
+      // but not all of its requests, we'll end up doing a lot more retries than
+      // if we stayed at the max backoff interval; partway toward what would
+      // happen if we weren't backing off at all.
+      //
+      // But at least for [getEvents] requests, as here, it should be OK,
+      // because this is a long-poll.  That means a typical successful request
+      // takes a long time to come back; in fact longer than our max backoff
+      // duration (which is 10 seconds).  So if we're getting a mix of successes
+      // and failures, the successes themselves should space out the requests.
+      backoffMachine = null;
+      store.isLoading = false;
 
       final events = result.events;
       for (final event in events) {

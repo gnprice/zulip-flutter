@@ -30,6 +30,28 @@ void main() {
     ).isEmpty();
   });
 
+  group('realm_user/update', () {
+    Map<String, Object?> mkJson(Map<String, Object?> data) =>
+      {'id': 1, 'type': 'realm_user', 'op': 'update',
+       'person': {'user_id': 1, ...data}};
+
+    test('delivery_email absent', () {
+      check(Event.fromJson(mkJson({})))
+        .isA<RealmUserUpdateEvent>().deliveryEmail.isNull();
+    });
+
+    test('delivery_email null', () {
+      check(Event.fromJson(mkJson({'delivery_email': null})))
+        .isA<RealmUserUpdateEvent>().deliveryEmail.equals(const JsonNullable(null));
+    });
+
+    test('delivery_email a string', () {
+      check(Event.fromJson(mkJson({'delivery_email': 'name@example.org'})))
+        .isA<RealmUserUpdateEvent>().deliveryEmail.equals(
+          const JsonNullable('name@example.org'));
+    });
+  });
+
   test('subscription/remove: deserialize stream_ids correctly', () {
     check(Event.fromJson({
       'id': 1,
@@ -131,7 +153,16 @@ void main() {
     })).throws<void>();
   });
 
-  test('update_message_flags/remove: require messageDetails in mark-as-unread', () {
+  test('delete_message: private -> direct', () {
+    check(DeleteMessageEvent.fromJson({
+      'id': 1,
+      'type': 'delete_message',
+      'message_ids': [1, 2, 3],
+      'message_type': 'private',
+    })).messageType.equals(MessageType.direct);
+  });
+
+  group('update_message_flags/remove', () {
     final baseJson = {
       'id': 1,
       'type': 'update_message_flags',
@@ -140,14 +171,82 @@ void main() {
       'messages': [123],
       'all': false,
     };
-    check(() => UpdateMessageFlagsRemoveEvent.fromJson(baseJson)).returnsNormally();
-    check(() => UpdateMessageFlagsRemoveEvent.fromJson({
-      ...baseJson, 'flag': 'read',
-    })).throws<void>();
-    check(() => UpdateMessageFlagsRemoveEvent.fromJson({
+    final messageDetail = {'type': 'direct', 'mentioned': false, 'user_ids': [2]};
+
+    test('require messageDetails in mark-as-unread', () {
+      check(() => UpdateMessageFlagsRemoveEvent.fromJson(baseJson)).returnsNormally();
+      check(() => UpdateMessageFlagsRemoveEvent.fromJson({
+        ...baseJson, 'flag': 'read',
+      })).throws<void>();
+      check(() => UpdateMessageFlagsRemoveEvent.fromJson({
+        ...baseJson,
+        'flag': 'read',
+        'message_details': {'123': messageDetail},
+      })).returnsNormally();
+    });
+
+    test('private -> direct', () {
+      check(UpdateMessageFlagsRemoveEvent.fromJson({
+        ...baseJson,
+        'flag': 'read',
+        'message_details': {
+          '123': {
+            ...messageDetail,
+            'type': 'private',
+          }}})).messageDetails.isNotNull()
+               .values.single.type.equals(MessageType.direct);
+    });
+  });
+
+  group('typing status event', () {
+    final baseJson = {
+      'id': 1,
+      'type': 'typing',
+      'op': 'start',
+      'sender': {'user_id': 123, 'email': '123@example.com'},
+    };
+
+    final directMessageJson = {
       ...baseJson,
-      'flag': 'read',
-      'message_details': {'123': {'type': 'private', 'mentioned': false, 'user_ids': [2]}},
-    })).returnsNormally();
+      'message_type': 'direct',
+      'recipients': [1, 2, 3].map((e) => {'user_id': e, 'email': '$e@example.com'}).toList(),
+    };
+
+    test('direct message typing events', () {
+      check(TypingEvent.fromJson(directMessageJson))
+        ..recipientIds.isNotNull().deepEquals([1, 2, 3])
+        ..senderId.equals(123);
+    });
+
+    test('private type missing recipient', () {
+      check(() => TypingEvent.fromJson({
+        ...baseJson, 'message_type': 'private'})).throws<void>();
+    });
+
+    test('private -> direct', () {
+      check(TypingEvent.fromJson({
+        ...directMessageJson,
+        'message_type': 'private',
+      })).messageType.equals(MessageType.direct);
+    });
+
+    test('stream type missing streamId/topic', () {
+      check(() => TypingEvent.fromJson({
+        ...baseJson, 'message_type': 'stream', 'stream_id': 123, 'topic': 'foo'}))
+        .returnsNormally();
+      check(() => TypingEvent.fromJson({
+        ...baseJson, 'message_type': 'stream'})).throws<void>();
+      check(() => TypingEvent.fromJson({
+        ...baseJson, 'message_type': 'stream', 'topic': 'foo'})).throws<void>();
+      check(() => TypingEvent.fromJson({
+        ...baseJson, 'message_type': 'stream', 'stream_id': 123})).throws<void>();
+    });
+
+    test('direct type sort recipient ids', () {
+      check(TypingEvent.fromJson({
+        ...directMessageJson,
+        'recipients': [4, 10, 8, 2, 1].map((e) => {'user_id': e, 'email': '$e@example.com'}).toList(),
+      })).recipientIds.isNotNull().deepEquals([1, 2, 4, 8, 10]);
+    });
   });
 }

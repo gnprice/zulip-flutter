@@ -1,16 +1,14 @@
 import 'package:checks/checks.dart';
 import 'package:zulip/api/model/model.dart';
+import 'package:zulip/api/model/submessage.dart';
 
 extension UserChecks on Subject<User> {
   Subject<int> get userId => has((x) => x.userId, 'userId');
-  Subject<String?> get deliveryEmailStaleDoNotUse => has((x) => x.deliveryEmailStaleDoNotUse, 'deliveryEmailStaleDoNotUse');
+  Subject<String?> get deliveryEmail => has((x) => x.deliveryEmail, 'deliveryEmail');
   Subject<String> get email => has((x) => x.email, 'email');
   Subject<String> get fullName => has((x) => x.fullName, 'fullName');
   Subject<String> get dateJoined => has((x) => x.dateJoined, 'dateJoined');
   Subject<bool> get isActive => has((x) => x.isActive, 'isActive');
-  Subject<bool> get isOwner => has((x) => x.isOwner, 'isOwner');
-  Subject<bool> get isAdmin => has((x) => x.isAdmin, 'isAdmin');
-  Subject<bool> get isGuest => has((x) => x.isGuest, 'isGuest');
   Subject<bool?> get isBillingAdmin => has((x) => x.isBillingAdmin, 'isBillingAdmin');
   Subject<bool> get isBot => has((x) => x.isBot, 'isBot');
   Subject<int?> get botType => has((x) => x.botType, 'botType');
@@ -34,6 +32,7 @@ extension MessageChecks on Subject<Message> {
   Subject<int> get id => has((e) => e.id, 'id');
   Subject<bool> get isMeMessage => has((e) => e.isMeMessage, 'isMeMessage');
   Subject<int?> get lastEditTimestamp => has((e) => e.lastEditTimestamp, 'lastEditTimestamp');
+  Subject<MessageEditState> get editState => has((e) => e.editState, 'editState');
   Subject<Reactions?> get reactions => has((e) => e.reactions, 'reactions');
   Subject<int> get recipientId => has((e) => e.recipientId, 'recipientId');
   Subject<String> get senderEmail => has((e) => e.senderEmail, 'senderEmail');
@@ -41,11 +40,16 @@ extension MessageChecks on Subject<Message> {
   Subject<int> get senderId => has((e) => e.senderId, 'senderId');
   Subject<String> get senderRealmStr => has((e) => e.senderRealmStr, 'senderRealmStr');
   Subject<String> get topic => has((e) => e.topic, 'topic');
+  Subject<Poll?> get poll => has((e) => e.poll, 'poll');
   Subject<int> get timestamp => has((e) => e.timestamp, 'timestamp');
   Subject<String> get type => has((e) => e.type, 'type');
   Subject<List<MessageFlag>> get flags => has((e) => e.flags, 'flags');
   Subject<String?> get matchContent => has((e) => e.matchContent, 'matchContent');
   Subject<String?> get matchTopic => has((e) => e.matchTopic, 'matchTopic');
+}
+
+extension StreamMessageChecks on Subject<StreamMessage> {
+  Subject<String?> get displayRecipient => has((e) => e.displayRecipient, 'displayRecipient');
 }
 
 extension ReactionsChecks on Subject<Reactions> {

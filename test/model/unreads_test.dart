@@ -16,7 +16,7 @@ void main() {
   // These variables are the common state operated on by each test.
   // Each test case calls [prepare] to initialize them.
   late Unreads model;
-  late PerAccountStore streamStore; // TODO reduce this to StreamStore
+  late PerAccountStore channelStore; // TODO reduce this to ChannelStore
   late int notifiedCount;
 
   void checkNotified({required int count}) {
@@ -30,17 +30,17 @@ void main() {
   void prepare({
     UnreadMessagesSnapshot initial = const UnreadMessagesSnapshot(
       count: 0,
-      streams: [],
+      channels: [],
       dms: [],
       huddles: [],
       mentions: [],
       oldUnreadsMissing: false,
     ),
   }) {
-    streamStore = eg.store();
+    channelStore = eg.store();
     notifiedCount = 0;
     model = Unreads(initial: initial,
-        selfUserId: eg.selfUser.userId, streamStore: streamStore)
+        selfUserId: eg.selfUser.userId, channelStore: channelStore)
       ..addListener(() {
         notifiedCount++;
       });
@@ -113,11 +113,11 @@ void main() {
 
       prepare(initial: UnreadMessagesSnapshot(
         count: 0,
-        streams: [
-          UnreadStreamSnapshot(streamId: stream1.streamId, topic: 'a', unreadMessageIds: [1, 2]),
-          UnreadStreamSnapshot(streamId: stream1.streamId, topic: 'b', unreadMessageIds: [3, 4]),
-          UnreadStreamSnapshot(streamId: stream2.streamId, topic: 'b', unreadMessageIds: [5, 6]),
-          UnreadStreamSnapshot(streamId: stream2.streamId, topic: 'c', unreadMessageIds: [7, 8]),
+        channels: [
+          UnreadChannelSnapshot(streamId: stream1.streamId, topic: 'a', unreadMessageIds: [1, 2]),
+          UnreadChannelSnapshot(streamId: stream1.streamId, topic: 'b', unreadMessageIds: [3, 4]),
+          UnreadChannelSnapshot(streamId: stream2.streamId, topic: 'b', unreadMessageIds: [5, 6]),
+          UnreadChannelSnapshot(streamId: stream2.streamId, topic: 'c', unreadMessageIds: [7, 8]),
         ],
         dms: [
           UnreadDmSnapshot(otherUserId: 1, unreadMessageIds: [9, 10]),
@@ -153,15 +153,15 @@ void main() {
 
   group('count helpers', () {
     test('countInCombinedFeedNarrow', () async {
-      final stream1 = eg.stream(streamId: 1, name: 'stream 1');
-      final stream2 = eg.stream(streamId: 2, name: 'stream 2');
-      final stream3 = eg.stream(streamId: 3, name: 'stream 3');
+      final stream1 = eg.stream();
+      final stream2 = eg.stream();
+      final stream3 = eg.stream();
       prepare();
-      await streamStore.addStreams([stream1, stream2, stream3]);
-      await streamStore.addSubscription(eg.subscription(stream1));
-      await streamStore.addSubscription(eg.subscription(stream2));
-      await streamStore.addSubscription(eg.subscription(stream3, isMuted: true));
-      await streamStore.addUserTopic(stream1, 'a', UserTopicVisibilityPolicy.muted);
+      await channelStore.addStreams([stream1, stream2, stream3]);
+      await channelStore.addSubscription(eg.subscription(stream1));
+      await channelStore.addSubscription(eg.subscription(stream2));
+      await channelStore.addSubscription(eg.subscription(stream3, isMuted: true));
+      await channelStore.addUserTopic(stream1, 'a', UserTopicVisibilityPolicy.muted);
       fillWithMessages([
         eg.streamMessage(stream: stream1, topic: 'a', flags: []),
         eg.streamMessage(stream: stream1, topic: 'b', flags: []),
@@ -174,13 +174,13 @@ void main() {
       check(model.countInCombinedFeedNarrow()).equals(5);
     });
 
-    test('countInStream/Narrow', () async {
+    test('countInChannel/Narrow', () async {
       final stream = eg.stream();
       prepare();
-      await streamStore.addStream(stream);
-      await streamStore.addSubscription(eg.subscription(stream));
-      await streamStore.addUserTopic(stream, 'a', UserTopicVisibilityPolicy.unmuted);
-      await streamStore.addUserTopic(stream, 'c', UserTopicVisibilityPolicy.muted);
+      await channelStore.addStream(stream);
+      await channelStore.addSubscription(eg.subscription(stream));
+      await channelStore.addUserTopic(stream, 'a', UserTopicVisibilityPolicy.unmuted);
+      await channelStore.addUserTopic(stream, 'c', UserTopicVisibilityPolicy.muted);
       fillWithMessages([
         eg.streamMessage(stream: stream, topic: 'a', flags: []),
         eg.streamMessage(stream: stream, topic: 'a', flags: []),
@@ -189,14 +189,14 @@ void main() {
         eg.streamMessage(stream: stream, topic: 'b', flags: []),
         eg.streamMessage(stream: stream, topic: 'c', flags: []),
       ]);
-      check(model.countInStream      (stream.streamId)).equals(5);
-      check(model.countInStreamNarrow(stream.streamId)).equals(5);
+      check(model.countInChannel      (stream.streamId)).equals(5);
+      check(model.countInChannelNarrow(stream.streamId)).equals(5);
 
-      await streamStore.handleEvent(SubscriptionUpdateEvent(id: 1,
+      await channelStore.handleEvent(SubscriptionUpdateEvent(id: 1,
         streamId: stream.streamId,
         property: SubscriptionProperty.isMuted, value: true));
-      check(model.countInStream      (stream.streamId)).equals(2);
-      check(model.countInStreamNarrow(stream.streamId)).equals(5);
+      check(model.countInChannel      (stream.streamId)).equals(2);
+      check(model.countInChannelNarrow(stream.streamId)).equals(5);
     });
 
     test('countInTopicNarrow', () {
@@ -214,6 +214,29 @@ void main() {
       final narrow = DmNarrow.withUser(
         eg.otherUser.userId, selfUserId: eg.selfUser.userId);
       check(model.countInDmNarrow(narrow)).equals(5);
+    });
+
+    test('countInMentionsNarrow', () async {
+      final stream = eg.stream();
+      prepare();
+      await channelStore.addStream(stream);
+      fillWithMessages([
+        eg.streamMessage(stream: stream, flags: []),
+        eg.streamMessage(stream: stream, flags: [MessageFlag.mentioned]),
+        eg.streamMessage(stream: stream, flags: [MessageFlag.wildcardMentioned]),
+      ]);
+      check(model.countInMentionsNarrow()).equals(2);
+    });
+
+    test('countInStarredMessagesNarrow', () async {
+      final stream = eg.stream();
+      prepare();
+      await channelStore.addStream(stream);
+      fillWithMessages([
+        eg.streamMessage(stream: stream, flags: []),
+        eg.streamMessage(stream: stream, flags: [MessageFlag.starred]),
+      ]);
+      check(model.countInStarredMessagesNarrow()).equals(0);
     });
   });
 
@@ -449,7 +472,7 @@ void main() {
           ),
           DmMessage() => DeleteMessageEvent(
             id: 0,
-            messageType: MessageType.private,
+            messageType: MessageType.direct,
             messageIds: [message.id],
             streamId: null,
             topic: null,
@@ -488,7 +511,7 @@ void main() {
       model.handleDeleteMessageEvent(DeleteMessageEvent(
         id: 0,
         messageIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        messageType: MessageType.private,
+        messageType: MessageType.direct,
         streamId: null,
         topic: null,
       ));
@@ -523,7 +546,7 @@ void main() {
       model.handleDeleteMessageEvent(DeleteMessageEvent(
         id: 0,
         messageIds: [message.id],
-        messageType: MessageType.private,
+        messageType: MessageType.direct,
         streamId: null,
         topic: null,
       ));
@@ -827,7 +850,7 @@ void main() {
     });
 
     group('mark as unread', () {
-      mkEvent(Iterable<Message> messages) =>
+      UpdateMessageFlagsEvent mkEvent(Iterable<Message> messages) =>
         eg.updateMessageFlagsRemoveEvent(MessageFlag.read, messages);
 
       test('usual cases', () {
@@ -968,7 +991,7 @@ void main() {
               ),
               // message 2 and 3 have their details missing
               message4.id: UpdateMessageFlagsMessageDetail(
-                type: MessageType.private,
+                type: MessageType.direct,
                 mentioned: false,
                 streamId: null,
                 topic: null,

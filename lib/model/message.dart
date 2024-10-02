@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../api/model/events.dart';
 import '../api/model/model.dart';
 import '../log.dart';
@@ -7,6 +9,8 @@ import 'message_list.dart';
 mixin MessageStore {
   /// All known messages, indexed by [Message.id].
   Map<int, Message> get messages;
+
+  Set<MessageListView> get debugMessageListViews;
 
   void registerMessageList(MessageListView view);
   void unregisterMessageList(MessageListView view);
@@ -36,6 +40,9 @@ class MessageStoreImpl with MessageStore {
   final Set<MessageListView> _messageListViews = {};
 
   @override
+  Set<MessageListView> get debugMessageListViews => _messageListViews;
+
+  @override
   void registerMessageList(MessageListView view) {
     final added = _messageListViews.add(view);
     assert(added);
@@ -54,7 +61,10 @@ class MessageStoreImpl with MessageStore {
   }
 
   void dispose() {
-    for (final view in _messageListViews) {
+    // When a MessageListView is disposed, it removes itself from the Set
+    // `MessageStoreImpl._messageListViews`. Instead of iterating on that Set,
+    // iterate on a copy, to avoid concurrent modifications.
+    for (final view in _messageListViews.toList()) {
       view.dispose();
     }
   }
@@ -79,6 +89,12 @@ class MessageStoreImpl with MessageStore {
     for (int i = 0; i < messages.length; i++) {
       final message = messages[i];
       messages[i] = this.messages.putIfAbsent(message.id, () => message);
+    }
+  }
+
+  void handleUserTopicEvent(UserTopicEvent event) {
+    for (final view in _messageListViews) {
+      view.handleUserTopicEvent(event);
     }
   }
 
@@ -125,6 +141,11 @@ class MessageStoreImpl with MessageStore {
     if (message == null) return;
 
     message.flags = event.flags;
+    if (event.origContent != null) {
+      // The message is guaranteed to be edited.
+      // See also: https://zulip.com/api/get-events#update_message
+      message.editState = MessageEditState.edited;
+    }
     if (event.renderedContent != null) {
       assert(message.contentType == 'text/html',
         "Message contentType was ${message.contentType}; expected text/html.");
@@ -143,11 +164,17 @@ class MessageStoreImpl with MessageStore {
     // The interaction between the fields of these events are a bit tricky.
     // For reference, see: https://zulip.com/api/get-events#update_message
 
-    if (event.origTopic == null) {
+    final origStreamId = event.origStreamId;
+    final newStreamId = event.newStreamId; // null if topic-only move
+    final origTopic = event.origTopic;
+    final newTopic = event.newTopic;
+    final propagateMode = event.propagateMode;
+
+    if (origTopic == null) {
       // There was no move.
       assert(() {
-        if (event.newStreamId != null && event.origStreamId != null
-            && event.newStreamId != event.origStreamId) {
+        if (newStreamId != null && origStreamId != null
+            && newStreamId != origStreamId) {
           // This should be impossible; `orig_subject` (aka origTopic) is
           // documented to be present when either the stream or topic changed.
           debugLog('Malformed UpdateMessageEvent: stream move but no origTopic'); // TODO(log)
@@ -157,21 +184,62 @@ class MessageStoreImpl with MessageStore {
       return;
     }
 
-    if (event.newTopic == null) {
-      // The `subject` field (aka newTopic) is documented to be present on moves.
-      assert(debugLog('Malformed UpdateMessageEvent: move but no newTopic')); // TODO(log)
+    if (newStreamId == null && newTopic == null) {
+      // If neither the channel nor topic name changed, nothing moved.
+      // In that case `orig_subject` (aka origTopic) should have been null.
+      assert(debugLog('Malformed UpdateMessageEvent: move but no newStreamId or newTopic')); // TODO(log)
       return;
     }
-    if (event.origStreamId == null) {
+    if (origStreamId == null) {
       // The `stream_id` field (aka origStreamId) is documented to be present on moves.
       assert(debugLog('Malformed UpdateMessageEvent: move but no origStreamId')); // TODO(log)
       return;
     }
+    if (propagateMode == null) {
+      // The `propagate_mode` field (aka propagateMode) is documented to be present on moves.
+      assert(debugLog('Malformed UpdateMessageEvent: move but no propagateMode')); // TODO(log)
+      return;
+    }
 
-    // final newStreamId = event.newStreamId; // null if topic-only move
-    // final newTopic = event.newTopic!;
-    // TODO(#150): Handle message moves.  The views' recipient headers
-    //   may need updating, and consequently showSender too.
+    final wasResolveOrUnresolve = (newStreamId == null
+      && MessageEditState.topicMoveWasResolveOrUnresolve(origTopic, newTopic!));
+
+    for (final messageId in event.messageIds) {
+      final message = messages[messageId];
+      if (message == null) continue;
+
+      if (message is! StreamMessage) {
+        assert(debugLog('Bad UpdateMessageEvent: stream/topic move on a DM')); // TODO(log)
+        continue;
+      }
+
+      if (newStreamId != null) {
+        message.streamId = newStreamId;
+        // See [StreamMessage.displayRecipient] on why the invalidation is
+        // needed.
+        message.displayRecipient = null;
+      }
+
+      if (newTopic != null) {
+        message.topic = newTopic;
+      }
+
+      if (!wasResolveOrUnresolve
+          && message.editState == MessageEditState.none) {
+        message.editState = MessageEditState.moved;
+      }
+    }
+
+    for (final view in _messageListViews) {
+      view.messagesMoved(
+        origStreamId: origStreamId,
+        newStreamId: newStreamId ?? origStreamId,
+        origTopic: origTopic,
+        newTopic: newTopic ?? origTopic,
+        messageIds: event.messageIds,
+        propagateMode: propagateMode,
+      );
+    }
   }
 
   void handleDeleteMessageEvent(DeleteMessageEvent event) {
@@ -212,6 +280,14 @@ class MessageStoreImpl with MessageStore {
       if (anyMessageFound) {
         for (final view in _messageListViews) {
           view.notifyListenersIfAnyMessagePresent(event.messages);
+          // TODO(#818): Support MentionsNarrow live-updates when handling
+          //   @-mention flags.
+
+          // To make it easier to re-star a message, we opt-out from supporting
+          // live-updates when starred flag is removed.
+          //
+          // TODO: Support StarredMessagesNarrow live-updates when starred flag
+          //   is added.
         }
       }
     }
@@ -243,5 +319,20 @@ class MessageStoreImpl with MessageStore {
     for (final view in _messageListViews) {
       view.notifyListenersIfMessagePresent(event.messageId);
     }
+  }
+
+  void handleSubmessageEvent(SubmessageEvent event) {
+    final message = messages[event.messageId];
+    if (message == null) return;
+
+    final poll = message.poll;
+    if (poll == null) {
+      assert(debugLog('Missing poll for submessage event:\n${jsonEncode(event)}')); // TODO(log)
+      return;
+    }
+
+    // Live-updates for polls should not rebuild the message lists.
+    // [Poll] is responsible for notifying the affected listeners.
+    poll.handleSubmessageEvent(event);
   }
 }

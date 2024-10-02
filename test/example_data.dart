@@ -1,14 +1,21 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/initial_snapshot.dart';
 import 'package:zulip/api/model/model.dart';
+import 'package:zulip/api/model/submessage.dart';
 import 'package:zulip/api/route/realm.dart';
+import 'package:zulip/api/route/channels.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/store.dart';
 
 import 'model/test_store.dart';
 import 'stdlib_checks.dart';
+
+void _checkPositive(int? value, String description) {
+  assert(value == null || value > 0, '$description should be positive');
+}
 
 ////////////////////////////////////////////////////////////////
 // Realm-wide (or server-wide) metadata.
@@ -55,6 +62,25 @@ GetServerSettingsResult serverSettings({
   );
 }
 
+RealmEmojiItem realmEmojiItem({
+  required String emojiCode,
+  required String emojiName,
+  String? sourceUrl,
+  String? stillUrl,
+  bool deactivated = false,
+  int? authorId,
+}) {
+  assert(RegExp(r'^[1-9][0-9]*$').hasMatch(emojiCode));
+  return RealmEmojiItem(
+    id: emojiCode,
+    name: emojiName,
+    sourceUrl: sourceUrl ?? '/emoji/$emojiCode.png',
+    stillUrl: stillUrl,
+    deactivated: deactivated,
+    authorId: authorId ?? user().userId,
+  );
+}
+
 ////////////////////////////////////////////////////////////////
 // Users and accounts.
 //
@@ -63,6 +89,10 @@ GetServerSettingsResult serverSettings({
 int _nextUserId() => (_lastUserId += 1 + Random().nextInt(100));
 int _lastUserId = 1000;
 
+/// A random email address, different from previously generated ones.
+String _nextEmail() => 'mail${_lastEmailSuffix += Random().nextInt(1000)}@example.com';
+int _lastEmailSuffix = 1000;
+
 /// Construct an example user.
 ///
 /// If user ID `userId` is not given, it will be generated from a random
@@ -70,8 +100,13 @@ int _lastUserId = 1000;
 /// Use an explicit `userId` only if the ID needs to correspond to some
 /// other data in the test, or if the IDs need to increase in a different order
 /// from the calls to [user].
+///
+/// If `deliveryEmail` is not given, it will be generated from a
+/// random sequence of distinct strings.
+/// If `email` is not given, it will be set to `deliveryEmail`.
 User user({
   int? userId,
+  String? deliveryEmail,
   String? email,
   String? fullName,
   bool? isActive,
@@ -79,16 +114,15 @@ User user({
   String? avatarUrl,
   Map<int, ProfileFieldUserData>? profileData,
 }) {
+  var effectiveDeliveryEmail = deliveryEmail ?? _nextEmail();
+  _checkPositive(userId, 'user ID');
   return User(
     userId: userId ?? _nextUserId(),
-    deliveryEmailStaleDoNotUse: 'name@example.com',
-    email: email ?? 'name@example.com', // TODO generate example emails
+    deliveryEmail: effectiveDeliveryEmail,
+    email: email ?? effectiveDeliveryEmail,
     fullName: fullName ?? 'A user', // TODO generate example names
     dateJoined: '2023-04-28',
     isActive: isActive ?? true,
-    isOwner: false,
-    isAdmin: false,
-    isGuest: false,
     isBillingAdmin: false,
     isBot: isBot ?? false,
     botType: null,
@@ -112,6 +146,7 @@ Account account({
   String? zulipMergeBase,
   String? ackedPushToken,
 }) {
+  _checkPositive(id, 'account ID');
   return Account(
     id: id ?? 1000, // TODO generate example IDs
     realmUrl: realmUrl ?? _realmUrl,
@@ -147,6 +182,17 @@ final User fourthUser  = user(fullName: 'Fourth User', email: 'fourth@example');
 // Streams and subscriptions.
 //
 
+/// A fresh stream ID, from a random but always strictly increasing sequence.
+int _nextStreamId() => (_lastStreamId += 1 + Random().nextInt(10));
+int _lastStreamId = 200;
+
+/// Construct an example stream.
+///
+/// If stream ID `streamId` is not given, it will be generated from a random
+/// but increasing sequence.
+/// Use an explicit `streamId` only if the ID needs to correspond to some
+/// other data in the test, or if the IDs need to increase in a different order
+/// from the calls to [stream].
 ZulipStream stream({
   int? streamId,
   String? name,
@@ -158,27 +204,37 @@ ZulipStream stream({
   bool? isWebPublic,
   bool? historyPublicToSubscribers,
   int? messageRetentionDays,
-  StreamPostPolicy? streamPostPolicy,
+  ChannelPostPolicy? channelPostPolicy,
   int? canRemoveSubscribersGroup,
   int? streamWeeklyTraffic,
 }) {
+  _checkPositive(streamId, 'stream ID');
+  _checkPositive(firstMessageId, 'message ID');
+  var effectiveStreamId = streamId ?? _nextStreamId();
+  var effectiveName = name ?? 'stream $effectiveStreamId';
+  var effectiveDescription = description ?? 'Description of $effectiveName';
   return ZulipStream(
-    streamId: streamId ?? 123, // TODO generate example IDs
-    name: name ?? 'A stream', // TODO generate example names
-    description: description ?? 'A description', // TODO generate example descriptions
-    renderedDescription: renderedDescription ?? '<p>A description</p>', // TODO generate random
+    streamId: effectiveStreamId,
+    name: effectiveName,
+    description: effectiveDescription,
+    renderedDescription: renderedDescription ?? '<p>$effectiveDescription</p>',
     dateCreated: dateCreated ?? 1686774898,
     firstMessageId: firstMessageId,
     inviteOnly: inviteOnly ?? false,
     isWebPublic: isWebPublic ?? false,
     historyPublicToSubscribers: historyPublicToSubscribers ?? true,
     messageRetentionDays: messageRetentionDays,
-    streamPostPolicy: streamPostPolicy ?? StreamPostPolicy.any,
+    channelPostPolicy: channelPostPolicy ?? ChannelPostPolicy.any,
     canRemoveSubscribersGroup: canRemoveSubscribersGroup ?? 123,
     streamWeeklyTraffic: streamWeeklyTraffic,
   );
 }
 const _stream = stream;
+
+GetStreamTopicsEntry getStreamTopicsEntry({int? maxId, String? name}) {
+  maxId ??= 123;
+  return GetStreamTopicsEntry(maxId: maxId, name: name ?? 'Test Topic #$maxId');
+}
 
 /// Construct an example subscription from a stream.
 ///
@@ -206,7 +262,7 @@ Subscription subscription(
     isWebPublic: stream.isWebPublic,
     historyPublicToSubscribers: stream.historyPublicToSubscribers,
     messageRetentionDays: stream.messageRetentionDays,
-    streamPostPolicy: stream.streamPostPolicy,
+    channelPostPolicy: stream.channelPostPolicy,
     canRemoveSubscribersGroup: stream.canRemoveSubscribersGroup,
     streamWeeklyTraffic: stream.streamWeeklyTraffic,
     desktopNotifications: desktopNotifications ?? false,
@@ -217,6 +273,16 @@ Subscription subscription(
     pinToTop: pinToTop ?? false,
     isMuted: isMuted ?? false,
     color: color ?? 0xFFFF0000,
+  );
+}
+
+UserTopicItem userTopicItem(
+    ZulipStream stream, String topic, UserTopicVisibilityPolicy policy) {
+  return UserTopicItem(
+    streamId: stream.streamId,
+    topicName: topic,
+    lastUpdated: 1234567890,
+    visibilityPolicy: policy,
   );
 }
 
@@ -279,6 +345,17 @@ Map<String, dynamic> _messagePropertiesFromContent(String? content, String? cont
 int _nextMessageId() => (_lastMessageId += 1 + Random().nextInt(100));
 int _lastMessageId = 1000;
 
+const defaultStreamMessageStreamId = 123;
+
+/// The default topic used by [streamMessage].
+///
+/// Tests generally shouldn't need this information directly.
+/// Instead, either
+///  * use [StreamMessage.topic] to read off an example message's topic;
+///  * or pick an example topic, and pass it both to [streamMessage]
+///    and wherever else the same topic is needed.
+final _defaultTopic = 'example topic ${Random().nextInt(1000)}';
+
 /// Construct an example stream message.
 ///
 /// If the message ID `id` is not given, it will be generated from a random
@@ -286,6 +363,13 @@ int _lastMessageId = 1000;
 /// Use an explicit `id` only if the ID needs to correspond to some other data
 /// in the test, or if the IDs need to increase in a different order from the
 /// calls to [streamMessage] and [dmMessage].
+///
+/// The message will be in `stream` if given.  Otherwise,
+/// an example stream with ID `defaultStreamMessageStreamId` will be used.
+///
+/// If `topic` is not given, a default topic name is used.
+/// The default is randomly chosen, but remains the same
+/// for subsequent calls to this function.
 ///
 /// See also:
 ///  * [dmMessage], to construct an example direct message.
@@ -300,8 +384,10 @@ StreamMessage streamMessage({
   List<Reaction>? reactions,
   int? timestamp,
   List<MessageFlag>? flags,
+  List<Submessage>? submessages,
 }) {
-  final effectiveStream = stream ?? _stream();
+  _checkPositive(id, 'message ID');
+  final effectiveStream = stream ?? _stream(streamId: defaultStreamMessageStreamId);
   // The use of JSON here is convenient in order to delegate parts of the data
   // to helper functions.  The main downside is that it loses static typing
   // of the properties as we're constructing the data.  That's probably OK
@@ -317,7 +403,8 @@ StreamMessage streamMessage({
     'flags': flags ?? [],
     'id': id ?? _nextMessageId(),
     'last_edit_timestamp': lastEditTimestamp,
-    'subject': topic ?? 'example topic',
+    'subject': topic ?? _defaultTopic,
+    'submessages': submessages ?? [],
     'timestamp': timestamp ?? 1678139636,
     'type': 'stream',
   }) as Map<String, dynamic>);
@@ -342,7 +429,9 @@ DmMessage dmMessage({
   int? lastEditTimestamp,
   int? timestamp,
   List<MessageFlag>? flags,
+  List<Submessage>? submessages,
 }) {
+  _checkPositive(id, 'message ID');
   assert(!to.any((user) => user.userId == from.userId));
   return DmMessage.fromJson(deepToJson({
     ..._messagePropertiesBase,
@@ -356,10 +445,34 @@ DmMessage dmMessage({
     'id': id ?? _nextMessageId(),
     'last_edit_timestamp': lastEditTimestamp,
     'subject': '',
+    'submessages': submessages ?? [],
     'timestamp': timestamp ?? 1678139636,
     'type': 'private',
   }) as Map<String, dynamic>);
 }
+
+PollWidgetData pollWidgetData({
+  required String question,
+  required List<String> options,
+}) {
+  return PollWidgetData(
+    extraData: PollWidgetExtraData(question: question, options: options));
+}
+
+Submessage submessage({
+  SubmessageType? msgType,
+  required SubmessageData? content,
+  int? senderId,
+}) {
+  return Submessage(
+    msgType: msgType ?? SubmessageType.widget,
+    content: jsonEncode(content),
+    senderId: senderId ?? selfUser.userId,
+  );
+}
+
+PollOption pollOption({required String text, required Iterable<int> voters}) =>
+    PollOption(text: text)..voters.addAll(voters);
 
 ////////////////////////////////////////////////////////////////
 // Aggregate data structures.
@@ -368,7 +481,7 @@ DmMessage dmMessage({
 UnreadMessagesSnapshot unreadMsgs({
   int? count,
   List<UnreadDmSnapshot>? dms,
-  List<UnreadStreamSnapshot>? streams,
+  List<UnreadChannelSnapshot>? channels,
   List<UnreadHuddleSnapshot>? huddles,
   List<int>? mentions,
   bool? oldUnreadsMissing,
@@ -376,7 +489,7 @@ UnreadMessagesSnapshot unreadMsgs({
   return UnreadMessagesSnapshot(
     count: count ?? 0,
     dms: dms ?? [],
-    streams: streams ?? [],
+    channels: channels ?? [],
     huddles: huddles ?? [],
     mentions: mentions ?? [],
     oldUnreadsMissing: oldUnreadsMissing ?? false,
@@ -387,6 +500,17 @@ const _unreadMsgs = unreadMsgs;
 ////////////////////////////////////////////////////////////////
 // Events.
 //
+
+UserTopicEvent userTopicEvent(
+    int streamId, String topic, UserTopicVisibilityPolicy visibilityPolicy) {
+  return UserTopicEvent(
+    id: 1,
+    streamId: streamId,
+    topicName: topic,
+    lastUpdated: 1234567890,
+    visibilityPolicy: visibilityPolicy,
+  );
+}
 
 DeleteMessageEvent deleteMessageEvent(List<StreamMessage> messages) {
   assert(messages.isNotEmpty);
@@ -413,6 +537,7 @@ UpdateMessageEvent updateMessageEditEvent(
   String? renderedContent,
   bool isMeMessage = false,
 }) {
+  _checkPositive(messageId, 'message ID');
   messageId ??= origMessage.id;
   return UpdateMessageEvent(
     id: 0,
@@ -435,11 +560,103 @@ UpdateMessageEvent updateMessageEditEvent(
   );
 }
 
+UpdateMessageEvent _updateMessageMoveEvent(
+  List<int> messageIds, {
+  required int origStreamId,
+  int? newStreamId,
+  required String origTopic,
+  String? newTopic,
+  String? origContent,
+  String? newContent,
+  required List<MessageFlag> flags,
+  PropagateMode propagateMode = PropagateMode.changeOne,
+}) {
+  _checkPositive(origStreamId, 'stream ID');
+  _checkPositive(newStreamId, 'stream ID');
+  assert(newTopic != origTopic
+         || (newStreamId != null && newStreamId != origStreamId));
+  assert(messageIds.isNotEmpty);
+  return UpdateMessageEvent(
+    id: 0,
+    userId: selfUser.userId,
+    renderingOnly: false,
+    messageId: messageIds.first,
+    messageIds: messageIds,
+    flags: flags,
+    editTimestamp: 1234567890, // TODO generate timestamp
+    origStreamId: origStreamId,
+    newStreamId: newStreamId,
+    propagateMode: propagateMode,
+    origTopic: origTopic,
+    newTopic: newTopic,
+    origContent: origContent,
+    origRenderedContent: origContent,
+    content: newContent,
+    renderedContent: newContent,
+    isMeMessage: false,
+  );
+}
+
+/// An [UpdateMessageEvent] where [origMessages] are moved to somewhere else.
+UpdateMessageEvent updateMessageEventMoveFrom({
+  required List<StreamMessage> origMessages,
+  int? newStreamId,
+  String? newTopic,
+  String? newContent,
+  PropagateMode propagateMode = PropagateMode.changeOne,
+}) {
+  _checkPositive(newStreamId, 'stream ID');
+  assert(origMessages.isNotEmpty);
+  final origMessage = origMessages.first;
+  // Only present on content change.
+  final origContent = (newContent != null) ? origMessage.content : null;
+  return _updateMessageMoveEvent(origMessages.map((e) => e.id).toList(),
+    origStreamId: origMessage.streamId,
+    newStreamId: newStreamId,
+    origTopic: origMessage.topic,
+    newTopic: newTopic,
+    origContent: origContent,
+    newContent: newContent,
+    flags: origMessage.flags,
+    propagateMode: propagateMode,
+  );
+}
+
+/// An [UpdateMessageEvent] where [newMessages] are moved from somewhere.
+UpdateMessageEvent updateMessageEventMoveTo({
+  required List<StreamMessage> newMessages,
+  int? origStreamId,
+  String? origTopic,
+  String? origContent,
+  PropagateMode propagateMode = PropagateMode.changeOne,
+}) {
+  _checkPositive(origStreamId, 'stream ID');
+  assert(newMessages.isNotEmpty);
+  final newMessage = newMessages.first;
+  // Only present on topic move.
+  final newTopic = (origTopic != null) ? newMessage.topic : null;
+  // Only present on channel move.
+  final newStreamId = (origStreamId != null) ? newMessage.streamId : null;
+  // Only present on content change.
+  final newContent = (origContent != null) ? newMessage.content : null;
+  return _updateMessageMoveEvent(newMessages.map((e) => e.id).toList(),
+    origStreamId: origStreamId ?? newMessage.streamId,
+    newStreamId: newStreamId,
+    origTopic: origTopic ?? newMessage.topic,
+    newTopic:  newTopic,
+    origContent: origContent,
+    newContent: newContent,
+    flags: newMessage.flags,
+    propagateMode: propagateMode,
+  );
+}
+
 UpdateMessageFlagsRemoveEvent updateMessageFlagsRemoveEvent(
   MessageFlag flag,
   Iterable<Message> messages, {
   int? selfUserId,
 }) {
+  _checkPositive(selfUserId, 'user ID');
   return UpdateMessageFlagsRemoveEvent(
     id: 0,
     flag: flag,
@@ -458,7 +675,7 @@ UpdateMessageFlagsRemoveEvent updateMessageFlagsRemoveEvent(
             userIds: null,
           ),
           DmMessage() => UpdateMessageFlagsMessageDetail(
-            type: MessageType.private,
+            type: MessageType.direct,
             mentioned: mentioned,
             streamId: null,
             topic: null,
@@ -470,16 +687,78 @@ UpdateMessageFlagsRemoveEvent updateMessageFlagsRemoveEvent(
     })));
 }
 
+SubmessageEvent submessageEvent(
+  int messageId,
+  int senderId, {
+  required SubmessageData? content,
+}) {
+  return SubmessageEvent(
+    id: 0,
+    msgType: SubmessageType.widget,
+    content: jsonEncode(content),
+    messageId: messageId,
+    senderId: senderId,
+    submessageId: 100,
+  );
+}
+
+TypingEvent typingEvent(SendableNarrow narrow, TypingOp op, int senderId) {
+  switch (narrow) {
+    case TopicNarrow():
+      return TypingEvent(id: 0, op: op, senderId: senderId,
+        messageType: MessageType.stream,
+        streamId: narrow.streamId,
+        topic: narrow.topic,
+        recipientIds: null);
+    case DmNarrow():
+      return TypingEvent(id: 0, op: op, senderId: senderId,
+        messageType: MessageType.direct,
+        recipientIds: narrow.allRecipientIds,
+        streamId: null,
+        topic: null);
+  }
+}
 
 ReactionEvent reactionEvent(Reaction reaction, ReactionOp op, int messageId) {
   return ReactionEvent(
-    id: 1,
+    id: 0,
     op: op,
     emojiName: reaction.emojiName,
     emojiCode: reaction.emojiCode,
     reactionType: reaction.reactionType,
     userId: reaction.userId,
     messageId: messageId,
+  );
+}
+
+ChannelUpdateEvent channelUpdateEvent(
+  ZulipStream stream, {
+  required ChannelPropertyName property,
+  required Object? value,
+}) {
+  switch (property) {
+    case ChannelPropertyName.name:
+    case ChannelPropertyName.description:
+      assert(value is String);
+    case ChannelPropertyName.firstMessageId:
+      assert(value is int?);
+    case ChannelPropertyName.inviteOnly:
+      assert(value is bool);
+    case ChannelPropertyName.messageRetentionDays:
+      assert(value is int?);
+    case ChannelPropertyName.channelPostPolicy:
+      assert(value is ChannelPostPolicy);
+    case ChannelPropertyName.canRemoveSubscribersGroup:
+    case ChannelPropertyName.canRemoveSubscribersGroupId:
+    case ChannelPropertyName.streamWeeklyTraffic:
+      assert(value is int?);
+  }
+  return ChannelUpdateEvent(
+    id: 1,
+    streamId: stream.streamId,
+    name: stream.name,
+    property: property,
+    value: value,
   );
 }
 
@@ -499,6 +778,10 @@ InitialSnapshot initialSnapshot({
   String? zulipMergeBase,
   List<String>? alertWords,
   List<CustomProfileField>? customProfileFields,
+  EmailAddressVisibility? emailAddressVisibility,
+  int? serverTypingStartedExpiryPeriodMilliseconds,
+  int? serverTypingStoppedWaitPeriodMilliseconds,
+  int? serverTypingStartedWaitPeriodMilliseconds,
   Map<String, RealmEmojiItem>? realmEmoji,
   List<RecentDmConversation>? recentPrivateConversations,
   List<Subscription>? subscriptions,
@@ -514,12 +797,19 @@ InitialSnapshot initialSnapshot({
 }) {
   return InitialSnapshot(
     queueId: queueId ?? '1:2345',
-    lastEventId: lastEventId ?? 1,
+    lastEventId: lastEventId ?? -1,
     zulipFeatureLevel: zulipFeatureLevel ?? recentZulipFeatureLevel,
     zulipVersion: zulipVersion ?? recentZulipVersion,
     zulipMergeBase: zulipMergeBase ?? recentZulipVersion,
     alertWords: alertWords ?? ['klaxon'],
     customProfileFields: customProfileFields ?? [],
+    emailAddressVisibility: EmailAddressVisibility.everyone,
+    serverTypingStartedExpiryPeriodMilliseconds:
+      serverTypingStartedExpiryPeriodMilliseconds ?? 15000,
+    serverTypingStoppedWaitPeriodMilliseconds:
+      serverTypingStoppedWaitPeriodMilliseconds ?? 5000,
+    serverTypingStartedWaitPeriodMilliseconds:
+      serverTypingStartedWaitPeriodMilliseconds ?? 10000,
     realmEmoji: realmEmoji ?? {},
     recentPrivateConversations: recentPrivateConversations ?? [],
     subscriptions: subscriptions ?? [], // TODO add subscriptions to default

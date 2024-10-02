@@ -3,19 +3,22 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 import 'package:video_player/video_player.dart';
+import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/localizations.dart';
+import 'package:zulip/widgets/app.dart';
+import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/lightbox.dart';
-import 'package:zulip/widgets/store.dart';
 
 import '../example_data.dart' as eg;
 import '../model/binding.dart';
+import '../test_images.dart';
 import 'dialog_checks.dart';
+import 'test_app.dart';
 
 const kTestVideoUrl = "https://a/video.mp4";
 const kTestUnsupportedVideoUrl = "https://a/unsupported.mp4";
@@ -194,6 +197,98 @@ class FakeVideoPlayerPlatform extends Fake
 void main() {
   TestZulipBinding.ensureInitialized();
 
+  group('_ImageLightboxPage', () {
+    final src = Uri.parse('https://chat.example/lightbox-image.png');
+
+    Future<void> setupPage(WidgetTester tester, {
+      Message? message,
+      required Uri? thumbnailUrl,
+    }) async {
+      addTearDown(testBinding.reset);
+      await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
+
+      // ZulipApp instead of TestZulipApp because we need the navigator to push
+      // the lightbox route. The lightbox page works together with the route;
+      // it takes the route's entrance animation.
+      await tester.pumpWidget(const ZulipApp());
+      await tester.pump();
+      final navigator = await ZulipApp.navigator;
+      navigator.push(getImageLightboxRoute(
+        accountId: eg.selfAccount.id,
+        message: message ?? eg.streamMessage(),
+        src: src,
+        thumbnailUrl: thumbnailUrl,
+        originalHeight: null,
+        originalWidth: null,
+      ));
+      await tester.pump(); // per-account store
+      await tester.pump(const Duration(milliseconds: 301)); // nav transition
+    }
+
+    testWidgets('shows image', (tester) async {
+      prepareBoringImageHttpClient();
+      await setupPage(tester, thumbnailUrl: null);
+
+      final image = tester.widget<RealmContentNetworkImage>(
+        find.byType(RealmContentNetworkImage));
+      check(image.src).equals(src);
+
+      debugNetworkImageHttpClientProvider = null;
+    });
+
+    testWidgets('app bar shows sender name and date', (tester) async {
+      prepareBoringImageHttpClient();
+      final timestamp = DateTime.parse("2024-07-23 23:12:24").millisecondsSinceEpoch ~/ 1000;
+      final message = eg.streamMessage(sender: eg.otherUser, timestamp: timestamp);
+      await setupPage(tester, message: message, thumbnailUrl: null);
+
+      // We're looking for a RichText, in the app bar, with both the
+      // sender's name and the timestamp.
+      final labelTextWidget = tester.widget<RichText>(
+        find.descendant(of: find.byType(AppBar).last,
+          matching: find.textContaining(findRichText: true,
+            eg.otherUser.fullName)));
+      check(labelTextWidget.text.toPlainText())
+        .contains('Jul 23, 2024 23:12:24');
+
+      debugNetworkImageHttpClientProvider = null;
+    });
+
+    testWidgets('header and footer hidden and shown by tapping image', (tester) async {
+      prepareBoringImageHttpClient();
+      final message = eg.streamMessage(sender: eg.otherUser);
+      await setupPage(tester, message: message, thumbnailUrl: null);
+
+      tester.widget(find.byType(AppBar));
+      tester.widget(find.byType(BottomAppBar));
+
+      await tester.tap(find.byType(ZulipApp));
+      await tester.pump();
+      check(tester.widgetList(find.byType(AppBar))).isEmpty();
+      check(tester.widgetList(find.byType(BottomAppBar))).isEmpty();
+
+      await tester.tap(find.byType(ZulipApp));
+      await tester.pump();
+      tester.widget(find.byType(AppBar));
+      tester.widget(find.byType(BottomAppBar));
+
+      debugNetworkImageHttpClientProvider = null;
+    });
+
+    // TODO test _CopyLinkButton
+    // TODO test thumbnail gets shown, then gets replaced when main image loads
+    // TODO test image is scaled down to fit, but not up
+    // TODO test image doesn't change size when header and footer hidden/shown
+    // TODO test image doesn't show in inset area by default, but does if user zooms/pans it there
+    //
+    // A draft version of some of those desired tests:
+    //   https://github.com/zulip/zulip-flutter/commit/ec4078d459da749f16511b826c5f7c398b0fb874
+    // Discussion related to that draft:
+    //   https://github.com/zulip/zulip-flutter/pull/833#discussion_r1688762292
+    //   https://github.com/zulip/zulip-flutter/pull/833#pullrequestreview-2200433626
+    //   https://github.com/zulip/zulip-flutter/pull/833#issuecomment-2251782337
+  });
+
   group('VideoDurationLabel', () {
     const cases = [
       (Duration(milliseconds: 1),    '00:00',     '1ms'),
@@ -211,7 +306,10 @@ void main() {
 
     for (final (duration, expected, title) in cases) {
       testWidgets('with $title shows $expected', (tester) async {
-        await tester.pumpWidget(MaterialApp(home: VideoDurationLabel(duration)));
+        addTearDown(testBinding.reset);
+        await tester.pumpWidget(TestZulipApp(
+          child: VideoDurationLabel(duration)));
+        await tester.pump();
         final text = tester.widget<Text>(find.byType(Text));
         check(text.data)
           ..equals(VideoDurationLabel.formatDuration(duration))
@@ -270,15 +368,11 @@ void main() {
       await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
       addTearDown(platform.reset);
 
-      await tester.pumpWidget(GlobalStoreWidget(child: MaterialApp(
-        localizationsDelegates: ZulipLocalizations.localizationsDelegates,
-        supportedLocales: ZulipLocalizations.supportedLocales,
-        home: PerAccountStoreWidget(
-          accountId: eg.selfAccount.id,
-          child: VideoLightboxPage(
-            routeEntranceAnimation: kAlwaysCompleteAnimation,
-            message: eg.streamMessage(),
-            src: videoSrc)))));
+      await tester.pumpWidget(TestZulipApp(accountId: eg.selfAccount.id,
+        child: VideoLightboxPage(
+          routeEntranceAnimation: kAlwaysCompleteAnimation,
+          message: eg.streamMessage(),
+          src: videoSrc)));
       await tester.pump(); // global store
       await tester.pump(); // per-account store
       await tester.pump(); // video controller initialization
@@ -313,6 +407,35 @@ void main() {
       await tester.tap(find.byWidget(checkErrorDialog(tester,
         expectedTitle: zulipLocalizations.errorDialogTitle,
         expectedMessage: zulipLocalizations.errorVideoPlayerFailed)));
+    });
+
+    testWidgets('toggles wakelock when playing state changes', (tester) async {
+      await setupPage(tester, videoSrc: Uri.parse(kTestVideoUrl));
+      check(platform.isPlaying).isTrue();
+      check(TestZulipBinding.instance.wakelockEnabled).isTrue();
+
+      await tester.tap(find.byIcon(Icons.pause_circle_rounded));
+      check(platform.isPlaying).isFalse();
+      check(TestZulipBinding.instance.wakelockEnabled).isFalse();
+
+      // re-render to update player controls
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.play_circle_rounded));
+      check(platform.isPlaying).isTrue();
+      check(TestZulipBinding.instance.wakelockEnabled).isTrue();
+    });
+
+    testWidgets('disables wakelock when disposed', (tester) async {
+      await setupPage(tester, videoSrc: Uri.parse(kTestVideoUrl));
+      check(platform.isPlaying).isTrue();
+      check(TestZulipBinding.instance.wakelockEnabled).isTrue();
+
+      // Replace current page with empty container,
+      // disposing the previous page.
+      await tester.pumpWidget(Container());
+
+      check(TestZulipBinding.instance.wakelockEnabled).isFalse();
     });
 
     testWidgets('video advances over time and stops playing when it ends', (tester) async {

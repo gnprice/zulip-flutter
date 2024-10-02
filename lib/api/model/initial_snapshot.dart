@@ -24,6 +24,24 @@ class InitialSnapshot {
 
   final List<CustomProfileField> customProfileFields;
 
+  /// The realm-level policy, on pre-FL 163 servers, for visibility of real email addresses.
+  ///
+  /// Search for "email_address_visibility" in https://zulip.com/api/register-queue.
+  ///
+  /// This field is removed in Zulip 7.0 (FL 163) and replaced with a user-level
+  /// setting:
+  ///   * https://zulip.com/api/update-settings#parameter-email_address_visibility
+  ///   * https://zulip.com/api/update-realm-user-settings-defaults#parameter-email_address_visibility
+  final EmailAddressVisibility? emailAddressVisibility; // TODO(server-7): remove
+
+  // TODO(server-8): Remove the default values.
+  @JsonKey(defaultValue: 15000)
+  final int serverTypingStartedExpiryPeriodMilliseconds;
+  @JsonKey(defaultValue: 5000)
+  final int serverTypingStoppedWaitPeriodMilliseconds;
+  @JsonKey(defaultValue: 10000)
+  final int serverTypingStartedWaitPeriodMilliseconds;
+
   // final List<…> mutedTopics; // TODO(#422) we ignore this feature on older servers
 
   final Map<String, RealmEmojiItem> realmEmoji;
@@ -86,6 +104,10 @@ class InitialSnapshot {
     required this.zulipMergeBase,
     required this.alertWords,
     required this.customProfileFields,
+    required this.emailAddressVisibility,
+    required this.serverTypingStartedExpiryPeriodMilliseconds,
+    required this.serverTypingStoppedWaitPeriodMilliseconds,
+    required this.serverTypingStartedWaitPeriodMilliseconds,
     required this.realmEmoji,
     required this.recentPrivateConversations,
     required this.subscriptions,
@@ -104,6 +126,14 @@ class InitialSnapshot {
     _$InitialSnapshotFromJson(json);
 
   Map<String, dynamic> toJson() => _$InitialSnapshotToJson(this);
+}
+
+enum EmailAddressVisibility {
+  @JsonValue(1) everyone,
+  @JsonValue(2) members,
+  @JsonValue(3) admins,
+  @JsonValue(4) nobody,
+  @JsonValue(5) moderators,
 }
 
 /// An item in `realm_default_external_accounts`.
@@ -161,7 +191,7 @@ class UserSettings {
   Emojiset emojiset;
 
   // TODO more, as needed. When adding a setting here, please also:
-  // (1) add it to the [UserSettingName] enum below
+  // (1) add it to the [UserSettingName] enum
   // (2) then re-run the command to refresh the .g.dart files
   // (3) handle the event that signals an update to the setting
 
@@ -218,7 +248,8 @@ class UnreadMessagesSnapshot {
   @JsonKey(name: 'pms')
   final List<UnreadDmSnapshot> dms;
 
-  final List<UnreadStreamSnapshot> streams;
+  @JsonKey(name: 'streams')
+  final List<UnreadChannelSnapshot> channels;
   final List<UnreadHuddleSnapshot> huddles;
 
   // Unlike other lists of message IDs here, [mentions] is *not* sorted.
@@ -229,7 +260,7 @@ class UnreadMessagesSnapshot {
   const UnreadMessagesSnapshot({
     required this.count,
     required this.dms,
-    required this.streams,
+    required this.channels,
     required this.huddles,
     required this.mentions,
     required this.oldUnreadsMissing,
@@ -264,23 +295,23 @@ class UnreadDmSnapshot {
   Map<String, dynamic> toJson() => _$UnreadDmSnapshotToJson(this);
 }
 
-/// An item in [UnreadMessagesSnapshot.streams].
+/// An item in [UnreadMessagesSnapshot.channels].
 @JsonSerializable(fieldRename: FieldRename.snake)
-class UnreadStreamSnapshot {
+class UnreadChannelSnapshot {
   final String topic;
   final int streamId;
   final List<int> unreadMessageIds;
 
-  UnreadStreamSnapshot({
+  UnreadChannelSnapshot({
     required this.topic,
     required this.streamId,
     required this.unreadMessageIds,
   }) : assert(isSortedWithoutDuplicates(unreadMessageIds));
 
-  factory UnreadStreamSnapshot.fromJson(Map<String, dynamic> json) =>
-    _$UnreadStreamSnapshotFromJson(json);
+  factory UnreadChannelSnapshot.fromJson(Map<String, dynamic> json) =>
+    _$UnreadChannelSnapshotFromJson(json);
 
-  Map<String, dynamic> toJson() => _$UnreadStreamSnapshotToJson(this);
+  Map<String, dynamic> toJson() => _$UnreadChannelSnapshotToJson(this);
 }
 
 /// An item in [UnreadMessagesSnapshot.huddles].

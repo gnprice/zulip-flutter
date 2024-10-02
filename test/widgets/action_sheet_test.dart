@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:checks/checks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:zulip/api/model/model.dart';
+import 'package:zulip/api/route/channels.dart';
 import 'package:zulip/api/route/messages.dart';
 import 'package:zulip/model/binding.dart';
 import 'package:zulip/model/compose.dart';
@@ -18,9 +18,7 @@ import 'package:zulip/widgets/compose_box.dart';
 import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/icons.dart';
 import 'package:zulip/widgets/message_list.dart';
-import 'package:zulip/widgets/store.dart';
 import 'package:share_plus_platform_interface/method_channel/method_channel_share.dart';
-import 'package:zulip/widgets/theme.dart';
 import '../api/fake_api.dart';
 
 import '../example_data.dart' as eg;
@@ -32,6 +30,9 @@ import '../test_clipboard.dart';
 import '../test_share_plus.dart';
 import 'compose_box_checks.dart';
 import 'dialog_checks.dart';
+import 'test_app.dart';
+
+late FakeApiConnection connection;
 
 /// Simulates loading a [MessageListPage] and long-pressing on [message].
 Future<void> setupToMessageActionSheet(WidgetTester tester, {
@@ -48,7 +49,7 @@ Future<void> setupToMessageActionSheet(WidgetTester tester, {
     await store.addStream(stream);
     await store.addSubscription(eg.subscription(stream));
   }
-  final connection = store.connection as FakeApiConnection;
+  connection = store.connection as FakeApiConnection;
 
   // prepare message list data
   connection.prepare(json: GetMessagesResult(
@@ -60,15 +61,8 @@ Future<void> setupToMessageActionSheet(WidgetTester tester, {
     messages: [message],
   ).toJson());
 
-  await tester.pumpWidget(Builder(builder: (context) =>
-    MaterialApp(
-      theme: zulipThemeData(context),
-      localizationsDelegates: ZulipLocalizations.localizationsDelegates,
-      supportedLocales: ZulipLocalizations.supportedLocales,
-      home: GlobalStoreWidget(
-        child: PerAccountStoreWidget(
-          accountId: eg.selfAccount.id,
-          child: MessageListPage(narrow: narrow))))));
+  await tester.pumpWidget(TestZulipApp(accountId: eg.selfAccount.id,
+    child: MessageListPage(initNarrow: narrow)));
 
   // global store, per-account store, and message list get loaded
   await tester.pumpAndSettle();
@@ -111,7 +105,7 @@ void main() {
       await tester.pump(); // [MenuItemButton.onPressed] called in a post-frame callback: flutter/flutter@e4a39fa2e
     }
 
-    testWidgets('success', (WidgetTester tester) async {
+    testWidgets('success', (tester) async {
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -131,7 +125,7 @@ void main() {
           });
     });
 
-    testWidgets('request has an error', (WidgetTester tester) async {
+    testWidgets('request has an error', (tester) async {
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -165,7 +159,7 @@ void main() {
       await tester.pump(); // [MenuItemButton.onPressed] called in a post-frame callback: flutter/flutter@e4a39fa2e
     }
 
-    testWidgets('star success', (WidgetTester tester) async {
+    testWidgets('star success', (tester) async {
       final message = eg.streamMessage(flags: []);
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -185,7 +179,7 @@ void main() {
         });
     });
 
-    testWidgets('unstar success', (WidgetTester tester) async {
+    testWidgets('unstar success', (tester) async {
       final message = eg.streamMessage(flags: [MessageFlag.starred]);
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -205,7 +199,7 @@ void main() {
         });
     });
 
-    testWidgets('star request has an error', (WidgetTester tester) async {
+    testWidgets('star request has an error', (tester) async {
       final message = eg.streamMessage(flags: []);
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -226,7 +220,7 @@ void main() {
         expectedMessage: 'Invalid message(s)')));
     });
 
-    testWidgets('unstar request has an error', (WidgetTester tester) async {
+    testWidgets('unstar request has an error', (tester) async {
       final message = eg.streamMessage(flags: [MessageFlag.starred]);
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -297,13 +291,19 @@ void main() {
       check(contentController).not((it) => it.validationErrors.contains(ContentValidationError.quoteAndReplyInProgress));
     }
 
-    testWidgets('in stream narrow', (WidgetTester tester) async {
+    testWidgets('in channel narrow', (tester) async {
       final message = eg.streamMessage();
-      await setupToMessageActionSheet(tester, message: message, narrow: StreamNarrow(message.streamId));
+      await setupToMessageActionSheet(tester, message: message, narrow: ChannelNarrow(message.streamId));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
 
       final composeBoxController = findComposeBoxController(tester)!;
       final contentController = composeBoxController.contentController;
+
+      // Ensure channel-topics are loaded before testing quote & reply behavior
+      connection.prepare(body:
+        jsonEncode(GetStreamTopicsResult(topics: [eg.getStreamTopicsEntry()]).toJson()));
+      final topicController = composeBoxController.topicController;
+      topicController?.value = const TextEditingValue(text: kNoTopicTopic);
 
       final valueBefore = contentController.value;
       prepareRawContentResponseSuccess(store, message: message, rawContent: 'Hello world');
@@ -315,7 +315,7 @@ void main() {
         valueBefore: valueBefore, message: message, rawContent: 'Hello world');
     });
 
-    testWidgets('in topic narrow', (WidgetTester tester) async {
+    testWidgets('in topic narrow', (tester) async {
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -333,7 +333,7 @@ void main() {
         valueBefore: valueBefore, message: message, rawContent: 'Hello world');
     });
 
-    testWidgets('in DM narrow', (WidgetTester tester) async {
+    testWidgets('in DM narrow', (tester) async {
       final message = eg.dmMessage(from: eg.selfUser, to: [eg.otherUser]);
       await setupToMessageActionSheet(tester,
         message: message, narrow: DmNarrow.ofMessage(message, selfUserId: eg.selfUser.userId));
@@ -352,7 +352,7 @@ void main() {
         valueBefore: valueBefore, message: message, rawContent: 'Hello world');
     });
 
-    testWidgets('request has an error', (WidgetTester tester) async {
+    testWidgets('request has an error', (tester) async {
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -381,10 +381,81 @@ void main() {
       ));
     });
 
-    testWidgets('not offered in CombinedFeedNarrow (composing to reply is not yet supported)', (WidgetTester tester) async {
+    testWidgets('not offered in CombinedFeedNarrow (composing to reply is not yet supported)', (tester) async {
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: const CombinedFeedNarrow());
       check(findQuoteAndReplyButton(tester)).isNull();
+    });
+
+    testWidgets('not offered in MentionsNarrow (composing to reply is not yet supported)', (tester) async {
+      final message = eg.streamMessage(flags: [MessageFlag.mentioned]);
+      await setupToMessageActionSheet(tester, message: message, narrow: const MentionsNarrow());
+      check(findQuoteAndReplyButton(tester)).isNull();
+    });
+
+    testWidgets('not offered in StarredMessagesNarrow (composing to reply is not yet supported)', (tester) async {
+      final message = eg.streamMessage(flags: [MessageFlag.starred]);
+      await setupToMessageActionSheet(tester, message: message, narrow: const StarredMessagesNarrow());
+      check(findQuoteAndReplyButton(tester)).isNull();
+    });
+  });
+
+  group('MarkAsUnread', () {
+    testWidgets('not visible if message is not read', (tester) async {
+      final unreadMessage = eg.streamMessage(flags: []);
+      await setupToMessageActionSheet(tester, message: unreadMessage, narrow: TopicNarrow.ofMessage(unreadMessage));
+
+      check(find.byIcon(Icons.mark_chat_unread_outlined).evaluate()).isEmpty();
+    });
+
+    testWidgets('visible if message is read', (tester) async {
+      final readMessage = eg.streamMessage(flags: [MessageFlag.read]);
+      await setupToMessageActionSheet(tester, message: readMessage, narrow: TopicNarrow.ofMessage(readMessage));
+
+      check(find.byIcon(Icons.mark_chat_unread_outlined).evaluate()).single;
+    });
+
+    group('onPressed', () {
+      testWidgets('smoke test', (tester) async {
+        final message = eg.streamMessage(flags: [MessageFlag.read]);
+        await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
+
+        connection.prepare(json: UpdateMessageFlagsForNarrowResult(
+          processedCount: 11, updatedCount: 3,
+          firstProcessedId: 1, lastProcessedId: 1980,
+          foundOldest: true, foundNewest: true).toJson());
+
+        await tester.ensureVisible(find.byIcon(Icons.mark_chat_unread_outlined, skipOffstage: false));
+        await tester.tap(find.byIcon(Icons.mark_chat_unread_outlined, skipOffstage: false));
+        await tester.pumpAndSettle();
+        check(connection.lastRequest).isA<http.Request>()
+          ..method.equals('POST')
+          ..url.path.equals('/api/v1/messages/flags/narrow')
+          ..bodyFields.deepEquals({
+              'anchor': '${message.id}',
+              'include_anchor': 'true',
+              'num_before': '0',
+              'num_after': '1000',
+              'narrow': jsonEncode(TopicNarrow.ofMessage(message).apiEncode()),
+              'op': 'remove',
+              'flag': 'read',
+            });
+      });
+
+      testWidgets('shows error when fails', (tester) async {
+        final message = eg.streamMessage(flags: [MessageFlag.read]);
+        await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
+
+        connection.prepare(exception: http.ClientException('Oops'));
+        final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+
+        await tester.ensureVisible(find.byIcon(Icons.mark_chat_unread_outlined, skipOffstage: false));
+        await tester.tap(find.byIcon(Icons.mark_chat_unread_outlined, skipOffstage: false));
+        await tester.pumpAndSettle();
+        checkErrorDialog(tester,
+          expectedTitle: zulipLocalizations.errorMarkAsUnreadFailedTitle,
+          expectedMessage: 'NetworkException: Oops (ClientException: Oops)');
+      });
     });
   });
 
@@ -402,7 +473,7 @@ void main() {
       await tester.pump(); // [MenuItemButton.onPressed] called in a post-frame callback: flutter/flutter@e4a39fa2e
     }
 
-    testWidgets('success', (WidgetTester tester) async {
+    testWidgets('success', (tester) async {
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -415,7 +486,7 @@ void main() {
 
     testWidgets('can show snackbar on success', (tester) async {
       // Regression test for: https://github.com/zulip/zulip-flutter/issues/732
-      testBinding.deviceInfoResult = IosDeviceInfo(systemVersion: '16.0');
+      testBinding.deviceInfoResult = const IosDeviceInfo(systemVersion: '16.0');
 
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
@@ -438,7 +509,7 @@ void main() {
         matching: find.text(zulipLocalizations.successMessageTextCopied)));
     });
 
-    testWidgets('request has an error', (WidgetTester tester) async {
+    testWidgets('request has an error', (tester) async {
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
       final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
@@ -499,7 +570,7 @@ void main() {
       await tester.pump(); // [MenuItemButton.onPressed] called in a post-frame callback: flutter/flutter@e4a39fa2e
     }
 
-    testWidgets('request succeeds; sharing succeeds', (WidgetTester tester) async {
+    testWidgets('request succeeds; sharing succeeds', (tester) async {
       final mockSharePlus = setupMockSharePlus();
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
@@ -511,7 +582,7 @@ void main() {
       check(mockSharePlus.sharedString).equals('Hello world');
     });
 
-    testWidgets('request succeeds; sharing fails', (WidgetTester tester) async {
+    testWidgets('request succeeds; sharing fails', (tester) async {
       final mockSharePlus = setupMockSharePlus();
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
@@ -527,7 +598,7 @@ void main() {
         expectedTitle: 'Sharing failed')));
     });
 
-    testWidgets('request has an error', (WidgetTester tester) async {
+    testWidgets('request has an error', (tester) async {
       final mockSharePlus = setupMockSharePlus();
       final message = eg.streamMessage();
       await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));

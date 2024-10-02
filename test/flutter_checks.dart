@@ -2,6 +2,7 @@
 library;
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -51,7 +52,7 @@ extension RouteSettingsChecks<T> on Subject<RouteSettings> {
   Subject<Object?> get arguments => has((s) => s.arguments, 'arguments');
 }
 
-extension ValueNotifierChecks<T> on Subject<ValueNotifier<T>> {
+extension ValueListenableChecks<T> on Subject<ValueListenable<T>> {
   Subject<T> get value => has((c) => c.value, 'value');
 }
 
@@ -60,8 +61,14 @@ extension TextChecks on Subject<Text> {
   Subject<TextStyle?> get style => has((t) => t.style, 'style');
 }
 
+extension TextEditingControllerChecks on Subject<TextEditingController> {
+  Subject<String?> get text => has((t) => t.text, 'text');
+}
+
 extension TextFieldChecks on Subject<TextField> {
   Subject<TextCapitalization?> get textCapitalization => has((t) => t.textCapitalization, 'textCapitalization');
+  Subject<InputDecoration?> get decoration => has((t) => t.decoration, 'decoration');
+  Subject<TextEditingController?> get controller => has((t) => t.controller, 'controller');
 }
 
 extension TextStyleChecks on Subject<TextStyle> {
@@ -110,4 +117,28 @@ extension TypographyChecks on Subject<Typography> {
 
 extension InlineSpanChecks on Subject<InlineSpan> {
   Subject<TextStyle?> get style => has((x) => x.style, 'style');
+}
+
+extension SizeChecks on Subject<Size> {
+  Subject<double> get width => has((x) => x.width, 'width');
+  Subject<double> get height => has((x) => x.height, 'height');
+}
+
+extension ElementChecks on Subject<Element> {
+  Subject<Size?> get size => has((t) => t.size, 'size');
+  // TODO more
+}
+
+extension MediaQueryDataChecks on Subject<MediaQueryData> {
+  Subject<TextScaler> get textScaler => has((x) => x.textScaler, 'textScaler');
+  // TODO more
+}
+
+extension MaterialChecks on Subject<Material> {
+  Subject<Color?> get color => has((x) => x.color, 'color');
+  // TODO more
+}
+
+extension InputDecorationChecks on Subject<InputDecoration> {
+  Subject<String?> get hintText => has((x) => x.hintText, 'hintText');
 }

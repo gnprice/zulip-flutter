@@ -1,7 +1,6 @@
 import 'package:checks/checks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
@@ -11,7 +10,6 @@ import 'package:zulip/widgets/icons.dart';
 import 'package:zulip/widgets/message_list.dart';
 import 'package:zulip/widgets/page.dart';
 import 'package:zulip/widgets/recent_dm_conversations.dart';
-import 'package:zulip/widgets/store.dart';
 
 import '../example_data.dart' as eg;
 import '../flutter_checks.dart';
@@ -21,6 +19,7 @@ import '../test_navigation.dart';
 import 'content_checks.dart';
 import 'message_list_checks.dart';
 import 'page_checks.dart';
+import 'test_app.dart';
 
 Future<void> setupPage(WidgetTester tester, {
   required List<DmMessage> dmMessages,
@@ -47,15 +46,10 @@ Future<void> setupPage(WidgetTester tester, {
       fullName: newNameForSelfUser));
   }
 
-  await tester.pumpWidget(
-    GlobalStoreWidget(
-      child: MaterialApp(
-        localizationsDelegates: ZulipLocalizations.localizationsDelegates,
-        supportedLocales: ZulipLocalizations.supportedLocales,
-        navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
-        home: PerAccountStoreWidget(
-          accountId: eg.selfAccount.id,
-          child: const RecentDmConversationsPage()))));
+  await tester.pumpWidget(TestZulipApp(
+    accountId: eg.selfAccount.id,
+    navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
+    child: const RecentDmConversationsPage()));
 
   // global store, per-account store, and page get loaded
   await tester.pumpAndSettle();
@@ -69,7 +63,7 @@ void main() {
       (widget) => widget is RecentDmConversationsItem && widget.narrow == narrow,
     );
 
-    testWidgets('page builds; conversations appear in order', (WidgetTester tester) async {
+    testWidgets('page builds; conversations appear in order', (tester) async {
       final user1 = eg.user(userId: 1);
       final user2 = eg.user(userId: 2);
 
@@ -87,10 +81,10 @@ void main() {
       check(items[2].narrow).equals(DmNarrow.ofMessage(message1, selfUserId: eg.selfUser.userId));
     });
 
-    testWidgets('fling to scroll down', (WidgetTester tester) async {
+    testWidgets('fling to scroll down', (tester) async {
       final List<User> users = [];
       final List<DmMessage> messages = [];
-      for (int i = 0; i < 30; i++) {
+      for (int i = 1; i <= 30; i++) {
         final user = eg.user(userId: i, fullName: 'User ${i.toString()}');
         users.add(user);
         messages.add(eg.dmMessage(from: eg.selfUser, to: [user]));
@@ -170,7 +164,7 @@ void main() {
       }
 
       group('self-1:1', () {
-        testWidgets('has right title/avatar', (WidgetTester tester) async {
+        testWidgets('has right title/avatar', (tester) async {
           final message = eg.dmMessage(from: eg.selfUser, to: []);
           await setupPage(tester, users: [], dmMessages: [message]);
 
@@ -178,7 +172,7 @@ void main() {
           checkTitle(tester, eg.selfUser.fullName);
         });
 
-        testWidgets('short name takes one line', (WidgetTester tester) async {
+        testWidgets('short name takes one line', (tester) async {
           final message = eg.dmMessage(from: eg.selfUser, to: []);
           const name = 'Short name';
           await setupPage(tester, users: [], dmMessages: [message],
@@ -186,7 +180,7 @@ void main() {
           checkTitle(tester, name, 1);
         });
 
-        testWidgets('very long name takes two lines (must be ellipsized)', (WidgetTester tester) async {
+        testWidgets('very long name takes two lines (must be ellipsized)', (tester) async {
           final message = eg.dmMessage(from: eg.selfUser, to: []);
           const name = 'Long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name';
           await setupPage(tester, users: [], dmMessages: [message],
@@ -194,7 +188,7 @@ void main() {
           checkTitle(tester, name, 2);
         });
 
-        testWidgets('unread counts', (WidgetTester tester) async {
+        testWidgets('unread counts', (tester) async {
           final message = eg.dmMessage(from: eg.selfUser, to: []);
           await setupPage(tester, users: [], dmMessages: [message]);
 
@@ -205,7 +199,7 @@ void main() {
       });
 
       group('1:1', () {
-        testWidgets('has right title/avatar', (WidgetTester tester) async {
+        testWidgets('has right title/avatar', (tester) async {
           final user = eg.user(userId: 1);
           final message = eg.dmMessage(from: eg.selfUser, to: [user]);
           await setupPage(tester, users: [user], dmMessages: [message]);
@@ -214,7 +208,7 @@ void main() {
           checkTitle(tester, user.fullName);
         });
 
-        testWidgets('no error when user somehow missing from store.users', (WidgetTester tester) async {
+        testWidgets('no error when user somehow missing from store.users', (tester) async {
           final user = eg.user(userId: 1);
           final message = eg.dmMessage(from: eg.selfUser, to: [user]);
           await setupPage(tester,
@@ -226,21 +220,21 @@ void main() {
           checkTitle(tester, '(unknown user)');
         });
 
-        testWidgets('short name takes one line', (WidgetTester tester) async {
+        testWidgets('short name takes one line', (tester) async {
           final user = eg.user(userId: 1, fullName: 'Short name');
           final message = eg.dmMessage(from: eg.selfUser, to: [user]);
           await setupPage(tester, users: [user], dmMessages: [message]);
           checkTitle(tester, user.fullName, 1);
         });
 
-        testWidgets('very long name takes two lines (must be ellipsized)', (WidgetTester tester) async {
+        testWidgets('very long name takes two lines (must be ellipsized)', (tester) async {
           final user = eg.user(userId: 1, fullName: 'Long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name long name');
           final message = eg.dmMessage(from: eg.selfUser, to: [user]);
           await setupPage(tester, users: [user], dmMessages: [message]);
           checkTitle(tester, user.fullName, 2);
         });
 
-        testWidgets('unread counts', (WidgetTester tester) async {
+        testWidgets('unread counts', (tester) async {
           final message = eg.dmMessage(from: eg.otherUser, to: [eg.selfUser]);
           await setupPage(tester, users: [], dmMessages: [message]);
 
@@ -253,13 +247,13 @@ void main() {
       group('group', () {
         List<User> usersList(int count) {
           final result = <User>[];
-          for (int i = 0; i < count; i++) {
+          for (int i = 1; i <= count; i++) {
             result.add(eg.user(userId: i, fullName: 'User ${i.toString()}'));
           }
           return result;
         }
 
-        testWidgets('has right title/avatar', (WidgetTester tester) async {
+        testWidgets('has right title/avatar', (tester) async {
           final users = usersList(2);
           final user0 = users[0];
           final user1 = users[1];
@@ -270,7 +264,7 @@ void main() {
           checkTitle(tester, '${user0.fullName}, ${user1.fullName}');
         });
 
-        testWidgets('no error when one user somehow missing from store.users', (WidgetTester tester) async {
+        testWidgets('no error when one user somehow missing from store.users', (tester) async {
           final users = usersList(2);
           final user0 = users[0];
           final user1 = users[1];
@@ -284,21 +278,21 @@ void main() {
           checkTitle(tester, '${user0.fullName}, (unknown user)');
         });
 
-        testWidgets('few names takes one line', (WidgetTester tester) async {
+        testWidgets('few names takes one line', (tester) async {
           final users = usersList(2);
           final message = eg.dmMessage(from: eg.selfUser, to: users);
           await setupPage(tester, users: users, dmMessages: [message]);
           checkTitle(tester, users.map((u) => u.fullName).join(', '), 1);
         });
 
-        testWidgets('very many names takes two lines (must be ellipsized)', (WidgetTester tester) async {
+        testWidgets('very many names takes two lines (must be ellipsized)', (tester) async {
           final users = usersList(40);
           final message = eg.dmMessage(from: eg.selfUser, to: users);
           await setupPage(tester, users: users, dmMessages: [message]);
           checkTitle(tester, users.map((u) => u.fullName).join(', '), 2);
         });
 
-        testWidgets('unread counts', (WidgetTester tester) async {
+        testWidgets('unread counts', (tester) async {
           final message = eg.dmMessage(from: eg.thirdUser, to: [eg.selfUser, eg.otherUser]);
           await setupPage(tester, users: [], dmMessages: [message]);
 
@@ -328,21 +322,21 @@ void main() {
 
         check(pushedRoutes).last.isA<WidgetRoute>().page
           .isA<MessageListPage>()
-          .narrow.equals(expectedNarrow);
+          .initNarrow.equals(expectedNarrow);
       }
 
-      testWidgets('1:1', (WidgetTester tester) async {
+      testWidgets('1:1', (tester) async {
         final user = eg.user(userId: 1, fullName: 'User 1');
         await runAndCheck(tester, users: [user],
           message: eg.dmMessage(from: eg.selfUser, to: [user]));
       });
 
-      testWidgets('self-1:1', (WidgetTester tester) async {
+      testWidgets('self-1:1', (tester) async {
         await runAndCheck(tester, users: [],
           message: eg.dmMessage(from: eg.selfUser, to: []));
       });
 
-      testWidgets('group', (WidgetTester tester) async {
+      testWidgets('group', (tester) async {
         final user1 = eg.user(userId: 1, fullName: 'User 1');
         final user2 = eg.user(userId: 2, fullName: 'User 2');
         await runAndCheck(tester, users: [user1, user2],

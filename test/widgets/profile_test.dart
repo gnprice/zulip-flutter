@@ -1,6 +1,5 @@
 import 'package:checks/checks.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zulip/api/model/initial_snapshot.dart';
@@ -10,8 +9,6 @@ import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/message_list.dart';
 import 'package:zulip/widgets/page.dart';
 import 'package:zulip/widgets/profile.dart';
-import 'package:zulip/widgets/store.dart';
-import 'package:zulip/widgets/theme.dart';
 
 import '../example_data.dart' as eg;
 import '../model/binding.dart';
@@ -20,6 +17,7 @@ import '../test_navigation.dart';
 import 'message_list_checks.dart';
 import 'page_checks.dart';
 import 'profile_page_checks.dart';
+import 'test_app.dart';
 
 Future<void> setupPage(WidgetTester tester, {
   required int pageUserId,
@@ -41,16 +39,10 @@ Future<void> setupPage(WidgetTester tester, {
     await store.addUsers(users);
   }
 
-  await tester.pumpWidget(
-    GlobalStoreWidget(child: Builder(builder: (context) =>
-      MaterialApp(
-        theme: zulipThemeData(context),
-        navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
-        localizationsDelegates: ZulipLocalizations.localizationsDelegates,
-        supportedLocales: ZulipLocalizations.supportedLocales,
-        home: PerAccountStoreWidget(
-          accountId: eg.selfAccount.id,
-          child: ProfilePage(userId: pageUserId))))));
+  await tester.pumpWidget(TestZulipApp(
+    accountId: eg.selfAccount.id,
+    navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
+    child: ProfilePage(userId: pageUserId)));
 
   // global store, per-account store, and page get loaded
   await tester.pumpAndSettle();
@@ -78,16 +70,18 @@ void main() {
   TestZulipBinding.ensureInitialized();
 
   group('ProfilePage', () {
-    testWidgets('page builds; profile page renders', (WidgetTester tester) async {
-      final user = eg.user(userId: 1, fullName: 'test user');
+    testWidgets('page builds; profile page renders', (tester) async {
+      final user = eg.user(userId: 1, fullName: 'test user',
+        deliveryEmail: 'testuser@example.com');
 
       await setupPage(tester, users: [user], pageUserId: user.userId);
 
       check(because: 'find user avatar', find.byType(Avatar).evaluate()).length.equals(1);
       check(because: 'find user name', find.text('test user').evaluate()).isNotEmpty();
+      check(because: 'find user delivery email', find.text('testuser@example.com').evaluate()).isNotEmpty();
     });
 
-    testWidgets('page builds; profile page renders with profileData', (WidgetTester tester) async {
+    testWidgets('page builds; profile page renders with profileData', (tester) async {
       await setupPage(tester,
         users: [
           eg.user(userId: 1, profileData: {
@@ -149,13 +143,13 @@ void main() {
         .deepEquals([1, 2]);
     });
 
-    testWidgets('page builds; error page shows up if data is missing', (WidgetTester tester) async {
+    testWidgets('page builds; error page shows up if data is missing', (tester) async {
       await setupPage(tester, pageUserId: eg.selfUser.userId + 1989);
       check(because: 'find no user avatar', find.byType(Avatar).evaluate()).isEmpty();
       check(because: 'find error icon', find.byIcon(Icons.error).evaluate()).isNotEmpty();
     });
 
-    testWidgets('page builds; link type will navigate', (WidgetTester tester) async {
+    testWidgets('page builds; link type will navigate', (tester) async {
       const testUrl = 'http://example/url';
       final user = eg.user(userId: 1, profileData: {
         0: ProfileFieldUserData(value: testUrl),
@@ -174,7 +168,7 @@ void main() {
       ));
     });
 
-    testWidgets('page builds; external link type navigates away', (WidgetTester tester) async {
+    testWidgets('page builds; external link type navigates away', (tester) async {
       final user = eg.user(userId: 1, profileData: {
         0: ProfileFieldUserData(value: 'externalValue'),
       });
@@ -201,7 +195,7 @@ void main() {
       ));
     });
 
-    testWidgets('page builds; user links to profile', (WidgetTester tester) async {
+    testWidgets('page builds; user links to profile', (tester) async {
       final users = [
         eg.user(userId: 1, profileData: {
           0: ProfileFieldUserData(value: '[2]'),
@@ -227,7 +221,7 @@ void main() {
       check(pushedRoutes).last.isA<WidgetRoute>().page.isA<ProfilePage>().userId.equals(2);
     });
 
-    testWidgets('page builds; user field with unknown user', (WidgetTester tester) async {
+    testWidgets('page builds; user field with unknown user', (tester) async {
       final users = [
         eg.user(userId: 1, profileData: {
           0: ProfileFieldUserData(value: '[2]'),
@@ -243,7 +237,7 @@ void main() {
       check(textFinder.evaluate()).length.equals(1);
     });
 
-    testWidgets('page builds; dm links to correct narrow', (WidgetTester tester) async {
+    testWidgets('page builds; dm links to correct narrow', (tester) async {
       final pushedRoutes = <Route<dynamic>>[];
       final testNavObserver = TestNavigatorObserver()
         ..onPushed = (route, prevRoute) => pushedRoutes.add(route);
@@ -259,10 +253,10 @@ void main() {
       await tester.tap(targetWidget);
       check(pushedRoutes).last.isA<WidgetRoute>().page
         .isA<MessageListPage>()
-        .narrow.equals(DmNarrow.withUser(1, selfUserId: eg.selfUser.userId));
+        .initNarrow.equals(DmNarrow.withUser(1, selfUserId: eg.selfUser.userId));
     });
 
-    testWidgets('page builds; user links render multiple avatars', (WidgetTester tester) async {
+    testWidgets('page builds; user links render multiple avatars', (tester) async {
       final users = [
         eg.user(userId: 1, profileData: {
           0: ProfileFieldUserData(value: '[2,3]'),
@@ -282,14 +276,14 @@ void main() {
         .deepEquals([1, 2, 3]);
     });
 
-    testWidgets('page builds; ensure long name does not overflow', (WidgetTester tester) async {
+    testWidgets('page builds; ensure long name does not overflow', (tester) async {
       final longString = 'X' * 400;
       final user = eg.user(userId: 1, fullName: longString);
       await setupPage(tester, users: [user], pageUserId: user.userId);
       check(find.text(longString).evaluate()).isNotEmpty();
     });
 
-    testWidgets('page builds; ensure long customProfileFields do not overflow', (WidgetTester tester) async {
+    testWidgets('page builds; ensure long customProfileFields do not overflow', (tester) async {
       final longString = 'X' * 400;
       final user = eg.user(userId: 1, fullName: 'fullName', profileData: {
         0: ProfileFieldUserData(value: longString),

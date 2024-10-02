@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -29,18 +30,18 @@ class _PreparedSuccess extends _PreparedResponse {
 /// An [http.Client] that accepts and replays canned responses, for testing.
 class FakeHttpClient extends http.BaseClient {
 
-  http.BaseRequest? lastRequest;
+  Iterable<http.BaseRequest> get requestHistory => _requestHistory;
+  List<http.BaseRequest> _requestHistory = [];
 
-  http.BaseRequest? takeLastRequest() {
-    final result = lastRequest;
-    lastRequest = null;
+  List<http.BaseRequest> takeRequests() {
+    final result = _requestHistory;
+    _requestHistory = [];
     return result;
   }
 
-  _PreparedResponse? _nextResponse;
+  final Queue<_PreparedResponse> _preparedResponses = Queue();
 
-  // Please add more features to this mocking API as needed.  For example:
-  //  * preparing more than one request, and logging more than one request
+  // Please add more features to this mocking API as needed.
 
   /// Prepare the response for the next request.
   ///
@@ -58,11 +59,11 @@ class FakeHttpClient extends http.BaseClient {
     String? body,
     Duration delay = Duration.zero,
   }) {
-    assert(_nextResponse == null,
-      'FakeApiConnection.prepare was called while already expecting a request');
+    // TODO: Prevent a source of bugs by ensuring that there are no outstanding
+    //   prepared responses when the test ends.
     if (exception != null) {
       assert(httpStatus == null && json == null && body == null);
-      _nextResponse = _PreparedException(exception: exception, delay: delay);
+      _preparedResponses.addLast(_PreparedException(exception: exception, delay: delay));
     } else {
       assert((json == null) || (body == null));
       final String resolvedBody = switch ((body, json)) {
@@ -70,19 +71,19 @@ class FakeHttpClient extends http.BaseClient {
         (_, var json?) => jsonEncode(json),
         _              => '',
       };
-      _nextResponse = _PreparedSuccess(
+      _preparedResponses.addLast(_PreparedSuccess(
         httpStatus: httpStatus ?? 200,
         bytes: utf8.encode(resolvedBody),
         delay: delay,
-      );
+      ));
     }
   }
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {
-    lastRequest = request;
+    _requestHistory.add(request);
 
-    if (_nextResponse == null) {
+    if (_preparedResponses.isEmpty) {
       throw FlutterError.fromParts([
         ErrorSummary(
           'An API request was attempted in a test when no response was prepared.'),
@@ -91,8 +92,7 @@ class FakeHttpClient extends http.BaseClient {
           'call to [FakeApiConnection.prepare].'),
       ]);
     }
-    final response = _nextResponse!;
-    _nextResponse = null;
+    final response = _preparedResponses.removeFirst();
 
     final http.StreamedResponse Function() computation;
     switch (response) {
@@ -134,20 +134,23 @@ class FakeApiConnection extends ApiConnection {
     int? zulipFeatureLevel = eg.futureZulipFeatureLevel,
     String? email,
     String? apiKey,
+    bool useBinding = false,
   }) : this._(
          realmUrl: realmUrl ?? eg.realmUrl,
          zulipFeatureLevel: zulipFeatureLevel,
          email: email,
          apiKey: apiKey,
          client: FakeHttpClient(),
+         useBinding: useBinding,
        );
 
-  FakeApiConnection.fromAccount(Account account)
+  FakeApiConnection.fromAccount(Account account, {required bool useBinding})
     : this(
         realmUrl: account.realmUrl,
         zulipFeatureLevel: account.zulipFeatureLevel,
         email: account.email,
-        apiKey: account.apiKey);
+        apiKey: account.apiKey,
+        useBinding: useBinding);
 
   FakeApiConnection._({
     required super.realmUrl,
@@ -155,6 +158,7 @@ class FakeApiConnection extends ApiConnection {
     super.email,
     super.apiKey,
     required this.client,
+    required super.useBinding,
   }) : super(client: client);
 
   final FakeHttpClient client;
@@ -171,12 +175,16 @@ class FakeApiConnection extends ApiConnection {
     Uri? realmUrl,
     int? zulipFeatureLevel = eg.futureZulipFeatureLevel,
     Account? account,
+    bool useBinding = false,
   }) async {
     assert((account == null)
       || (realmUrl == null && zulipFeatureLevel == eg.futureZulipFeatureLevel));
     final connection = (account != null)
-      ? FakeApiConnection.fromAccount(account)
-      : FakeApiConnection(realmUrl: realmUrl, zulipFeatureLevel: zulipFeatureLevel);
+      ? FakeApiConnection.fromAccount(account, useBinding: useBinding)
+      : FakeApiConnection(
+          realmUrl: realmUrl,
+          zulipFeatureLevel: zulipFeatureLevel,
+          useBinding: useBinding);
     try {
       return await fn(connection);
     } finally {
@@ -197,9 +205,9 @@ class FakeApiConnection extends ApiConnection {
     super.close();
   }
 
-  http.BaseRequest? get lastRequest => client.lastRequest;
+  http.BaseRequest? get lastRequest => client._requestHistory.lastOrNull;
 
-  http.BaseRequest? takeLastRequest() => client.takeLastRequest();
+  List<http.BaseRequest> takeRequests() => client.takeRequests();
 
   /// Prepare the response for the next request.
   ///

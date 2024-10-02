@@ -1,18 +1,20 @@
 import 'package:checks/checks.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/store.dart';
-import 'package:zulip/widgets/app.dart';
+import 'package:zulip/widgets/color.dart';
 import 'package:zulip/widgets/icons.dart';
 import 'package:zulip/widgets/inbox.dart';
-import 'package:zulip/widgets/stream_colors.dart';
+import 'package:zulip/widgets/channel_colors.dart';
 
 import '../example_data.dart' as eg;
 import '../flutter_checks.dart';
 import '../model/binding.dart';
 import '../model/test_store.dart';
+import 'test_app.dart';
 
 /// Repeatedly drags `view` by `moveStep` until `finder` is invisible.
 ///
@@ -71,11 +73,12 @@ void main() {
       await store.handleEvent(MessageEvent(id: 1, message: message));
     }
 
-    await tester.pumpWidget(
-      ZulipApp(navigatorObservers: [if (navigatorObserver != null) navigatorObserver]));
+    await tester.pumpWidget(TestZulipApp(
+      accountId: eg.selfAccount.id,
+      navigatorObservers: [if (navigatorObserver != null) navigatorObserver],
+      child: const InboxPage(),
+    ));
     await tester.pump();
-    final navigator = await ZulipApp.navigator;
-    navigator.push(InboxPage.buildRoute(accountId: eg.selfAccount.id));
 
     // global store and per-account store get loaded
     await tester.pumpAndSettle();
@@ -330,7 +333,7 @@ void main() {
           final icon = findHeaderCollapseIcon(tester, headerRow!);
           check(icon).icon.equals(ZulipIcons.arrow_down);
           check(allDmsHeaderBackgroundColor(tester))
-            .isNotNull().equals(const HSLColor.fromAHSL(1, 46, 0.35, 0.93).toColor());
+            .isNotNull().isSameColorAs(const HSLColor.fromAHSL(1, 46, 0.35, 0.93).toColor());
           check(tester.widgetList(findSectionContent)).isNotEmpty();
         }
 
@@ -348,7 +351,7 @@ void main() {
           final icon = findHeaderCollapseIcon(tester, headerRow!);
           check(icon).icon.equals(ZulipIcons.arrow_right);
           check(allDmsHeaderBackgroundColor(tester))
-            .isNotNull().equals(Colors.white);
+            .isNotNull().isSameColorAs(Colors.white);
           check(tester.widgetList(findSectionContent)).isEmpty();
         }
 
@@ -423,10 +426,10 @@ void main() {
           final collapseIcon = findHeaderCollapseIcon(tester, headerRow!);
           check(collapseIcon).icon.equals(ZulipIcons.arrow_down);
           final streamIcon = findStreamHeaderIcon(tester, streamId);
-          check(streamIcon).color.equals(
-            StreamColorSwatch.light(subscription.color).iconOnBarBackground);
+          check(streamIcon).color.isNotNull().isSameColorAs(
+            ChannelColorSwatch.light(subscription.color).iconOnBarBackground);
           check(streamHeaderBackgroundColor(tester, streamId))
-            .isNotNull().equals(StreamColorSwatch.light(subscription.color).barBackground);
+            .isNotNull().isSameColorAs(ChannelColorSwatch.light(subscription.color).barBackground);
           check(tester.widgetList(findSectionContent)).isNotEmpty();
         }
 
@@ -446,10 +449,10 @@ void main() {
           final collapseIcon = findHeaderCollapseIcon(tester, headerRow!);
           check(collapseIcon).icon.equals(ZulipIcons.arrow_right);
           final streamIcon = findStreamHeaderIcon(tester, streamId);
-          check(streamIcon).color.equals(
-            StreamColorSwatch.light(subscription.color).iconOnPlainBackground);
+          check(streamIcon).color.isNotNull().isSameColorAs(
+            ChannelColorSwatch.light(subscription.color).iconOnPlainBackground);
           check(streamHeaderBackgroundColor(tester, streamId))
-            .isNotNull().equals(Colors.white);
+            .isNotNull().isSameColorAs(Colors.white);
           check(tester.widgetList(findSectionContent)).isEmpty();
         }
 
@@ -469,7 +472,7 @@ void main() {
         });
 
         testWidgets('uncollapsed header changes background color when [subscription.color] changes', (tester) async {
-          final initialColor = Colors.indigo.value;
+          final initialColor = Colors.indigo.argbInt;
 
           final stream = eg.stream(streamId: 1);
           await setupPage(tester,
@@ -480,15 +483,15 @@ void main() {
           checkAppearsUncollapsed(tester, stream.streamId, find.text('specific topic'));
 
           check(streamHeaderBackgroundColor(tester, 1))
-            .equals(StreamColorSwatch.light(initialColor).barBackground);
+            .isNotNull().isSameColorAs(ChannelColorSwatch.light(initialColor).barBackground);
 
-          final newColor = Colors.orange.value;
+          final newColor = Colors.orange.argbInt;
           store.handleEvent(SubscriptionUpdateEvent(id: 1, streamId: 1,
             property: SubscriptionProperty.color, value: newColor));
           await tester.pump();
 
           check(streamHeaderBackgroundColor(tester, 1))
-            .equals(StreamColorSwatch.light(newColor).barBackground);
+            .isNotNull().isSameColorAs(ChannelColorSwatch.light(newColor).barBackground);
         });
 
         testWidgets('collapse stream section when partially offscreen: '

@@ -3,56 +3,60 @@ import 'dart:convert';
 
 import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/widgets.dart';
 import 'package:test/scaffolding.dart';
 import 'package:zulip/api/model/initial_snapshot.dart';
 import 'package:zulip/api/model/model.dart';
+import 'package:zulip/api/route/channels.dart';
 import 'package:zulip/model/autocomplete.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/compose_box.dart';
 
+import '../api/fake_api.dart';
 import '../example_data.dart' as eg;
 import 'test_store.dart';
 import 'autocomplete_checks.dart';
 
-void main() {
-  group('ComposeContentController.autocompleteIntent', () {
-    parseMarkedText(String markedText) {
-      final TextSelection selection;
-      int? expectedSyntaxStart;
-      final textBuffer = StringBuffer();
-      final caretPositions = <int>[];
-      int i = 0;
-      for (final char in markedText.codeUnits) {
-        if (char == 94 /* ^ */) {
-          caretPositions.add(i);
-          continue;
-        } else if (char == 126 /* ~ */) {
-          if (expectedSyntaxStart != null) {
-            throw Exception('Test error: too many ~ in input');
-          }
-          expectedSyntaxStart = i;
-          continue;
-        }
-        textBuffer.writeCharCode(char);
-        i++;
-      }
-      switch (caretPositions.length) {
-        case 0:
-          selection = const TextSelection.collapsed(offset: -1);
-        case 1:
-          selection = TextSelection(baseOffset: caretPositions[0], extentOffset: caretPositions[0]);
-        case 2:
-          selection = TextSelection(baseOffset: caretPositions[0], extentOffset: caretPositions[1]);
-        default:
-          throw Exception('Test error: too many ^ in input');
-      }
-      return (
-        value: TextEditingValue(text: textBuffer.toString(), selection: selection),
-        expectedSyntaxStart: expectedSyntaxStart);
-    }
+typedef MarkedTextParse = ({int? expectedSyntaxStart, TextEditingValue value});
 
+void main() {
+  ({int? expectedSyntaxStart, TextEditingValue value}) parseMarkedText(String markedText) {
+    final TextSelection selection;
+    int? expectedSyntaxStart;
+    final textBuffer = StringBuffer();
+    final caretPositions = <int>[];
+    int i = 0;
+    for (final char in markedText.codeUnits) {
+      if (char == 94 /* ^ */) {
+        caretPositions.add(i);
+        continue;
+      } else if (char == 126 /* ~ */) {
+        if (expectedSyntaxStart != null) {
+          throw Exception('Test error: too many ~ in input');
+        }
+        expectedSyntaxStart = i;
+        continue;
+      }
+      textBuffer.writeCharCode(char);
+      i++;
+    }
+    switch (caretPositions.length) {
+      case 0:
+        selection = const TextSelection.collapsed(offset: -1);
+      case 1:
+        selection = TextSelection(baseOffset: caretPositions[0], extentOffset: caretPositions[0]);
+      case 2:
+        selection = TextSelection(baseOffset: caretPositions[0], extentOffset: caretPositions[1]);
+      default:
+        throw Exception('Test error: too many ^ in input');
+    }
+    return (
+      value: TextEditingValue(text: textBuffer.toString(), selection: selection),
+      expectedSyntaxStart: expectedSyntaxStart);
+  }
+
+  group('ComposeContentController.autocompleteIntent', () {
     /// Test the given input, in a convenient format.
     ///
     /// Represent selection handles as "^". For convenience, a single "^" can
@@ -64,7 +68,7 @@ void main() {
     ///
     /// For example, "~@chris^" means the text is "@chris", the selection is
     /// collapsed at index 6, and we expect the syntax to start at index 0.
-    doTest(String markedText, MentionAutocompleteQuery? expectedQuery) {
+    void doTest(String markedText, MentionAutocompleteQuery? expectedQuery) {
       final description = expectedQuery != null
         ? 'in ${jsonEncode(markedText)}, query ${jsonEncode(expectedQuery.raw)}'
         : 'no query in ${jsonEncode(markedText)}';
@@ -168,7 +172,7 @@ void main() {
   });
 
   test('MentionAutocompleteView misc', () async {
-    const narrow = StreamNarrow(1);
+    const narrow = ChannelNarrow(1);
     final store = eg.store();
     await store.addUsers([eg.selfUser, eg.otherUser, eg.thirdUser]);
     final view = MentionAutocompleteView.init(store: store, narrow: narrow);
@@ -176,6 +180,7 @@ void main() {
     bool done = false;
     view.addListener(() { done = true; });
     view.query = MentionAutocompleteQuery('Third');
+    await Future(() {});
     await Future(() {});
     check(done).isTrue();
     check(view.results).single
@@ -185,7 +190,7 @@ void main() {
 
   test('MentionAutocompleteView not starve timers', () {
     fakeAsync((binding) async {
-      const narrow = StreamNarrow(1);
+      const narrow = ChannelNarrow(1);
       final store = eg.store();
       await store.addUsers([eg.selfUser, eg.otherUser, eg.thirdUser]);
       final view = MentionAutocompleteView.init(store: store, narrow: narrow);
@@ -220,9 +225,9 @@ void main() {
   });
 
   test('MentionAutocompleteView yield between batches of 1000', () async {
-    const narrow = StreamNarrow(1);
+    const narrow = ChannelNarrow(1);
     final store = eg.store();
-    for (int i = 0; i < 2500; i++) {
+    for (int i = 1; i <= 2500; i++) {
       await store.addUser(eg.user(userId: i, email: 'user$i@example.com', fullName: 'User $i'));
     }
     final view = MentionAutocompleteView.init(store: store, narrow: narrow);
@@ -243,9 +248,9 @@ void main() {
   });
 
   test('MentionAutocompleteView new query during computation replaces old', () async {
-    const narrow = StreamNarrow(1);
+    const narrow = ChannelNarrow(1);
     final store = eg.store();
-    for (int i = 0; i < 1500; i++) {
+    for (int i = 1; i <= 1500; i++) {
       await store.addUser(eg.user(userId: i, email: 'user$i@example.com', fullName: 'User $i'));
     }
     final view = MentionAutocompleteView.init(store: store, narrow: narrow);
@@ -256,7 +261,7 @@ void main() {
 
     await Future(() {});
     check(done).isFalse();
-    view.query = MentionAutocompleteQuery('User 0');
+    view.query = MentionAutocompleteQuery('User 234');
 
     // …new query goes through all batches
     await Future(() {});
@@ -265,22 +270,22 @@ void main() {
     check(done).isTrue(); // new result is set
     check(view.results).single
       .isA<UserMentionAutocompleteResult>()
-      .userId.equals(0);
+      .userId.equals(234);
 
     // new result sticks; it isn't clobbered with old query's result
     for (int i = 0; i < 10; i++) { // for good measure
       await Future(() {});
       check(view.results).single
         .isA<UserMentionAutocompleteResult>()
-        .userId.equals(0);
+        .userId.equals(234);
     }
   });
 
   test('MentionAutocompleteView mutating store.users while in progress does not '
       'prevent query from finishing', () async {
-    const narrow = StreamNarrow(1);
+    const narrow = ChannelNarrow(1);
     final store = eg.store();
-    for (int i = 0; i < 2500; i++) {
+    for (int i = 1; i <= 2500; i++) {
       await store.addUser(eg.user(userId: i, email: 'user$i@example.com', fullName: 'User $i'));
     }
     final view = MentionAutocompleteView.init(store: store, narrow: narrow);
@@ -296,6 +301,7 @@ void main() {
     check(done).isFalse();
     for (int i = 0; i < 3; i++) {
       await Future(() {});
+      if (done) break;
     }
     check(done).isTrue();
     final results = view.results
@@ -308,7 +314,7 @@ void main() {
   });
 
   group('MentionAutocompleteQuery.testUser', () {
-    doCheck(String rawQuery, User user, bool expected) {
+    void doCheck(String rawQuery, User user, bool expected) {
       final result = MentionAutocompleteQuery(rawQuery)
         .testUser(user, AutocompleteDataCache());
       expected ? check(result).isTrue() : check(result).isFalse();
@@ -358,13 +364,83 @@ void main() {
     Future<void> prepare({
       List<User> users = const [],
       List<RecentDmConversation> dmConversations = const [],
+      List<Message> messages = const [],
     }) async {
       store = eg.store(initialSnapshot: eg.initialSnapshot(
         recentPrivateConversations: dmConversations));
       await store.addUsers(users);
+      await store.addMessages(messages);
     }
 
-    group('MentionAutocompleteView.compareByDms', () {
+    group('compareRecentMessageIds', () {
+      test('both a and b are non-null', () async {
+        check(MentionAutocompleteView.compareRecentMessageIds(2, 5)).isLessThan(0);
+        check(MentionAutocompleteView.compareRecentMessageIds(5, 2)).isGreaterThan(0);
+        check(MentionAutocompleteView.compareRecentMessageIds(5, 5)).equals(0);
+      });
+
+      test('one of a and b is null', () async {
+        check(MentionAutocompleteView.compareRecentMessageIds(null, 5)).isLessThan(0);
+        check(MentionAutocompleteView.compareRecentMessageIds(5, null)).isGreaterThan(0);
+      });
+
+      test('both of a and b are null', () async {
+        check(MentionAutocompleteView.compareRecentMessageIds(null, null)).equals(0);
+      });
+    });
+
+    group('compareByRecency', () {
+      final userA = eg.otherUser;
+      final userB = eg.thirdUser;
+      final stream = eg.stream();
+      const topic1 = 'topic1';
+      const topic2 = 'topic2';
+
+      Message message(User sender, String topic) {
+        return eg.streamMessage(sender: sender, stream: stream, topic: topic);
+      }
+
+      int compareAB({required String? topic}) {
+        final resultAB = MentionAutocompleteView.compareByRecency(userA, userB,
+          streamId: stream.streamId, topic: topic, store: store);
+        final resultBA = MentionAutocompleteView.compareByRecency(userB, userA,
+          streamId: stream.streamId, topic: topic, store: store);
+        switch (resultAB) {
+          case <0: check(resultBA).isGreaterThan(0);
+          case >0: check(resultBA).isLessThan(0);
+          default: check(resultBA).equals(0);
+        }
+        return resultAB;
+      }
+
+      test('favor user most recent in topic', () async {
+        await prepare(messages: [message(userA, topic1), message(userB, topic1)]);
+        check(compareAB(topic: topic1)).isGreaterThan(0);
+      });
+
+      test('favor most recent in topic ahead of most recent in stream', () async {
+        await prepare(messages: [
+          message(userA, topic1), message(userB, topic1), message(userA, topic2)]);
+        check(compareAB(topic: topic1)).isGreaterThan(0);
+      });
+
+      test('no activity in topic -> favor user most recent in stream', () async {
+        await prepare(messages: [message(userA, topic1), message(userB, topic1)]);
+        check(compareAB(topic: topic2)).isGreaterThan(0);
+      });
+
+      test('no topic provided -> favor user most recent in stream', () async {
+        await prepare(messages: [message(userA, topic1), message(userB, topic2)]);
+        check(compareAB(topic: null)).isGreaterThan(0);
+      });
+
+      test('no activity in topic/stream -> favor none', () async {
+        await prepare(messages: []);
+        check(compareAB(topic: null)).equals(0);
+      });
+    });
+
+    group('compareByDms', () {
       const idA = 1;
       const idB = 2;
 
@@ -417,61 +493,338 @@ void main() {
       });
     });
 
-    group('autocomplete suggests relevant users in the intended order', () {
-      // The order should be:
-      // 1. Users most recent in the DM conversations
+    group('compareByBotStatus', () {
+      final humanUser = eg.user(isBot: false);
+      final botUser = eg.user(isBot: true);
 
-      Future<void> checkResultsIn(Narrow narrow, {required List<int> expected}) async {
-        final users = [
-          eg.user(userId: 0),
-          eg.user(userId: 1),
-          eg.user(userId: 2),
-          eg.user(userId: 3),
-          eg.user(userId: 4),
-        ];
+      int compareAB(User a, User b) => MentionAutocompleteView.compareByBotStatus(a, b);
 
-        final dmConversations = [
-          RecentDmConversation(userIds: [3],    maxMessageId: 300),
-          RecentDmConversation(userIds: [0],    maxMessageId: 200),
-          RecentDmConversation(userIds: [0, 1], maxMessageId: 100),
-        ];
+      test('userA is human, userB is bot -> favor userA', () {
+        check(compareAB(humanUser, botUser)).isLessThan(0);
+      });
 
-        await prepare(users: users, dmConversations: dmConversations);
+      test('userA is bot, userB is human -> favor userB', () {
+        check(compareAB(botUser, humanUser)).isGreaterThan(0);
+      });
+
+      test('both users have the same bot status -> favor none', () {
+        check(compareAB(humanUser, humanUser)).equals(0);
+        check(compareAB(botUser, botUser)).equals(0);
+      });
+    });
+
+    group('compareByAlphabeticalOrder', () {
+      int compareAB(String aName, String bName) => MentionAutocompleteView.compareByAlphabeticalOrder(
+        eg.user(fullName: aName), eg.user(fullName: bName), store: store);
+
+      test("userA's fullName comes first than userB's fullName -> favor userA", () async {
+        await prepare();
+        check(compareAB('alice', 'brian')).isLessThan(0);
+        check(compareAB('alice', 'BRIAN')).isLessThan(0);
+        // TODO(i18n): add locale-aware sorting
+        // check(compareAB('čarolína', 'david')).isLessThan(0);
+      });
+
+      test("userB's fullName comes first than userA's fullName -> favor userB", () async {
+        await prepare();
+        check(compareAB('brian', 'alice')).isGreaterThan(0);
+        check(compareAB('BRIAN', 'alice')).isGreaterThan(0);
+        // TODO(i18n): add locale-aware sorting
+        // check(compareAB('david', 'čarolína')).isGreaterThan(0);
+      });
+
+      test('both users have identical fullName -> favor none', () async {
+        await prepare();
+        check(compareAB('alice', 'alice')).equals(0);
+        check(compareAB('BRIAN', 'brian')).equals(0);
+        // TODO(i18n): add locale-aware sorting
+        // check(compareAB('čarolína', 'carolina')).equals(0);
+      });
+    });
+
+    group('ranking across signals', () {
+      void checkPrecedes(Narrow narrow, User userA, Iterable<User> usersB) {
         final view = MentionAutocompleteView.init(store: store, narrow: narrow);
+        for (final userB in usersB) {
+          check(view.debugCompareUsers(userA, userB)).isLessThan(0);
+          check(view.debugCompareUsers(userB, userA)).isGreaterThan(0);
+        }
+      }
 
+      void checkRankEqual(Narrow narrow, List<User> users) {
+        final view = MentionAutocompleteView.init(store: store, narrow: narrow);
+        for (int i = 0; i < users.length; i++) {
+          for (int j = i + 1; j < users.length; j++) {
+            check(view.debugCompareUsers(users[i], users[j])).equals(0);
+            check(view.debugCompareUsers(users[j], users[i])).equals(0);
+          }
+        }
+      }
+
+      test('TopicNarrow: topic recency > stream recency > DM recency > human/bot > name', () async {
+        // The user with the greatest topic recency ranks last on each of the
+        // other criteria, but comes out first in the end, showing that
+        // topic recency comes first.  Then among the remaining users, the one
+        // with the greatest stream recency ranks last on each of the remaining
+        // criteria, but comes out second in the end; and so on.
+        final users = [
+          eg.user(fullName: 'Z', isBot: true), // wins by topic recency
+          eg.user(fullName: 'Y', isBot: true), // runner-up, by stream recency
+          eg.user(fullName: 'X', isBot: true), // runner-up, by DM recency
+          eg.user(fullName: 'W', isBot: false), // runner-up, by human-vs-bot
+          eg.user(fullName: 'A', isBot: true), // runner-up, by name
+          eg.user(fullName: 'B', isBot: true), // tied because no remaining criteria
+          eg.user(fullName: 'b', isBot: true),
+        ];
+        final stream = eg.stream();
+        final narrow = TopicNarrow(stream.streamId, 'this');
+        await prepare(users: users, messages: [
+          eg.streamMessage(sender: users[1], stream: stream, topic: 'this'),
+          eg.streamMessage(sender: users[0], stream: stream, topic: 'this'),
+          eg.streamMessage(sender: users[2], stream: stream, topic: 'other'),
+          eg.streamMessage(sender: users[1], stream: stream, topic: 'other'),
+          eg.dmMessage(from: users[3], to: [...users.skip(4), eg.selfUser]),
+          eg.dmMessage(from: users[2], to: [eg.selfUser]),
+        ]);
+        checkPrecedes(narrow, users[0], users.skip(1));
+        checkPrecedes(narrow, users[1], users.skip(2));
+        checkPrecedes(narrow, users[2], users.skip(3));
+        checkPrecedes(narrow, users[3], users.skip(4));
+        checkPrecedes(narrow, users[4], users.skip(5));
+        checkRankEqual(narrow, [users[5], users[6]]);
+      });
+
+      test('ChannelNarrow: stream recency > DM recency > human/bot > name', () async {
+        // Same principle as for TopicNarrow; see that test case above.
+        final users = [
+          eg.user(fullName: 'Z', isBot: true), // wins by stream recency
+          eg.user(fullName: 'Y', isBot: true), // runner-up, by DM recency
+          eg.user(fullName: 'X', isBot: false), // runner-up, by human-vs-bot
+          eg.user(fullName: 'A', isBot: true), // runner-up, by name
+          eg.user(fullName: 'B', isBot: true), // tied because no remaining criteria
+          eg.user(fullName: 'b', isBot: true),
+        ];
+        final stream = eg.stream();
+        final narrow = ChannelNarrow(stream.streamId);
+        await prepare(users: users, messages: [
+          eg.streamMessage(sender: users[1], stream: stream),
+          eg.streamMessage(sender: users[0], stream: stream),
+          eg.dmMessage(from: users[2], to: [...users.skip(3), eg.selfUser]),
+          eg.dmMessage(from: users[1], to: [eg.selfUser]),
+        ]);
+        checkPrecedes(narrow, users[0], users.skip(1));
+        checkPrecedes(narrow, users[1], users.skip(2));
+        checkPrecedes(narrow, users[2], users.skip(3));
+        checkPrecedes(narrow, users[3], users.skip(4));
+        checkRankEqual(narrow, [users[4], users[5]]);
+      });
+
+      test('DmNarrow: DM recency > human/bot > name, ignore this-conversation recency and stream recency', () async {
+        // Same principle as for TopicNarrow; see that test case above.
+        final users = [
+          // First user wins by DM recency.
+          eg.user(fullName: 'Z', isBot: true),
+          // Next two are runners-up by DM recency, and have a two-way tie
+          // despite different this-conversation recency (because that doesn't count).
+          eg.user(fullName: 'Y', isBot: true),
+          eg.user(fullName: 'y', isBot: true),
+          // Next user is the runner-up due to DM recency, and comes after the
+          // above users even when it has greater this-conversation recency
+          // (because that doesn't count).
+          eg.user(fullName: 'X', isBot: true),
+          // Remainder have no DM recency and so come later.
+          // Next user is the runner-up due to human-vs-bot.
+          eg.user(fullName: 'W', isBot: false),
+          // Next user is the runner-up due to name.
+          eg.user(fullName: 'A', isBot: true),
+          // Remaining users are tied, even though they differ in stream recency
+          // (because that doesn't count).
+          eg.user(fullName: 'B', isBot: true),
+          eg.user(fullName: 'b', isBot: true),
+        ];
+        await prepare(users: users, messages: [
+          eg.dmMessage(from: users[3], to: [eg.selfUser]),
+          eg.dmMessage(from: users[1], to: [users[2], eg.selfUser]),
+          eg.dmMessage(from: users[0], to: [eg.selfUser]),
+          for (final user in users.skip(1))
+            eg.streamMessage(sender: user),
+        ]);
+        for (final narrow in [
+          DmNarrow.withUser(users[3].userId, selfUserId: eg.selfUser.userId),
+          DmNarrow.withOtherUsers([users[1].userId, users[2].userId],
+            selfUserId: eg.selfUser.userId),
+          DmNarrow.withUser(users[1].userId, selfUserId: eg.selfUser.userId),
+        ]) {
+          checkPrecedes(narrow, users[0], users.skip(1));
+          checkRankEqual(narrow, [users[1], users[2]]);
+          checkPrecedes(narrow, users[1], users.skip(3));
+          checkPrecedes(narrow, users[2], users.skip(3));
+          checkPrecedes(narrow, users[3], users.skip(4));
+          checkPrecedes(narrow, users[4], users.skip(5));
+          checkPrecedes(narrow, users[5], users.skip(6));
+          checkRankEqual(narrow, [users[6], users[7]]);
+        }
+      });
+
+      test('CombinedFeedNarrow gives error', () async {
+        await prepare(users: [eg.user(), eg.user()], messages: []);
+        const narrow = CombinedFeedNarrow();
+        check(() => MentionAutocompleteView.init(store: store, narrow: narrow))
+          .throws<AssertionError>();
+      });
+
+      test('MentionsNarrow gives error', () async {
+        await prepare(users: [eg.user(), eg.user()], messages: []);
+        const narrow = MentionsNarrow();
+        check(() => MentionAutocompleteView.init(store: store, narrow: narrow))
+          .throws<AssertionError>();
+      });
+
+      test('StarredMessagesNarrow gives error', () async {
+        await prepare(users: [eg.user(), eg.user()], messages: []);
+        const narrow = StarredMessagesNarrow();
+        check(() => MentionAutocompleteView.init(store: store, narrow: narrow))
+          .throws<AssertionError>();
+      });
+    });
+
+    test('final results end-to-end', () async {
+      Future<Iterable<int>> getResults(
+          Narrow narrow, MentionAutocompleteQuery query) async {
         bool done = false;
+        final view = MentionAutocompleteView.init(store: store, narrow: narrow);
         view.addListener(() { done = true; });
-        view.query = MentionAutocompleteQuery('');
+        view.query = query;
         await Future(() {});
         check(done).isTrue();
         final results = view.results
           .map((e) => (e as UserMentionAutocompleteResult).userId);
-        check(results).deepEquals(expected);
+        view.dispose();
+        return results;
       }
 
-      test('StreamNarrow', () async {
-        await checkResultsIn(const StreamNarrow(1), expected: [3, 0, 1, 2, 4]);
-      });
+      final stream = eg.stream();
+      const topic = 'topic';
+      final topicNarrow = TopicNarrow(stream.streamId, topic);
 
-      test('TopicNarrow', () async {
-        await checkResultsIn(const TopicNarrow(1, 'topic'), expected: [3, 0, 1, 2, 4]);
-      });
+      final users = [
+        eg.user(userId: 1, fullName: 'User One'),
+        eg.user(userId: 2, fullName: 'User Two'),
+        eg.user(userId: 3, fullName: 'User Three'),
+        eg.user(userId: 4, fullName: 'User Four'),
+        eg.user(userId: 5, fullName: 'User Five'),
+        eg.user(userId: 6, fullName: 'User Six', isBot: true),
+        eg.user(userId: 7, fullName: 'User Seven'),
+      ];
 
-      test('DmNarrow', () async {
-        await checkResultsIn(
-          DmNarrow.withUser(eg.selfUser.userId, selfUserId: eg.selfUser.userId),
-          expected: [3, 0, 1, 2, 4],
-        );
-      });
+      await prepare(users: users, messages: [
+        eg.streamMessage(id: 50, sender: users[1-1], stream: stream, topic: topic),
+        eg.streamMessage(id: 60, sender: users[5-1], stream: stream, topic: 'other $topic'),
+      ], dmConversations: [
+        RecentDmConversation(userIds: [4],    maxMessageId: 300),
+        RecentDmConversation(userIds: [1],    maxMessageId: 200),
+        RecentDmConversation(userIds: [1, 2], maxMessageId: 100),
+      ]);
 
-      test('CombinedFeedNarrow', () async {
-        // As we do not expect a compose box in [CombinedFeedNarrow], it should
-        // not proceed to show any results.
-        await check(checkResultsIn(
-          const CombinedFeedNarrow(),
-          expected: [0, 1, 2, 3, 4])
-        ).throws();
+      // Check the ranking of the full list of users.
+      // The order should be:
+      // 1. Users most recent in the current topic/stream.
+      // 2. Users most recent in the DM conversations.
+      // 3. Human vs. Bot users (human users come first).
+      // 4. Alphabetical order by name.
+      check(await getResults(topicNarrow, MentionAutocompleteQuery('')))
+        .deepEquals([1, 5, 4, 2, 7, 3, 6]);
+
+      // Check the ranking applies also to results filtered by a query.
+      check(await getResults(topicNarrow, MentionAutocompleteQuery('t')))
+        .deepEquals([2, 3]);
+      check(await getResults(topicNarrow, MentionAutocompleteQuery('f')))
+        .deepEquals([5, 4]);
+    });
+  });
+
+  group('ComposeTopicAutocomplete.autocompleteIntent', () {
+    void doTest(String markedText, TopicAutocompleteQuery? expectedQuery) {
+      final parsed = parseMarkedText(markedText);
+
+      final description = 'topic-input with text: $markedText produces: ${expectedQuery?.raw ?? 'No Query!'}';
+      test(description, () {
+        final controller = ComposeTopicController();
+        controller.value = parsed.value;
+        if (expectedQuery == null) {
+          check(controller).autocompleteIntent.isNull();
+        } else {
+          check(controller).autocompleteIntent.isNotNull()
+            ..query.equals(expectedQuery)
+            ..syntaxStart.equals(0); // query is the whole value
+        }
       });
+    }
+
+    /// if there is any input, produced query should match input text
+    doTest('', TopicAutocompleteQuery(''));
+    doTest('^abc', TopicAutocompleteQuery('abc'));
+    doTest('a^bc', TopicAutocompleteQuery('abc'));
+    doTest('abc^', TopicAutocompleteQuery('abc'));
+    doTest('a^bc^', TopicAutocompleteQuery('abc'));
+  });
+
+  test('TopicAutocompleteView misc', () async {
+    final store = eg.store();
+    final connection = store.connection as FakeApiConnection;
+    final first = eg.getStreamTopicsEntry(maxId: 1, name: 'First Topic');
+    final second = eg.getStreamTopicsEntry(maxId: 2, name: 'Second Topic');
+    final third = eg.getStreamTopicsEntry(maxId: 3, name: 'Third Topic');
+    connection.prepare(json: GetStreamTopicsResult(
+      topics: [first, second, third]).toJson());
+    final view = TopicAutocompleteView.init(
+      store: store,
+      streamId: eg.stream().streamId);
+
+    bool done = false;
+    view.addListener(() { done = true; });
+    view.query = TopicAutocompleteQuery('Third');
+    // those are here to wait for topics to be loaded
+    await Future(() {});
+    await Future(() {});
+    check(done).isTrue();
+    check(view.results).single
+      .isA<TopicAutocompleteResult>()
+      .topic.equals(third.name);
+  });
+
+  test('TopicAutocompleteView updates results when streams are loaded', () async {
+    final store = eg.store();
+    final connection = store.connection as FakeApiConnection;
+    connection.prepare(json: GetStreamTopicsResult(
+      topics: [eg.getStreamTopicsEntry(name: 'test')]
+    ).toJson());
+
+    final view = TopicAutocompleteView.init(
+      store: store,
+      streamId: eg.stream().streamId);
+
+    bool done = false;
+    view.addListener(() { done = true; });
+    view.query = TopicAutocompleteQuery('te');
+
+    check(done).isFalse();
+    await Future(() {});
+    check(done).isTrue();
+  });
+
+  group('TopicAutocompleteQuery.testTopic', () {
+    void doCheck(String rawQuery, String topic, bool expected) {
+      final result = TopicAutocompleteQuery(rawQuery).testTopic(topic);
+      expected ? check(result).isTrue() : check(result).isFalse();
+    }
+
+    test('topic is included if it matches the query', () {
+      doCheck('', 'Top Name', true);
+      doCheck('Name', 'Name', false);
+      doCheck('name', 'Name', true);
+      doCheck('name', 'Nam', false);
+      doCheck('nam', 'Name', true);
     });
   });
 }

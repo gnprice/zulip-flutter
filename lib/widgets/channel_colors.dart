@@ -1,142 +1,142 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_color_models/flutter_color_models.dart';
 
 import '../api/model/model.dart';
 import 'color.dart';
 
-/// A lazily-computed map from a stream's base color to a
-/// corresponding [StreamColorSwatch].
-abstract class StreamColorSwatches {
-  /// The [StreamColorSwatches] for the light theme.
-  static final StreamColorSwatches light = _StreamColorSwatchesLight();
+/// A lazily-computed map from a channel's base color to a
+/// corresponding [ChannelColorSwatch].
+abstract class ChannelColorSwatches {
+  /// The [ChannelColorSwatches] for the light theme.
+  static final ChannelColorSwatches light = _ChannelColorSwatchesLight();
 
-  /// The [StreamColorSwatches] for the dark theme.
-  static final StreamColorSwatches dark = _StreamColorSwatchesDark();
+  /// The [ChannelColorSwatches] for the dark theme.
+  static final ChannelColorSwatches dark = _ChannelColorSwatchesDark();
 
-  final Map<int, StreamColorSwatch> _cache = {};
+  final Map<int, ChannelColorSwatch> _cache = {};
 
-  /// Gives the [StreamColorSwatch] for a [subscription.color].
-  StreamColorSwatch forBaseColor(int base) =>
+  /// Gives the [ChannelColorSwatch] for a [subscription.color].
+  ChannelColorSwatch forBaseColor(int base) =>
     _cache[base] ??= _computeForBaseColor(base);
 
-  StreamColorSwatch _computeForBaseColor(int base);
+  ChannelColorSwatch _computeForBaseColor(int base);
 
-  /// Gives a [StreamColorSwatches], lerped between [a] and [b] at [t].
+  /// Gives a [ChannelColorSwatches], lerped between [a] and [b] at [t].
   ///
   /// If [a] and [b] are [identical], returns [this].
   ///
   /// Else returns an instance whose [forBaseColor] will call
   /// [a.forBaseColor] and [b.forBaseColor]
-  /// and return [StreamColorSwatch.lerp]'s result on those.
+  /// and return [ChannelColorSwatch.lerp]'s result on those.
   /// This computation is cached on the instance
   /// in order to save work building [t]'s animation frame when there are
   /// multiple UI elements using the same [subscription.color].
-  static StreamColorSwatches lerp(StreamColorSwatches a, StreamColorSwatches b, double t) {
+  static ChannelColorSwatches lerp(ChannelColorSwatches a, ChannelColorSwatches b, double t) {
     // This short-circuit helps when [a] and [b]
-    // are both [StreamColorSwatches.light]
-    // or both [StreamColorSwatches.dark].
+    // are both [ChannelColorSwatches.light]
+    // or both [ChannelColorSwatches.dark].
     // Empirically, [lerp] is called even when the theme hasn't changed,
     // so this is an important optimization.
     if (identical(a, b)) return a;
 
-    return _StreamColorSwatchesLerped(a, b, t);
+    return _ChannelColorSwatchesLerped(a, b, t);
   }
 }
 
-class _StreamColorSwatchesLight extends StreamColorSwatches {
-  _StreamColorSwatchesLight();
+class _ChannelColorSwatchesLight extends ChannelColorSwatches {
+  _ChannelColorSwatchesLight();
 
   @override
-  StreamColorSwatch _computeForBaseColor(int base) => StreamColorSwatch.light(base);
+  ChannelColorSwatch _computeForBaseColor(int base) => ChannelColorSwatch.light(base);
 }
 
-class _StreamColorSwatchesDark extends StreamColorSwatches {
-  _StreamColorSwatchesDark();
+class _ChannelColorSwatchesDark extends ChannelColorSwatches {
+  _ChannelColorSwatchesDark();
 
   @override
-  StreamColorSwatch _computeForBaseColor(int base) => StreamColorSwatch.dark(base);
+  ChannelColorSwatch _computeForBaseColor(int base) => ChannelColorSwatch.dark(base);
 }
 
-class _StreamColorSwatchesLerped extends StreamColorSwatches {
-  _StreamColorSwatchesLerped(this.a, this.b, this.t);
+class _ChannelColorSwatchesLerped extends ChannelColorSwatches {
+  _ChannelColorSwatchesLerped(this.a, this.b, this.t);
 
-  final StreamColorSwatches a;
-  final StreamColorSwatches b;
+  final ChannelColorSwatches a;
+  final ChannelColorSwatches b;
   final double t;
 
   @override
-  StreamColorSwatch _computeForBaseColor(int base) =>
-    StreamColorSwatch.lerp(a.forBaseColor(base), b.forBaseColor(base), t)!;
+  ChannelColorSwatch _computeForBaseColor(int base) =>
+    ChannelColorSwatch.lerp(a.forBaseColor(base), b.forBaseColor(base), t)!;
 }
 
 
-/// A [ColorSwatch] with colors related to a base stream color.
+/// A [ColorSwatch] with colors related to a base channel color.
 ///
 /// Use this in UI code for colors related to [Subscription.color],
 /// such as the background of an unread count badge.
-class StreamColorSwatch extends ColorSwatch<StreamColorVariant> {
-  StreamColorSwatch.light(int base) : this._(base, _computeLight(base));
-  StreamColorSwatch.dark(int base) : this._(base, _computeDark(base));
+class ChannelColorSwatch extends ColorSwatch<ChannelColorVariant> {
+  ChannelColorSwatch.light(int base) : this._(base, _computeLight(base));
+  ChannelColorSwatch.dark(int base) : this._(base, _computeDark(base));
 
-  const StreamColorSwatch._(int base, this._swatch) : super(base, _swatch);
+  const ChannelColorSwatch._(int base, this._swatch) : super(base, _swatch);
 
-  final Map<StreamColorVariant, Color> _swatch;
+  final Map<ChannelColorVariant, Color> _swatch;
 
   /// The [Subscription.color] int that the swatch is based on.
-  Color get base => this[StreamColorVariant.base]!;
+  Color get base => this[ChannelColorVariant.base]!;
 
-  Color get unreadCountBadgeBackground => this[StreamColorVariant.unreadCountBadgeBackground]!;
+  Color get unreadCountBadgeBackground => this[ChannelColorVariant.unreadCountBadgeBackground]!;
 
-  /// The stream icon on a plain-colored surface, such as white.
+  /// The channel icon on a plain-colored surface, such as white.
   ///
   /// For the icon on a [barBackground]-colored surface,
   /// use [iconOnBarBackground] instead.
-  Color get iconOnPlainBackground => this[StreamColorVariant.iconOnPlainBackground]!;
+  Color get iconOnPlainBackground => this[ChannelColorVariant.iconOnPlainBackground]!;
 
-  /// The stream icon on a [barBackground]-colored surface.
+  /// The channel icon on a [barBackground]-colored surface.
   ///
   /// For the icon on a plain surface, use [iconOnPlainBackground] instead.
   /// This color is chosen to enhance contrast with [barBackground]:
   ///   <https://github.com/zulip/zulip/pull/27485>
-  Color get iconOnBarBackground => this[StreamColorVariant.iconOnBarBackground]!;
+  Color get iconOnBarBackground => this[ChannelColorVariant.iconOnBarBackground]!;
 
-  /// The background color of a bar representing a stream, like a recipient bar.
+  /// The background color of a bar representing a channel, like a recipient bar.
   ///
-  /// Use this in the message list, the "Inbox" view, and the "Streams" view.
-  Color get barBackground => this[StreamColorVariant.barBackground]!;
+  /// Use this in the message list, the "Inbox" view, and the "Channels" view.
+  Color get barBackground => this[ChannelColorVariant.barBackground]!;
 
-  static Map<StreamColorVariant, Color> _computeLight(int base) {
+  static Map<ChannelColorVariant, Color> _computeLight(int base) {
     final baseAsColor = Color(base);
 
     final clamped20to75 = clampLchLightness(baseAsColor, 20, 75);
     final clamped20to75AsHsl = HSLColor.fromColor(clamped20to75);
 
     return {
-      StreamColorVariant.base: baseAsColor,
+      ChannelColorVariant.base: baseAsColor,
 
       // Follows `.unread-count` in Vlad's replit:
       //   <https://replit.com/@VladKorobov/zulip-sidebar#script.js>
       //   <https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/design.3A.20.23F117.20.22Inbox.22.20screen/near/1624484>
       //
       // TODO fix bug where our results differ from the replit's (see unit tests)
-      StreamColorVariant.unreadCountBadgeBackground:
+      ChannelColorVariant.unreadCountBadgeBackground:
         clampLchLightness(baseAsColor, 30, 70)
-          .withOpacity(0.3),
+          .withValues(alpha: 0.3),
 
       // Follows `.sidebar-row__icon` in Vlad's replit:
       //   <https://replit.com/@VladKorobov/zulip-sidebar#script.js>
       //
       // TODO fix bug where our results differ from the replit's (see unit tests)
-      StreamColorVariant.iconOnPlainBackground: clamped20to75,
+      ChannelColorVariant.iconOnPlainBackground: clamped20to75,
 
       // Follows `.recepeient__icon` in Vlad's replit:
       //   <https://replit.com/@VladKorobov/zulip-topic-feed-colors#script.js>
       //   <https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/design.3A.20.23F117.20.22Inbox.22.20screen/near/1624484>
       //
       // TODO fix bug where our results differ from the replit's (see unit tests)
-      StreamColorVariant.iconOnBarBackground:
+      ChannelColorVariant.iconOnBarBackground:
         clamped20to75AsHsl
           .withLightness(clampDouble(clamped20to75AsHsl.lightness - 0.12, 0.0, 1.0))
           .toColor(),
@@ -149,14 +149,14 @@ class StreamColorSwatch extends ColorSwatch<StreamColorVariant> {
       //     <https://pub.dev/documentation/flutter_color_models/latest/flutter_color_models/ColorModel/interpolate.html>
       //   which does ordinary RGB mixing. Investigate and send a PR?
       // TODO fix bug where our results differ from the replit's (see unit tests)
-      StreamColorVariant.barBackground:
+      ChannelColorVariant.barBackground:
         LabColor.fromColor(const Color(0xfff9f9f9))
           .interpolate(LabColor.fromColor(clamped20to75), 0.22)
           .toColor(),
     };
   }
 
-  static Map<StreamColorVariant, Color> _computeDark(int base) {
+  static Map<ChannelColorVariant, Color> _computeDark(int base) {
     final baseAsColor = Color(base);
 
     final clamped20to75 = clampLchLightness(baseAsColor, 20, 75);
@@ -166,11 +166,11 @@ class StreamColorSwatch extends ColorSwatch<StreamColorVariant> {
       // on, and how the resulting values are a little off sometimes. The
       // comments mostly apply here too.
 
-      StreamColorVariant.base: baseAsColor,
-      StreamColorVariant.unreadCountBadgeBackground:
+      ChannelColorVariant.base: baseAsColor,
+      ChannelColorVariant.unreadCountBadgeBackground:
         clampLchLightness(baseAsColor, 30, 70)
-          .withOpacity(0.3),
-      StreamColorVariant.iconOnPlainBackground: clamped20to75,
+          .withValues(alpha: 0.3),
+      ChannelColorVariant.iconOnPlainBackground: clamped20to75,
 
       // Follows the web app (as of zulip/zulip@db03369ac); see
       // get_stream_privacy_icon_color in web/src/stream_color.ts.
@@ -185,9 +185,9 @@ class StreamColorSwatch extends ColorSwatch<StreamColorVariant> {
       //   https://chat.zulip.org/#narrow/stream/101-design/topic/UI.20redesign.3A.20recipient.20bar.20colors/near/1675786
       //
       // TODO fix bug where our results are unexpected (see unit tests)
-      StreamColorVariant.iconOnBarBackground: clamped20to75,
+      ChannelColorVariant.iconOnBarBackground: clamped20to75,
 
-      StreamColorVariant.barBackground:
+      ChannelColorVariant.barBackground:
         LabColor.fromColor(const Color(0xff000000))
           .interpolate(LabColor.fromColor(clamped20to75), 0.38)
           .toColor(),
@@ -195,11 +195,11 @@ class StreamColorSwatch extends ColorSwatch<StreamColorVariant> {
   }
 
   /// Copied from [ColorSwatch.lerp].
-  static StreamColorSwatch? lerp(StreamColorSwatch? a, StreamColorSwatch? b, double t) {
+  static ChannelColorSwatch? lerp(ChannelColorSwatch? a, ChannelColorSwatch? b, double t) {
     if (identical(a, b)) {
       return a;
     }
-    final Map<StreamColorVariant, Color> swatch;
+    final Map<ChannelColorVariant, Color> swatch;
     if (b == null) {
       swatch = a!._swatch.map((key, color) => MapEntry(key, Color.lerp(color, null, t)!));
     } else {
@@ -209,12 +209,12 @@ class StreamColorSwatch extends ColorSwatch<StreamColorVariant> {
         swatch = a._swatch.map((key, color) => MapEntry(key, Color.lerp(color, b[key], t)!));
       }
     }
-    return StreamColorSwatch._(Color.lerp(a, b, t)!.value, swatch);
+    return ChannelColorSwatch._(Color.lerp(a, b, t)!.argbInt, swatch);
   }
 }
 
 @visibleForTesting
-enum StreamColorVariant {
+enum ChannelColorVariant {
   base,
   unreadCountBadgeBackground,
   iconOnPlainBackground,

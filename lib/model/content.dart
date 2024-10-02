@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart';
 
+import '../api/model/model.dart';
+import '../api/model/submessage.dart';
 import 'code_block.dart';
 
 /// A node in a parse tree for Zulip message-style content.
@@ -72,13 +74,26 @@ mixin UnimplementedNode on ContentNode {
   }
 }
 
+/// A parsed, ready-to-render representation of Zulip message content.
+sealed class ZulipMessageContent {}
+
+/// A wrapper around a mutable representation of a Zulip poll message.
+///
+/// Consumers are expected to listen for [Poll]'s changes to receive
+/// live-updates.
+class PollContent implements ZulipMessageContent {
+  const PollContent(this.poll);
+
+  final Poll poll;
+}
+
 /// A complete parse tree for a Zulip message's content,
 /// or other complete piece of Zulip HTML content.
 ///
 /// This is a parsed representation for an entire value of [Message.content],
 /// [Stream.renderedDescription], or other text from a Zulip server that comes
 /// in the same Zulip HTML format.
-class ZulipContent extends ContentNode {
+class ZulipContent extends ContentNode implements ZulipMessageContent {
   const ZulipContent({super.debugHtmlNode, required this.nodes});
 
   final List<BlockContentNode> nodes;
@@ -99,7 +114,7 @@ class ZulipContent extends ContentNode {
 ///   <https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flow_layout/Block_and_inline_layout_in_normal_flow>
 ///
 /// Almost all nodes are either a [BlockContentNode] or an [InlineContentNode].
-abstract class BlockContentNode extends ContentNode {
+sealed class BlockContentNode extends ContentNode {
   const BlockContentNode({super.debugHtmlNode});
 }
 
@@ -134,7 +149,7 @@ class _BlockContentListNode extends DiagnosticableTree {
 /// but provides an inline layout context for its children.
 ///
 /// See also [InlineContainerNode].
-class BlockInlineContainerNode extends BlockContentNode {
+sealed class BlockInlineContainerNode extends BlockContentNode {
   const BlockInlineContainerNode({
     super.debugHtmlNode,
     required this.links,
@@ -297,7 +312,7 @@ class CodeBlockNode extends BlockContentNode {
   }
 }
 
-class CodeBlockSpanNode extends InlineContentNode {
+class CodeBlockSpanNode extends ContentNode {
   const CodeBlockSpanNode({super.debugHtmlNode, required this.text, required this.type});
 
   final String text;
@@ -351,26 +366,64 @@ class ImageNodeList extends BlockContentNode {
 }
 
 class ImageNode extends BlockContentNode {
-  const ImageNode({super.debugHtmlNode, required this.srcUrl});
+  const ImageNode({
+    super.debugHtmlNode,
+    required this.srcUrl,
+    required this.thumbnailUrl,
+    required this.loading,
+    required this.originalWidth,
+    required this.originalHeight,
+  });
 
-  /// The unmodified `src` attribute for the image.
+  /// The canonical source URL of the image.
   ///
-  /// This may be a relative URL string.  It also may not work without adding
+  /// This may be a relative URL string. It also may not work without adding
   /// authentication credentials to the request.
   final String srcUrl;
 
+  /// The thumbnail URL of the image.
+  ///
+  /// This may be a relative URL string. It also may not work without adding
+  /// authentication credentials to the request.
+  ///
+  /// This will be null if the server hasn't yet generated a thumbnail,
+  /// or is a version that doesn't offer thumbnails.
+  /// It will also be null when [loading] is true.
+  final String? thumbnailUrl;
+
+  /// A flag to indicate whether to show the placeholder.
+  ///
+  /// Typically it will be `true` while Server is generating thumbnails.
+  final bool loading;
+
+  /// The width of the canonical image.
+  final double? originalWidth;
+
+  /// The height of the canonical image.
+  final double? originalHeight;
+
   @override
   bool operator ==(Object other) {
-    return other is ImageNode && other.srcUrl == srcUrl;
+    return other is ImageNode
+      && other.srcUrl == srcUrl
+      && other.thumbnailUrl == thumbnailUrl
+      && other.loading == loading
+      && other.originalWidth == originalWidth
+      && other.originalHeight == originalHeight;
   }
 
   @override
-  int get hashCode => Object.hash('ImageNode', srcUrl);
+  int get hashCode => Object.hash('ImageNode',
+    srcUrl, thumbnailUrl, loading, originalWidth, originalHeight);
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(StringProperty('srcUrl', srcUrl));
+    properties.add(StringProperty('thumbnailUrl', thumbnailUrl));
+    properties.add(FlagProperty('loading', value: loading, ifTrue: "is loading"));
+    properties.add(DoubleProperty('originalWidth', originalWidth));
+    properties.add(DoubleProperty('originalHeight', originalHeight));
   }
 }
 
@@ -462,7 +515,7 @@ class EmbedVideoNode extends BlockContentNode {
 ///   https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flow_layout/Block_and_inline_layout_in_normal_flow#elements_participating_in_an_inline_formatting_context
 ///
 /// Almost all nodes are either an [InlineContentNode] or a [BlockContentNode].
-abstract class InlineContentNode extends ContentNode {
+sealed class InlineContentNode extends ContentNode {
   const InlineContentNode({super.debugHtmlNode});
 }
 
@@ -523,7 +576,7 @@ class LineBreakInlineNode extends InlineContentNode {
 /// itself does.
 ///
 /// See also [BlockInlineContainerNode].
-abstract class InlineContainerNode extends InlineContentNode {
+sealed class InlineContainerNode extends InlineContentNode {
   const InlineContainerNode({super.debugHtmlNode, required this.nodes});
 
   final List<InlineContentNode> nodes;
@@ -589,7 +642,7 @@ class UserMentionNode extends InlineContainerNode {
   //   final bool isSilent;
 }
 
-abstract class EmojiNode extends InlineContentNode {
+sealed class EmojiNode extends InlineContentNode {
   const EmojiNode({super.debugHtmlNode});
 }
 
@@ -677,27 +730,6 @@ class GlobalTimeNode extends InlineContentNode {
 }
 
 ////////////////////////////////////////////////////////////////
-
-// Ported from https://github.com/zulip/zulip-mobile/blob/c979530d6804db33310ed7d14a4ac62017432944/src/emoji/data.js#L108-L112
-//
-// Which was in turn ported from https://github.com/zulip/zulip/blob/63c9296d5339517450f79f176dc02d77b08020c8/zerver/models.py#L3235-L3242
-// and that describes the encoding as follows:
-//
-// > * For Unicode emoji, [emoji_code is] a dash-separated hex encoding of
-// >   the sequence of Unicode codepoints that define this emoji in the
-// >   Unicode specification.  For examples, see "non_qualified" or
-// >   "unified" in the following data, with "non_qualified" taking
-// >   precedence when both present:
-// >   https://raw.githubusercontent.com/iamcal/emoji-data/master/emoji_pretty.json
-String? tryParseEmojiCodeToUnicode(String code) {
-  try {
-    return String.fromCharCodes(code.split('-').map((hex) => int.parse(hex, radix: 16)));
-  } on FormatException { // thrown by `int.parse`
-    return null;
-  } on ArgumentError { // thrown by `String.fromCharCodes`
-    return null;
-  }
-}
 
 /// What sort of nodes a [_ZulipContentParser] is currently expecting to find.
 enum _ParserContext {
@@ -948,18 +980,20 @@ class _ZulipContentParser {
           && divElement.className == "codehilite");
 
       if (divElement.nodes.length != 1) return null;
-      final child = divElement.nodes[0];
+      final child = divElement.nodes.single;
       if (child is! dom.Element) return null;
       if (child.localName != 'pre') return null;
 
-      if (child.nodes.length > 2) return null;
+      if (child.nodes.length > 2 || child.nodes.isEmpty) return null;
       if (child.nodes.length == 2) {
         final first = child.nodes[0];
         if (first is! dom.Element
             || first.localName != 'span'
-            || first.nodes.isNotEmpty) return null;
+            || first.nodes.isNotEmpty) {
+          return null;
+        }
       }
-      final grandchild = child.nodes[child.nodes.length - 1];
+      final grandchild = child.nodes.last;
       if (grandchild is! dom.Element) return null;
       if (grandchild.localName != 'code') return null;
 
@@ -1012,9 +1046,11 @@ class _ZulipContentParser {
     return CodeBlockNode(spans, debugHtmlNode: debugHtmlNode);
   }
 
+  static final _imageDimensionsRegExp = RegExp(r'^(\d+)x(\d+)$');
+
   BlockContentNode parseImageNode(dom.Element divElement) {
     assert(_debugParserContext == _ParserContext.block);
-    final imgElement = () {
+    final elements = () {
       assert(divElement.localName == 'div'
           && divElement.className == 'message_inline_image');
 
@@ -1028,21 +1064,75 @@ class _ZulipContentParser {
       final grandchild = child.nodes[0];
       if (grandchild is! dom.Element) return null;
       if (grandchild.localName != 'img') return null;
-      if (grandchild.className.isNotEmpty) return null;
-      return grandchild;
+      return (child, grandchild);
     }();
 
     final debugHtmlNode = kDebugMode ? divElement : null;
-    if (imgElement == null) {
+    if (elements == null) {
       return UnimplementedBlockContentNode(htmlNode: divElement);
     }
 
+    final (linkElement, imgElement) = elements;
+    final href = linkElement.attributes['href'];
+    if (href == null) {
+      return UnimplementedBlockContentNode(htmlNode: divElement);
+    }
+    if (imgElement.className == 'image-loading-placeholder') {
+      return ImageNode(
+        srcUrl: href,
+        thumbnailUrl: null,
+        loading: true,
+        originalWidth: null,
+        originalHeight: null,
+        debugHtmlNode: debugHtmlNode);
+    }
     final src = imgElement.attributes['src'];
     if (src == null) {
       return UnimplementedBlockContentNode(htmlNode: divElement);
     }
 
-    return ImageNode(srcUrl: src, debugHtmlNode: debugHtmlNode);
+    final String srcUrl;
+    final String? thumbnailUrl;
+    if (src.startsWith('/user_uploads/thumbnail/')) {
+      srcUrl = href;
+      thumbnailUrl = src;
+    } else if (src.startsWith('/external_content/')
+        || src.startsWith('https://uploads.zulipusercontent.net/')) {
+      srcUrl = src;
+      thumbnailUrl = null;
+    } else if (href == src)  {
+      srcUrl = src;
+      thumbnailUrl = null;
+    } else {
+      return UnimplementedBlockContentNode(htmlNode: divElement);
+    }
+
+    double? originalWidth, originalHeight;
+    final originalDimensions = imgElement.attributes['data-original-dimensions'];
+    if (originalDimensions != null) {
+      // Server encodes this string as "{width}x{height}" (eg. "300x400")
+      final match = _imageDimensionsRegExp.firstMatch(originalDimensions);
+      if (match != null) {
+        final width = int.tryParse(match.group(1)!, radix: 10);
+        final height = int.tryParse(match.group(2)!, radix: 10);
+        if (width != null && height != null) {
+          originalWidth = width.toDouble();
+          originalHeight = height.toDouble();
+        }
+      }
+
+      if (originalWidth == null || originalHeight == null) {
+        return UnimplementedBlockContentNode(htmlNode: divElement);
+      }
+    }
+
+    return ImageNode(
+      srcUrl: srcUrl,
+      thumbnailUrl: thumbnailUrl,
+      loading: false,
+      originalWidth: originalWidth,
+      originalHeight: originalHeight,
+      debugHtmlNode: debugHtmlNode);
   }
 
   static final _videoClassNameRegexp = () {

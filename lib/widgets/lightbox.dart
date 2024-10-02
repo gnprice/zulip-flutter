@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,7 @@ import 'package:video_player/video_player.dart';
 import '../api/core.dart';
 import '../api/model/model.dart';
 import '../log.dart';
+import '../model/binding.dart';
 import 'content.dart';
 import 'dialog.dart';
 import 'page.dart';
@@ -91,12 +93,17 @@ class _LightboxPageLayout extends StatefulWidget {
   const _LightboxPageLayout({
     required this.routeEntranceAnimation,
     required this.message,
+    required this.buildAppBarBottom,
     required this.buildBottomAppBar,
     required this.child,
   });
 
   final Animation<double> routeEntranceAnimation;
   final Message message;
+
+  /// For [AppBar.bottom].
+  final PreferredSizeWidget? Function(BuildContext context) buildAppBarBottom;
+
   final Widget? Function(
     BuildContext context, Color color, double elevation) buildBottomAppBar;
   final Widget child;
@@ -139,7 +146,7 @@ class _LightboxPageLayoutState extends State<_LightboxPageLayout> {
   Widget build(BuildContext context) {
     final themeData = Theme.of(context);
 
-    final appBarBackgroundColor = Colors.grey.shade900.withOpacity(0.87);
+    final appBarBackgroundColor = Colors.grey.shade900.withValues(alpha: 0.87);
     const appBarForegroundColor = Colors.white;
     const appBarElevation = 0.0;
 
@@ -151,6 +158,13 @@ class _LightboxPageLayoutState extends State<_LightboxPageLayout> {
         .add_Hms()
         .format(DateTime.fromMillisecondsSinceEpoch(widget.message.timestamp * 1000));
 
+      // We use plain [AppBar] instead of [ZulipAppBar], even though this page
+      // has a [PerAccountStore], because:
+      //  * There's already a progress indicator with a different meaning
+      //    (loading the image).
+      //  * The app bar can be hidden, so wouldn't always be visible anyway.
+      //  * This is a page where the store loading indicator isn't especially
+      //    necessary: https://github.com/zulip/zulip-flutter/pull/852#issuecomment-2264211917
       appBar = AppBar(
         centerTitle: false,
         foregroundColor: appBarForegroundColor,
@@ -171,7 +185,8 @@ class _LightboxPageLayoutState extends State<_LightboxPageLayout> {
 
               // Make smaller, like a subtitle
               style: themeData.textTheme.titleSmall!.copyWith(color: appBarForegroundColor)),
-          ])));
+          ])),
+        bottom: widget.buildAppBarBottom(context));
     }
 
     Widget? bottomAppBar;
@@ -209,17 +224,34 @@ class _ImageLightboxPage extends StatefulWidget {
     required this.routeEntranceAnimation,
     required this.message,
     required this.src,
+    required this.thumbnailUrl,
+    required this.originalWidth,
+    required this.originalHeight,
   });
 
   final Animation<double> routeEntranceAnimation;
   final Message message;
   final Uri src;
+  final Uri? thumbnailUrl;
+  final double? originalWidth;
+  final double? originalHeight;
 
   @override
   State<_ImageLightboxPage> createState() => _ImageLightboxPageState();
 }
 
 class _ImageLightboxPageState extends State<_ImageLightboxPage> {
+  double? _loadingProgress;
+
+  PreferredSizeWidget? _buildAppBarBottom(BuildContext context) {
+    if (_loadingProgress == null) {
+      return null;
+    }
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(4.0),
+      child: LinearProgressIndicator(minHeight: 4.0, value: _loadingProgress));
+  }
+
   Widget _buildBottomAppBar(BuildContext context, Color color, double elevation) {
     return BottomAppBar(
       color: color,
@@ -232,11 +264,51 @@ class _ImageLightboxPageState extends State<_ImageLightboxPage> {
     );
   }
 
+  Widget _frameBuilder(BuildContext context, Widget child, int? frame, bool wasSynchronouslyLoaded) {
+    if (widget.thumbnailUrl == null) return child;
+
+    // The full image is available, so display it.
+    if (frame != null) return child;
+
+    // Display the thumbnail image while original image is downloading.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: SizedBox(
+        width: widget.originalWidth,
+        height: widget.originalHeight,
+        child: RealmContentNetworkImage(widget.thumbnailUrl!,
+          filterQuality: FilterQuality.medium,
+          fit: BoxFit.contain)));
+  }
+
+  Widget _loadingBuilder(BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+    if (widget.thumbnailUrl == null) return child;
+
+    // `loadingProgress` becomes null when Image has finished downloading.
+    final double? progress = loadingProgress?.expectedTotalBytes == null ? null
+      : loadingProgress!.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!;
+
+    if (progress != _loadingProgress) {
+      _loadingProgress = progress;
+      // The [Image.network] API lets us learn progress information only at
+      // its build time.  That's too late for updating the progress indicator,
+      // so delay that update to the next frame.  For discussion, see:
+      //   https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/addPostFrameCallback/near/1893539
+      //   https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/addPostFrameCallback/near/1894124
+      SchedulerBinding.instance.scheduleFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {});
+      });
+    }
+    return child;
+  }
+
   @override
   Widget build(BuildContext context) {
     return _LightboxPageLayout(
       routeEntranceAnimation: widget.routeEntranceAnimation,
       message: widget.message,
+      buildAppBarBottom: _buildAppBarBottom,
       buildBottomAppBar: _buildBottomAppBar,
       child: SizedBox.expand(
         child: InteractiveViewer(
@@ -244,7 +316,10 @@ class _ImageLightboxPageState extends State<_ImageLightboxPage> {
             child: LightboxHero(
               message: widget.message,
               src: widget.src,
-              child: RealmContentNetworkImage(widget.src, filterQuality: FilterQuality.medium))))));
+              child: RealmContentNetworkImage(widget.src,
+                filterQuality: FilterQuality.medium,
+                frameBuilder: _frameBuilder,
+                loadingBuilder: _loadingBuilder))))));
   }
 }
 
@@ -399,17 +474,15 @@ class _VideoLightboxPageState extends State<VideoLightboxPage> with PerAccountSt
       await _controller!.play();
     } catch (error) { // TODO(log)
       assert(debugLog("VideoPlayerController.initialize failed: $error"));
-      if (mounted) {
-        final zulipLocalizations = ZulipLocalizations.of(context);
-        await showErrorDialog(
-          context: context,
-          title: zulipLocalizations.errorDialogTitle,
-          message: zulipLocalizations.errorVideoPlayerFailed,
-          onDismiss: () {
-            Navigator.pop(context); // Pops the dialog
-            Navigator.pop(context); // Pops the lightbox
-          });
-      }
+      if (!mounted) return;
+      final zulipLocalizations = ZulipLocalizations.of(context);
+      // Wait until the dialog is closed
+      await showErrorDialog(
+        context: context,
+        title: zulipLocalizations.errorDialogTitle,
+        message: zulipLocalizations.errorVideoPlayerFailed);
+      if (!mounted) return;
+      Navigator.pop(context); // Pops the lightbox
     }
   }
 
@@ -418,11 +491,24 @@ class _VideoLightboxPageState extends State<VideoLightboxPage> with PerAccountSt
     _controller?.removeListener(_handleVideoControllerUpdate);
     _controller?.dispose();
     _controller = null;
+    // The VideoController doesn't emit a pause event
+    // while disposing, so disable the wakelock here
+    // explicitly.
+    ZulipBinding.instance.toggleWakelock(enable: false);
     super.dispose();
   }
 
   void _handleVideoControllerUpdate() {
     setState(() {});
+    _updateWakelock();
+  }
+
+  Future<void> _updateWakelock() async {
+    if (_controller!.value.isPlaying) {
+      await ZulipBinding.instance.toggleWakelock(enable: true);
+    } else {
+      await ZulipBinding.instance.toggleWakelock(enable: false);
+    }
   }
 
   Widget? _buildBottomAppBar(BuildContext context, Color color, double elevation) {
@@ -457,6 +543,7 @@ class _VideoLightboxPageState extends State<VideoLightboxPage> with PerAccountSt
     return _LightboxPageLayout(
       routeEntranceAnimation: widget.routeEntranceAnimation,
       message: widget.message,
+      buildAppBarBottom: (context) => null,
       buildBottomAppBar: _buildBottomAppBar,
       child: SafeArea(
         child: Center(
@@ -474,17 +561,10 @@ class _VideoLightboxPageState extends State<VideoLightboxPage> with PerAccountSt
   }
 }
 
-enum MediaType {
-  video,
-  image
-}
-
-Route<void> getLightboxRoute({
-  int? accountId,
-  BuildContext? context,
-  required Message message,
-  required Uri src,
-  required MediaType mediaType,
+Route<void> _getLightboxRoute({
+  required int? accountId,
+  required BuildContext? context,
+  required RoutePageBuilder pageBuilder,
 }) {
   return AccountPageRouteBuilder(
     accountId: accountId,
@@ -496,16 +576,7 @@ Route<void> getLightboxRoute({
       Animation<double> secondaryAnimation,
     ) {
       // TODO(#40): Drag down to close?
-      return switch (mediaType) {
-        MediaType.image => _ImageLightboxPage(
-          routeEntranceAnimation: animation,
-          message: message,
-          src: src),
-        MediaType.video => VideoLightboxPage(
-          routeEntranceAnimation: animation,
-          message: message,
-          src: src),
-      };
+      return pageBuilder(context, animation, secondaryAnimation);
     },
     transitionsBuilder: (
       BuildContext context,
@@ -518,4 +589,44 @@ Route<void> getLightboxRoute({
         child: child);
     },
   );
+}
+
+Route<void> getImageLightboxRoute({
+  int? accountId,
+  BuildContext? context,
+  required Message message,
+  required Uri src,
+  required Uri? thumbnailUrl,
+  required double? originalWidth,
+  required double? originalHeight,
+}) {
+  return _getLightboxRoute(
+    accountId: accountId,
+    context: context,
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return _ImageLightboxPage(
+        routeEntranceAnimation: animation,
+        message: message,
+        src: src,
+        thumbnailUrl: thumbnailUrl,
+        originalWidth: originalWidth,
+        originalHeight: originalHeight);
+    });
+}
+
+Route<void> getVideoLightboxRoute({
+  int? accountId,
+  BuildContext? context,
+  required Message message,
+  required Uri src,
+}) {
+  return _getLightboxRoute(
+    accountId: accountId,
+    context: context,
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return VideoLightboxPage(
+        routeEntranceAnimation: animation,
+        message: message,
+        src: src);
+    });
 }

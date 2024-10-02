@@ -1,18 +1,22 @@
+import 'dart:math';
+
 import 'package:app_settings/app_settings.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/zulip_localizations.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:mime/mime.dart';
 
+import '../api/exception.dart';
 import '../api/model/model.dart';
 import '../api/route/messages.dart';
+import '../model/binding.dart';
 import '../model/compose.dart';
 import '../model/narrow.dart';
 import '../model/store.dart';
 import 'autocomplete.dart';
 import 'dialog.dart';
 import 'store.dart';
+import 'theme.dart';
 
 const double _inputVerticalPadding = 8;
 const double _sendButtonSize = 36;
@@ -318,7 +322,7 @@ class _StreamContentInput extends StatefulWidget {
     required this.focusNode,
   });
 
-  final StreamNarrow narrow;
+  final ChannelNarrow narrow;
   final ComposeContentController controller;
   final ComposeTopicController topicController;
   final FocusNode focusNode;
@@ -363,12 +367,44 @@ class _StreamContentInputState extends State<_StreamContentInput> {
     final store = PerAccountStoreWidget.of(context);
     final zulipLocalizations = ZulipLocalizations.of(context);
     final streamName = store.streams[widget.narrow.streamId]?.name
-      ?? zulipLocalizations.composeBoxUnknownStreamName;
+      ?? zulipLocalizations.composeBoxUnknownChannelName;
     return _ContentInput(
       narrow: widget.narrow,
       controller: widget.controller,
       focusNode: widget.focusNode,
-      hintText: zulipLocalizations.composeBoxStreamContentHint(streamName, _topicTextNormalized));
+      hintText: zulipLocalizations.composeBoxChannelContentHint(streamName, _topicTextNormalized));
+  }
+}
+
+class _TopicInput extends StatelessWidget {
+  const _TopicInput({
+    required this.streamId,
+    required this.controller,
+    required this.focusNode,
+    required this.contentFocusNode});
+
+  final int streamId;
+  final ComposeTopicController controller;
+  final FocusNode focusNode;
+  final FocusNode contentFocusNode;
+
+  @override
+  Widget build(BuildContext context) {
+    final zulipLocalizations = ZulipLocalizations.of(context);
+    ColorScheme colorScheme = Theme.of(context).colorScheme;
+
+    return TopicAutocomplete(
+      streamId: streamId,
+      controller: controller,
+      focusNode: focusNode,
+      contentFocusNode: contentFocusNode,
+      fieldViewBuilder: (context) => TextField(
+        controller: controller,
+        focusNode: focusNode,
+        textInputAction: TextInputAction.next,
+        style: TextStyle(color: colorScheme.onSurface),
+        decoration: InputDecoration(hintText: zulipLocalizations.composeBoxTopicHintText),
+      ));
   }
 }
 
@@ -389,8 +425,8 @@ class _FixedDestinationContentInput extends StatelessWidget {
       case TopicNarrow(:final streamId, :final topic):
         final store = PerAccountStoreWidget.of(context);
         final streamName = store.streams[streamId]?.name
-          ?? zulipLocalizations.composeBoxUnknownStreamName;
-        return zulipLocalizations.composeBoxStreamContentHint(streamName, topic);
+          ?? zulipLocalizations.composeBoxUnknownChannelName;
+        return zulipLocalizations.composeBoxChannelContentHint(streamName, topic);
 
       case DmNarrow(otherRecipientIds: []): // The self-1:1 thread.
         return zulipLocalizations.composeBoxSelfDmContentHint;
@@ -421,11 +457,17 @@ class _FixedDestinationContentInput extends StatelessWidget {
 /// A convenience class to represent data from the generic file picker,
 /// the media library, and the camera, in a single form.
 class _File {
-  _File({required this.content, required this.length, required this.filename});
+  _File({
+    required this.content,
+    required this.length,
+    required this.filename,
+    required this.mimeType,
+  });
 
   final Stream<List<int>> content;
   final int length;
   final String filename;
+  final String? mimeType;
 }
 
 Future<void> _uploadFiles({
@@ -472,11 +514,15 @@ Future<void> _uploadFiles({
   }
 
   for (final (tag, file) in uploadsInProgress) {
-    final _File(:content, :length, :filename) = file;
+    final _File(:content, :length, :filename, :mimeType) = file;
     Uri? url;
     try {
       final result = await uploadFile(store.connection,
-        content: content, length: length, filename: filename);
+        content: content,
+        length: length,
+        filename: filename,
+        contentType: mimeType,
+      );
       url = Uri.parse(result.uri);
     } catch (e) {
       if (!context.mounted) return;
@@ -541,7 +587,7 @@ abstract class _AttachUploadsButton extends StatelessWidget {
 Future<Iterable<_File>> _getFilePickerFiles(BuildContext context, FileType type) async {
   FilePickerResult? result;
   try {
-    result = await FilePicker.platform
+    result = await ZulipBinding.instance
       .pickFiles(allowMultiple: true, withReadStream: true, type: type);
   } catch (e) {
     if (!context.mounted) return [];
@@ -573,7 +619,22 @@ Future<Iterable<_File>> _getFilePickerFiles(BuildContext context, FileType type)
 
   return result.files.map((f) {
     assert(f.readStream != null);  // We passed `withReadStream: true` to pickFiles.
-    return _File(content: f.readStream!, length: f.size, filename: f.name);
+    final mimeType = lookupMimeType(
+      // Seems like the path shouldn't be required; we still want to look for
+      // matches on `headerBytes`. Thankfully we can still do that, by calling
+      // lookupMimeType with the empty string as the path. That's a value that
+      // doesn't map to any particular type, so the path will be effectively
+      // ignored, as desired. Upstream comment:
+      //   https://github.com/dart-lang/mime/issues/11#issuecomment-2246824452
+      f.path ?? '',
+      headerBytes: f.bytes?.take(defaultMagicNumbersMaxLength).toList(),
+    );
+    return _File(
+      content: f.readStream!,
+      length: f.size,
+      filename: f.name,
+      mimeType: mimeType,
+    );
   });
 }
 
@@ -623,7 +684,6 @@ class _AttachFromCameraButton extends _AttachUploadsButton {
   @override
   Future<Iterable<_File>> getFiles(BuildContext context) async {
     final zulipLocalizations = ZulipLocalizations.of(context);
-    final picker = ImagePicker();
     final XFile? result;
     try {
       // Ideally we'd open a platform interface that lets you choose between
@@ -631,7 +691,8 @@ class _AttachFromCameraButton extends _AttachUploadsButton {
       // option: https://github.com/flutter/flutter/issues/89159
       // so just stick with images for now. We could add another button for
       // videos, but we don't want too many buttons.
-      result = await picker.pickImage(source: ImageSource.camera, requestFullMetadata: false);
+      result = await ZulipBinding.instance.pickImage(
+        source: ImageSource.camera, requestFullMetadata: false);
     } catch (e) {
       if (!context.mounted) return [];
       if (e is PlatformException && e.code == 'camera_access_denied') {
@@ -658,7 +719,27 @@ class _AttachFromCameraButton extends _AttachUploadsButton {
     }
     final length = await result.length();
 
-    return [_File(content: result.openRead(), length: length, filename: result.name)];
+    List<int>? headerBytes;
+    try {
+      headerBytes = await result.openRead(
+        0,
+        // Despite its dartdoc, [XFile.openRead] can throw if `end` is greater
+        // than the file's length. We can *probably* trust our `length` to be
+        // accurate, but it's nontrivial to verify. If it's inaccurate, we'd
+        // rather sacrifice this part of the MIME lookup than throw the whole
+        // upload. So, the try/catch.
+        min(defaultMagicNumbersMaxLength, length)
+      ).expand((l) => l).toList();
+    } catch (e) {
+      // TODO(log)
+    }
+    return [_File(
+      content: result.openRead(),
+      length: length,
+      filename: result.name,
+      mimeType: result.mimeType
+        ?? lookupMimeType(result.path, headerBytes: headerBytes),
+    )];
   }
 }
 
@@ -716,7 +797,7 @@ class _SendButtonState extends State<_SendButton> {
       || widget.contentController.hasValidationErrors.value;
   }
 
-  void _send() {
+  void _send() async {
     if (_hasValidationErrors) {
       final zulipLocalizations = ZulipLocalizations.of(context);
       List<String> validationErrorMessages = [
@@ -735,9 +816,26 @@ class _SendButtonState extends State<_SendButton> {
 
     final store = PerAccountStoreWidget.of(context);
     final content = widget.contentController.textNormalized;
-    store.sendMessage(destination: widget.getDestination(), content: content);
 
     widget.contentController.clear();
+
+    try {
+      // TODO(#720) clear content input only on success response;
+      //   while waiting, put input(s) and send button into a disabled
+      //   "working on it" state (letting input text be selected for copying).
+      await store.sendMessage(destination: widget.getDestination(), content: content);
+    } on ApiRequestException catch (e) {
+      if (!mounted) return;
+      final zulipLocalizations = ZulipLocalizations.of(context);
+      final message = switch (e) {
+        ZulipApiException() => zulipLocalizations.errorServerMessage(e.message),
+        _ => e.message,
+      };
+      showErrorDialog(context: context,
+        title: zulipLocalizations.errorMessageNotSent,
+        message: message);
+      return;
+    }
   }
 
   @override
@@ -748,12 +846,12 @@ class _SendButtonState extends State<_SendButton> {
 
     // Copy FilledButton defaults (_FilledButtonDefaultsM3.backgroundColor)
     final backgroundColor = disabled
-      ? colorScheme.onSurface.withOpacity(0.12)
+      ? colorScheme.onSurface.withValues(alpha: 0.12)
       : colorScheme.primary;
 
     // Copy FilledButton defaults (_FilledButtonDefaultsM3.foregroundColor)
     final foregroundColor = disabled
-      ? colorScheme.onSurface.withOpacity(0.38)
+      ? colorScheme.onSurface.withValues(alpha: 0.38)
       : colorScheme.onPrimary;
 
     return Ink(
@@ -775,6 +873,28 @@ class _SendButtonState extends State<_SendButton> {
         color: foregroundColor,
         icon: const Icon(Icons.send),
         onPressed: _send));
+  }
+}
+
+class _ComposeBoxContainer extends StatelessWidget {
+  const _ComposeBoxContainer({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    ColorScheme colorScheme = Theme.of(context).colorScheme;
+
+    // TODO(design): Maybe put a max width on the compose box, like we do on
+    //   the message list itself
+    return SizedBox(width: double.infinity,
+      child: Material(
+        color: colorScheme.surfaceContainerHighest,
+        child: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: child))));
   }
 }
 
@@ -812,34 +932,30 @@ class _ComposeBoxLayout extends StatelessWidget {
       ),
     );
 
-    return Material(
-      color: colorScheme.surfaceContainerHighest,
-      child: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: Column(children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Expanded(
-                child: Theme(
-                  data: inputThemeData,
-                  child: Column(children: [
-                    if (topicInput != null) topicInput!,
-                    if (topicInput != null) const SizedBox(height: 8),
-                    contentInput,
-                  ]))),
-              const SizedBox(width: 8),
-              sendButton,
-            ]),
-            Theme(
-              data: themeData.copyWith(
-                iconTheme: themeData.iconTheme.copyWith(color: colorScheme.onSurfaceVariant)),
-              child: Row(children: [
-                _AttachFileButton(contentController: contentController, contentFocusNode: contentFocusNode),
-                _AttachMediaButton(contentController: contentController, contentFocusNode: contentFocusNode),
-                _AttachFromCameraButton(contentController: contentController, contentFocusNode: contentFocusNode),
-              ])),
-          ]))));  }
+    return _ComposeBoxContainer(
+      child: Column(children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Expanded(
+            child: Theme(
+              data: inputThemeData,
+              child: Column(children: [
+                if (topicInput != null) topicInput!,
+                if (topicInput != null) const SizedBox(height: 8),
+                contentInput,
+              ]))),
+          const SizedBox(width: 8),
+          sendButton,
+        ]),
+        Theme(
+          data: themeData.copyWith(
+            iconTheme: themeData.iconTheme.copyWith(color: colorScheme.onSurfaceVariant)),
+          child: Row(children: [
+            _AttachFileButton(contentController: contentController, contentFocusNode: contentFocusNode),
+            _AttachMediaButton(contentController: contentController, contentFocusNode: contentFocusNode),
+            _AttachFromCameraButton(contentController: contentController, contentFocusNode: contentFocusNode),
+          ])),
+      ]));
+  }
 }
 
 abstract class ComposeBoxController<T extends StatefulWidget> extends State<T> {
@@ -848,7 +964,7 @@ abstract class ComposeBoxController<T extends StatefulWidget> extends State<T> {
   FocusNode get contentFocusNode;
 }
 
-/// A compose box for use in a stream narrow.
+/// A compose box for use in a channel narrow.
 ///
 /// This offers a text input for the topic to send to,
 /// in addition to a text input for the message content.
@@ -856,7 +972,7 @@ class _StreamComposeBox extends StatefulWidget {
   const _StreamComposeBox({super.key, required this.narrow});
 
   /// The narrow on view in the message list.
-  final StreamNarrow narrow;
+  final ChannelNarrow narrow;
 
   @override
   State<_StreamComposeBox> createState() => _StreamComposeBoxState();
@@ -872,6 +988,9 @@ class _StreamComposeBoxState extends State<_StreamComposeBox> implements Compose
   @override FocusNode get contentFocusNode => _contentFocusNode;
   final _contentFocusNode = FocusNode();
 
+  FocusNode get topicFocusNode => _topicFocusNode;
+  final _topicFocusNode = FocusNode();
+
   @override
   void dispose() {
     _topicController.dispose();
@@ -882,16 +1001,14 @@ class _StreamComposeBoxState extends State<_StreamComposeBox> implements Compose
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final zulipLocalizations = ZulipLocalizations.of(context);
-
     return _ComposeBoxLayout(
       contentController: _contentController,
       contentFocusNode: _contentFocusNode,
-      topicInput: TextField(
+      topicInput: _TopicInput(
+        streamId: widget.narrow.streamId,
         controller: _topicController,
-        style: TextStyle(color: colorScheme.onSurface),
-        decoration: InputDecoration(hintText: zulipLocalizations.composeBoxTopicHintText),
+        focusNode: topicFocusNode,
+        contentFocusNode: _contentFocusNode,
       ),
       contentInput: _StreamContentInput(
         narrow: widget.narrow,
@@ -905,6 +1022,27 @@ class _StreamComposeBoxState extends State<_StreamComposeBox> implements Compose
         getDestination: () => StreamDestination(
           widget.narrow.streamId, _topicController.textNormalized),
       ));
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: designVariables.errorBannerBackground,
+        border: Border.all(color: designVariables.errorBannerBorder),
+        borderRadius: BorderRadius.circular(5)),
+      child: Text(label,
+        style: TextStyle(fontSize: 18, color: designVariables.errorBannerLabel),
+      ),
+    );
   }
 }
 
@@ -933,8 +1071,26 @@ class _FixedDestinationComposeBoxState extends State<_FixedDestinationComposeBox
     super.dispose();
   }
 
+  Widget? _errorBanner(BuildContext context) {
+    if (widget.narrow case DmNarrow(:final otherRecipientIds)) {
+      final store = PerAccountStoreWidget.of(context);
+      final hasDeactivatedUser = otherRecipientIds.any((id) =>
+        !(store.users[id]?.isActive ?? true));
+      if (hasDeactivatedUser) {
+        return _ErrorBanner(label: ZulipLocalizations.of(context)
+          .errorBannerDeactivatedDmLabel);
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final errorBanner = _errorBanner(context);
+    if (errorBanner != null) {
+      return _ComposeBoxContainer(child: errorBanner);
+    }
+
     return _ComposeBoxLayout(
       contentController: _contentController,
       contentFocusNode: _contentFocusNode,
@@ -958,19 +1114,34 @@ class ComposeBox extends StatelessWidget {
   final GlobalKey<ComposeBoxController>? controllerKey;
   final Narrow narrow;
 
+  static bool hasComposeBox(Narrow narrow) {
+    switch (narrow) {
+      case ChannelNarrow():
+      case TopicNarrow():
+      case DmNarrow():
+        return true;
+
+      case CombinedFeedNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
+        return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final narrow = this.narrow;
-    if (narrow is StreamNarrow) {
-      return _StreamComposeBox(key: controllerKey, narrow: narrow);
-    } else if (narrow is TopicNarrow) {
-      return _FixedDestinationComposeBox(key: controllerKey, narrow: narrow);
-    } else if (narrow is DmNarrow) {
-      return _FixedDestinationComposeBox(key: controllerKey, narrow: narrow);
-    } else if (narrow is CombinedFeedNarrow) {
-      return const SizedBox.shrink();
-    } else {
-      throw Exception("impossible narrow"); // TODO(dart-3): show this statically
+    switch (narrow) {
+      case ChannelNarrow():
+        return _StreamComposeBox(key: controllerKey, narrow: narrow);
+      case TopicNarrow():
+        return _FixedDestinationComposeBox(key: controllerKey, narrow: narrow);
+      case DmNarrow():
+        return _FixedDestinationComposeBox(key: controllerKey, narrow: narrow);
+      case CombinedFeedNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
+        return const SizedBox.shrink();
     }
   }
 }

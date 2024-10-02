@@ -23,11 +23,17 @@ android {
     namespace "com.zulip.flutter"
 
     compileSdkVersion flutter.compileSdkVersion
-    ndkVersion flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+
+        // The use of desugar_jdk_libs causes warning noise at build time:
+        //   https://github.com/zulip/zulip-flutter/pull/887#issuecomment-2287653388
+        //   https://issuetracker.google.com/issues/294273986
+        // TODO(#351): Try removing core-library desugaring once we've
+        //   removed flutter_local_notifications.
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -72,6 +78,23 @@ android {
                     signingConfigs.release : signingConfigs.debug
         }
     }
+
+    lint {
+        // For docs on options available here:
+        //   https://developer.android.com/reference/tools/gradle-api/8.5/com/android/build/api/dsl/Lint
+        checkAllWarnings = true
+        warningsAsErrors = true
+    }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    // Compile Kotlin with `-Werror`... but only in release builds, so that it
+    // doesn't get in the way of quick local experiments for debugging.
+    //
+    // The string-searching makes this a bit of a mess, but it works.
+    // Better would be if we can add this to android.buildTypes.release above;
+    // but on a first attempt that didn't work (it affected debug builds too).
+    kotlinOptions.allWarningsAsErrors = name.contains("Release")
 }
 
 flutter {
@@ -80,4 +103,5 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
 }

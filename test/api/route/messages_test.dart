@@ -181,12 +181,18 @@ void main() {
       }
 
       checkNarrow(const CombinedFeedNarrow().apiEncode(), jsonEncode([]));
-      checkNarrow(const StreamNarrow(12).apiEncode(), jsonEncode([
+      checkNarrow(const ChannelNarrow(12).apiEncode(), jsonEncode([
         {'operator': 'stream', 'operand': 12},
       ]));
       checkNarrow(const TopicNarrow(12, 'stuff').apiEncode(), jsonEncode([
         {'operator': 'stream', 'operand': 12},
         {'operator': 'topic', 'operand': 'stuff'},
+      ]));
+      checkNarrow(const MentionsNarrow().apiEncode(), jsonEncode([
+        {'operator': 'is', 'operand': 'mentioned'},
+      ]));
+      checkNarrow(const StarredMessagesNarrow().apiEncode(), jsonEncode([
+        {'operator': 'is', 'operand': 'starred'},
       ]));
 
       checkNarrow([ApiNarrowDm([123, 234])], jsonEncode([
@@ -316,13 +322,13 @@ void main() {
         ..method.equals('POST')
         ..url.path.equals('/api/v1/messages')
         ..bodyFields.deepEquals(expectedBodyFields)
-        ..headers['User-Agent'].equals(expectedUserAgent ?? userAgentHeader()['User-Agent']!);
+        ..headers['User-Agent'].equals(expectedUserAgent ?? kFallbackUserAgentHeader['User-Agent']!);
     }
 
     test('smoke', () {
       return FakeApiConnection.with_((connection) async {
         await checkSendMessage(connection,
-          destination: StreamDestination(streamId, topic), content: content,
+          destination: const StreamDestination(streamId, topic), content: content,
           queueId: 'abc:123',
           localId: '456',
           readBySender: true,
@@ -341,7 +347,7 @@ void main() {
     test('to stream', () {
       return FakeApiConnection.with_((connection) async {
         await checkSendMessage(connection,
-          destination: StreamDestination(streamId, topic), content: content,
+          destination: const StreamDestination(streamId, topic), content: content,
           readBySender: true,
           expectedBodyFields: {
             'type': 'stream',
@@ -356,7 +362,7 @@ void main() {
     test('to DM conversation', () {
       return FakeApiConnection.with_((connection) async {
         await checkSendMessage(connection,
-          destination: DmDestination(userIds: userIds), content: content,
+          destination: const DmDestination(userIds: userIds), content: content,
           readBySender: true,
           expectedBodyFields: {
             'type': 'direct',
@@ -370,7 +376,7 @@ void main() {
     test('to DM conversation, with legacy type "private"', () {
       return FakeApiConnection.with_(zulipFeatureLevel: 173, (connection) async {
         await checkSendMessage(connection,
-          destination: DmDestination(userIds: userIds), content: content,
+          destination: const DmDestination(userIds: userIds), content: content,
           readBySender: true,
           expectedBodyFields: {
             'type': 'private',
@@ -385,7 +391,7 @@ void main() {
     test('when readBySender is null, sends a User-Agent we know the server will recognize', () {
       return FakeApiConnection.with_((connection) async {
         await checkSendMessage(connection,
-          destination: StreamDestination(streamId, topic), content: content,
+          destination: const StreamDestination(streamId, topic), content: content,
           readBySender: null,
           expectedBodyFields: {
             'type': 'stream',
@@ -400,7 +406,7 @@ void main() {
     test('legacy: when server does not support readBySender, sends a User-Agent the server will recognize', () {
       return FakeApiConnection.with_(zulipFeatureLevel: 235, (connection) async {
         await checkSendMessage(connection,
-          destination: StreamDestination(streamId, topic), content: content,
+          destination: const StreamDestination(streamId, topic), content: content,
           readBySender: true,
           expectedBodyFields: {
             'type': 'stream',
@@ -410,6 +416,55 @@ void main() {
             'read_by_sender': 'true',
           },
           expectedUserAgent: 'ZulipMobile/flutter');
+      });
+    });
+  });
+
+  group('uploadFile', () {
+    Future<void> checkUploadFile(FakeApiConnection connection, {
+      required List<List<int>> content,
+      required int length,
+      required String filename,
+      required String? contentType,
+    }) async {
+      connection.prepare(json:
+        UploadFileResult(uri: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/$filename').toJson());
+      await uploadFile(connection,
+        content: Stream.fromIterable(content),
+        length: length,
+        filename: filename,
+        contentType: contentType);
+      check(connection.lastRequest).isA<http.MultipartRequest>()
+        ..method.equals('POST')
+        ..url.path.equals('/api/v1/user_uploads')
+        ..files.single.which((it) => it
+          ..field.equals('file')
+          ..length.equals(length)
+          ..filename.equals(filename)
+          ..contentType.asString.equals(contentType ?? 'application/octet-stream')
+          ..has<Future<List<int>>>((f) => f.finalize().toBytes(), 'contents')
+            .completes((it) => it.deepEquals(content.expand((l) => l))));
+    }
+
+    test('with mime type', () {
+      return FakeApiConnection.with_((connection) async {
+        await checkUploadFile(connection,
+          content: ['asdf'.codeUnits],
+          length: 4,
+          filename: 'image.jpg',
+          contentType: 'image/jpeg',
+        );
+      });
+    });
+
+    test('without mime type', () {
+      return FakeApiConnection.with_((connection) async {
+        await checkUploadFile(connection,
+          content: ['asdf'.codeUnits],
+          length: 4,
+          filename: 'some_file',
+          contentType: null,
+        );
       });
     });
   });

@@ -8,6 +8,7 @@ import '../api/model/model.dart';
 import '../api/route/messages.dart';
 import '../model/internal_link.dart';
 import '../model/narrow.dart';
+import 'actions.dart';
 import 'clipboard.dart';
 import 'compose_box.dart';
 import 'dialog.dart';
@@ -26,7 +27,12 @@ void showMessageActionSheet({required BuildContext context, required Message mes
   // of the action sheet (we avoid calling composeBoxControllerOf in a build
   // method; see its doc). But currently it will be constant through the life of
   // any message list, so that's fine.
-  final isComposeBoxOffered = MessageListPage.composeBoxControllerOf(context) != null;
+  final messageListPage = MessageListPage.ancestorOf(context);
+  final isComposeBoxOffered = messageListPage.composeBoxController != null;
+  final narrow = messageListPage.narrow;
+  final isMessageRead = message.flags.contains(MessageFlag.read);
+  final markAsUnreadSupported = store.connection.zulipFeatureLevel! >= 155; // TODO(server-6)
+  final showMarkAsUnreadButton = markAsUnreadSupported && isMessageRead;
 
   final hasThumbsUpReactionVote = message.reactions
     ?.aggregated.any((reactionWithVotes) =>
@@ -39,12 +45,13 @@ void showMessageActionSheet({required BuildContext context, required Message mes
     context: context,
     builder: (BuildContext _) {
       return Column(children: [
-        if (!hasThumbsUpReactionVote) AddThumbsUpButton(message: message, messageListContext: context),
+        if (!hasThumbsUpReactionVote)
+          AddThumbsUpButton(message: message, messageListContext: context),
         StarButton(message: message, messageListContext: context),
-        if (isComposeBoxOffered) QuoteAndReplyButton(
-          message: message,
-          messageListContext: context,
-        ),
+        if (isComposeBoxOffered)
+          QuoteAndReplyButton(message: message, messageListContext: context),
+        if (showMarkAsUnreadButton)
+          MarkAsUnreadButton(message: message, messageListContext: context, narrow: narrow),
         CopyMessageTextButton(message: message, messageListContext: context),
         CopyMessageLinkButton(message: message, messageListContext: context),
         ShareButton(message: message, messageListContext: context),
@@ -239,7 +246,7 @@ class QuoteAndReplyButton extends MessageActionSheetMenuItemButton {
     // message action sheet opened, and before "Quote and reply" was pressed.
     // Currently a compose box can't ever disappear, so this is impossible.
     ComposeBoxController composeBoxController =
-      MessageListPage.composeBoxControllerOf(messageListContext)!;
+      MessageListPage.ancestorOf(messageListContext).composeBoxController!;
     final topicController = composeBoxController.topicController;
     if (
       topicController != null
@@ -264,7 +271,8 @@ class QuoteAndReplyButton extends MessageActionSheetMenuItemButton {
     // This will be null only if the compose box disappeared during the
     // quotation request. Currently a compose box can't ever disappear,
     // so this is impossible.
-    composeBoxController = MessageListPage.composeBoxControllerOf(messageListContext)!;
+    composeBoxController =
+      MessageListPage.ancestorOf(messageListContext).composeBoxController!;
     composeBoxController.contentController
       .registerQuoteAndReplyEnd(PerAccountStoreWidget.of(messageListContext), tag,
         message: message,
@@ -273,6 +281,29 @@ class QuoteAndReplyButton extends MessageActionSheetMenuItemButton {
     if (!composeBoxController.contentFocusNode.hasFocus) {
       composeBoxController.contentFocusNode.requestFocus();
     }
+  }
+}
+
+class MarkAsUnreadButton extends MessageActionSheetMenuItemButton {
+  MarkAsUnreadButton({
+    super.key,
+    required super.message,
+    required super.messageListContext,
+    required this.narrow,
+  });
+
+  final Narrow narrow;
+
+  @override IconData get icon => Icons.mark_chat_unread_outlined;
+
+  @override
+  String label(ZulipLocalizations zulipLocalizations) {
+    return zulipLocalizations.actionSheetOptionMarkAsUnread;
+  }
+
+  @override void onPressed(BuildContext context) async {
+    Navigator.of(context).pop();
+    markNarrowAsUnreadFromMessage(messageListContext, message, narrow);
   }
 }
 

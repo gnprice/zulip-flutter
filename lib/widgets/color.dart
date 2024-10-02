@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:flutter_color_models/flutter_color_models.dart';
+import 'package:flutter_color_models/flutter_color_models.dart' as flutter_color_models;
 
 // This function promises to deal with "LCH" lightness, not "LAB" lightness,
 // but it's not yet true. We haven't found a Dart libary that can work with LCH:
@@ -11,8 +11,31 @@ import 'package:flutter_color_models/flutter_color_models.dart';
 //
 // TODO try LCH; see linked discussion
 Color clampLchLightness(Color color, num lowerLimit, num upperLimit) {
-  final asLab = LabColor.fromColor(color);
+  final asLab = flutter_color_models.LabColor.fromColor(color);
   return asLab
     .copyWith(lightness: asLab.lightness.clamp(lowerLimit, upperLimit))
     .toColor();
+}
+
+extension ColorExtension on Color {
+  /// A 32 bit integer representing this sRGB color.
+  ///
+  /// If [colorSpace] is not [ColorSpace.sRGB], do not use this.
+  ///
+  /// The bits are assigned as follows:
+  ///
+  /// * Bits 24-31 are the alpha value.
+  /// * Bits 16-23 are the red value.
+  /// * Bits 8-15 are the green value.
+  /// * Bits 0-7 are the blue value.
+  ///
+  /// This is the same form that [Color.new] takes.
+  int get argbInt {
+    assert(colorSpace == ColorSpace.sRGB);
+
+    return ((a * 255.0).round() & 0xff) << 24 |
+           ((r * 255.0).round() & 0xff) << 16 |
+           ((g * 255.0).round() & 0xff) << 8 |
+           ((b * 255.0).round() & 0xff) << 0;
+  }
 }

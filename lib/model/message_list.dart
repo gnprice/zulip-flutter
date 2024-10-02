@@ -5,6 +5,7 @@ import '../api/model/events.dart';
 import '../api/model/model.dart';
 import '../api/route/messages.dart';
 import 'algorithms.dart';
+import 'channel.dart';
 import 'content.dart';
 import 'narrow.dart';
 import 'store.dart';
@@ -34,7 +35,7 @@ class MessageListDateSeparatorItem extends MessageListItem {
 /// A message to show in the message list.
 class MessageListMessageItem extends MessageListItem {
   final Message message;
-  ZulipContent content;
+  ZulipMessageContent content;
   bool showSender;
   bool isLastInBlock;
 
@@ -65,6 +66,9 @@ class MessageListHistoryStartItem extends MessageListItem {
 ///
 /// This comprises much of the guts of [MessageListView].
 mixin _MessageSequence {
+  /// A sequence number for invalidating stale fetches.
+  int generation = 0;
+
   /// The messages.
   ///
   /// See also [contents] and [items].
@@ -94,7 +98,7 @@ mixin _MessageSequence {
   ///
   /// This information is completely derived from [messages].
   /// It exists as an optimization, to memoize the work of parsing.
-  final List<ZulipContent> contents = [];
+  final List<ZulipMessageContent> contents = [];
 
   /// The messages and their siblings in the UI, in order.
   ///
@@ -130,10 +134,16 @@ mixin _MessageSequence {
     }
   }
 
+  ZulipMessageContent _parseMessageContent(Message message) {
+    final poll = message.poll;
+    if (poll != null) return PollContent(poll);
+    return parseContent(message.content);
+  }
+
   /// Update data derived from the content of the index-th message.
   void _reparseContent(int index) {
     final message = messages[index];
-    final content = parseContent(message.content);
+    final content = _parseMessageContent(message);
     contents[index] = content;
 
     final itemIndex = findItemWithMessageId(message.id);
@@ -150,9 +160,41 @@ mixin _MessageSequence {
   void _addMessage(Message message) {
     assert(contents.length == messages.length);
     messages.add(message);
-    contents.add(parseContent(message.content));
+    contents.add(_parseMessageContent(message));
     assert(contents.length == messages.length);
     _processMessage(messages.length - 1);
+  }
+
+  /// Removes all messages from the list that satisfy [test].
+  ///
+  /// Returns true if any messages were removed, false otherwise.
+  bool _removeMessagesWhere(bool Function(Message) test) {
+    // Before we find a message to remove, there's no need to copy elements.
+    // This is like the loop below, but simplified for `target == candidate`.
+    int candidate = 0;
+    while (true) {
+      if (candidate == messages.length) return false;
+      if (test(messages[candidate])) break;
+      candidate++;
+    }
+
+    int target = candidate;
+    candidate++;
+    assert(contents.length == messages.length);
+    while (candidate < messages.length) {
+      if (test(messages[candidate])) {
+        candidate++;
+        continue;
+      }
+      messages[target] = messages[candidate];
+      contents[target] = contents[candidate];
+      target++; candidate++;
+    }
+    messages.length = target;
+    contents.length = target;
+    assert(contents.length == messages.length);
+    _reprocessAll();
+    return true;
   }
 
   /// Removes the given messages, if present.
@@ -161,7 +203,7 @@ mixin _MessageSequence {
   /// If none of [messageIds] are found, this is a no-op.
   bool _removeMessagesById(Iterable<int> messageIds) {
     final messagesToRemoveById = <int>{};
-    final contentToRemove = Set<ZulipContent>.identity();
+    final contentToRemove = Set<ZulipMessageContent>.identity();
     for (final messageId in messageIds) {
       final index = _findMessageWithId(messageId);
       if (index == -1) continue;
@@ -187,16 +229,27 @@ mixin _MessageSequence {
     assert(contents.length == messages.length);
     messages.insertAll(index, toInsert);
     contents.insertAll(index, toInsert.map(
-      (message) => parseContent(message.content)));
+      (message) => _parseMessageContent(message)));
     assert(contents.length == messages.length);
     _reprocessAll();
+  }
+
+  /// Reset all [_MessageSequence] data, and cancel any active fetches.
+  void _reset() {
+    generation += 1;
+    messages.clear();
+    _fetched = false;
+    _haveOldest = false;
+    _fetchingOlder = false;
+    contents.clear();
+    items.clear();
   }
 
   /// Redo all computations from scratch, based on [messages].
   void _recompute() {
     assert(contents.length == messages.length);
     contents.clear();
-    contents.addAll(messages.map((message) => parseContent(message.content)));
+    contents.addAll(messages.map((message) => _parseMessageContent(message)));
     assert(contents.length == messages.length);
     _reprocessAll();
   }
@@ -345,7 +398,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   }
 
   final PerAccountStore store;
-  final Narrow narrow;
+  Narrow narrow;
 
   /// Whether [message] should actually appear in this message list,
   /// given that it does belong to the narrow.
@@ -363,14 +416,35 @@ class MessageListView with ChangeNotifier, _MessageSequence {
           DmMessage() => true,
         };
 
-      case StreamNarrow(:final streamId):
+      case ChannelNarrow(:final streamId):
         assert(message is StreamMessage && message.streamId == streamId);
         if (message is! StreamMessage) return false;
         return store.isTopicVisibleInStream(streamId, message.topic);
 
       case TopicNarrow():
       case DmNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
         return true;
+    }
+  }
+
+  /// Whether this event could affect the result that [_messageVisible]
+  /// would ever have returned for any possible message in this message list.
+  VisibilityEffect _canAffectVisibility(UserTopicEvent event) {
+    switch (narrow) {
+      case CombinedFeedNarrow():
+        return store.willChangeIfTopicVisible(event);
+
+      case ChannelNarrow(:final streamId):
+        if (event.streamId != streamId) return VisibilityEffect.none;
+        return store.willChangeIfTopicVisibleInStream(event);
+
+      case TopicNarrow():
+      case DmNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
+        return VisibilityEffect.none;
     }
   }
 
@@ -380,11 +454,13 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   bool get _allMessagesVisible {
     switch (narrow) {
       case CombinedFeedNarrow():
-      case StreamNarrow():
+      case ChannelNarrow():
         return false;
 
       case TopicNarrow():
       case DmNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
         return true;
     }
   }
@@ -396,13 +472,16 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     assert(!fetched && !haveOldest && !fetchingOlder);
     assert(messages.isEmpty && contents.isEmpty);
     // TODO schedule all this in another isolate
+    final generation = this.generation;
     final result = await getMessages(store.connection,
       narrow: narrow.apiEncode(),
       anchor: AnchorCode.newest,
       numBefore: kMessageListFetchBatchSize,
       numAfter: 0,
     );
+    if (this.generation > generation) return;
     store.reconcileMessages(result.messages);
+    store.recentSenders.handleMessages(result.messages); // TODO(#824)
     for (final message in result.messages) {
       if (_messageVisible(message)) {
         _addMessage(message);
@@ -423,6 +502,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     _fetchingOlder = true;
     _updateEndMarkers();
     notifyListeners();
+    final generation = this.generation;
     try {
       final result = await getMessages(store.connection,
         narrow: narrow.apiEncode(),
@@ -431,6 +511,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
         numBefore: kMessageListFetchBatchSize,
         numAfter: 0,
       );
+      if (this.generation > generation) return;
 
       if (result.messages.isNotEmpty
           && result.messages.last.id == messages[0].id) {
@@ -439,6 +520,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       }
 
       store.reconcileMessages(result.messages);
+      store.recentSenders.handleMessages(result.messages); // TODO(#824)
 
       final fetchedMessages = _allMessagesVisible
         ? result.messages // Avoid unnecessarily copying the list.
@@ -447,9 +529,36 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       _insertAllMessages(0, fetchedMessages);
       _haveOldest = result.foundOldest;
     } finally {
-      _fetchingOlder = false;
-      _updateEndMarkers();
-      notifyListeners();
+      if (this.generation == generation) {
+        _fetchingOlder = false;
+        _updateEndMarkers();
+        notifyListeners();
+      }
+    }
+  }
+
+  void handleUserTopicEvent(UserTopicEvent event) {
+    switch (_canAffectVisibility(event)) {
+      case VisibilityEffect.none:
+        return;
+
+      case VisibilityEffect.muted:
+        if (_removeMessagesWhere((message) =>
+            (message is StreamMessage
+             && message.streamId == event.streamId
+             && message.topic == event.topicName))) {
+          notifyListeners();
+        }
+
+      case VisibilityEffect.unmuted:
+        // TODO get the newly-unmuted messages from the message store
+        // For now, we simplify the task by just refetching this message list
+        // from scratch.
+        if (fetched) {
+          _reset();
+          notifyListeners();
+          fetchInitial();
+        }
     }
   }
 
@@ -474,6 +583,99 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     notifyListeners();
   }
 
+  /// Update data derived from the content of the given message.
+  ///
+  /// This does not notify listeners.
+  /// The caller should ensure that happens later.
+  void messageContentChanged(int messageId) {
+    final index = _findMessageWithId(messageId);
+    if (index != -1) {
+      _reparseContent(index);
+    }
+  }
+
+  void _messagesMovedInternally(List<int> messageIds) {
+    for (final messageId in messageIds) {
+      if (_findMessageWithId(messageId) != -1) {
+        _reprocessAll();
+        notifyListeners();
+        return;
+      }
+    }
+  }
+
+  void _messagesMovedIntoNarrow() {
+    // If there are some messages we don't have in [MessageStore], and they
+    // occur later than the messages we have here, then we just have to
+    // re-fetch from scratch.  That's always valid, so just do that always.
+    // TODO in cases where we do have data to do better, do better.
+    _reset();
+    notifyListeners();
+    fetchInitial();
+  }
+
+  void _messagesMovedFromNarrow(List<int> messageIds) {
+    if (_removeMessagesById(messageIds)) {
+      notifyListeners();
+    }
+  }
+
+  void _handlePropagateMode(PropagateMode propagateMode, Narrow newNarrow) {
+    switch (propagateMode) {
+      case PropagateMode.changeAll:
+      case PropagateMode.changeLater:
+        narrow = newNarrow;
+        _reset();
+        fetchInitial();
+      case PropagateMode.changeOne:
+    }
+  }
+
+  void messagesMoved({
+    required int origStreamId,
+    required int newStreamId,
+    required String origTopic,
+    required String newTopic,
+    required List<int> messageIds,
+    required PropagateMode propagateMode,
+  }) {
+    switch (narrow) {
+      case DmNarrow():
+        // DMs can't be moved (nor created by moves),
+        // so the messages weren't in this narrow and still aren't.
+        return;
+
+      case CombinedFeedNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
+        // The messages were and remain in this narrow.
+        // TODO(#421): … except they may have become muted or not.
+        //   We'll handle that at the same time as we handle muting itself changing.
+        // Recipient headers, and downstream of those, may change, though.
+        _messagesMovedInternally(messageIds);
+
+      case ChannelNarrow(:final streamId):
+        switch ((origStreamId == streamId, newStreamId == streamId)) {
+          case (false, false): return;
+          case (true,  true ): _messagesMovedInternally(messageIds);
+          case (false, true ): _messagesMovedIntoNarrow();
+          case (true,  false): _messagesMovedFromNarrow(messageIds);
+        }
+
+      case TopicNarrow(:final streamId, :final topic):
+        final oldMatch = (origStreamId == streamId && origTopic == topic);
+        final newMatch = (newStreamId == streamId && newTopic == topic);
+        switch ((oldMatch, newMatch)) {
+          case (false, false): return;
+          case (true,  true ): return; // TODO(log) no-op move
+          case (false, true ): _messagesMovedIntoNarrow();
+          case (true,  false):
+            _messagesMovedFromNarrow(messageIds);
+            _handlePropagateMode(propagateMode, TopicNarrow(newStreamId, newTopic));
+        }
+    }
+  }
+
   // Repeal the `@protected` annotation that applies on the base implementation,
   // so we can call this method from [MessageStoreImpl].
   @override
@@ -494,17 +696,6 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     final isAnyPresent = messageIds.any((id) => _findMessageWithId(id) != -1);
     if (isAnyPresent) {
       notifyListeners();
-    }
-  }
-
-  /// Update data derived from the content of the given message.
-  ///
-  /// This does not notify listeners.
-  /// The caller should ensure that happens later.
-  void messageContentChanged(int messageId) {
-    final index = _findMessageWithId(messageId);
-    if (index != -1) {
-      _reparseContent(index);
     }
   }
 

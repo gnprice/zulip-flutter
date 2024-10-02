@@ -1,5 +1,102 @@
 # Changelog
 
+## 0.0.20 (2024-10-01)
+
+### Highlights for users
+
+* (Android) Notifications are removed when you read the
+  message. (#341)
+* Show polls and their results. (#165)
+* (Android) Videos play in higher quality. (#951)
+* The screen stays on when you're watching a video. (#763)
+* Clearer emoji in dark theme; "Starred messages" feed;
+  new "edited"/"moved" labels on messages. (#953, #251, #900)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers
+
+* In tests, "matchers" from Flutter upstream can now be conveniently
+  used, via `package:flutter_checks`. (#232)
+
+* Resolved: #182, #251, #341, #905, #926, PR #919, #810, #232,
+  PR #951, #763, #953, #165
+
+
+## 0.0.19 (2024-08-15)
+
+### Highlights for users
+
+* Introducing dark theme!  The app now follows your system-wide
+  dark/light setting. (#95)
+* The app is snappier to re-connect to your Zulip server after
+  being offline, and shows a loading indicator when doing so.
+  (#554, #465)
+* Handle messages being moved, muted, or unmuted while the app
+  is open. (#150, #421)
+* Autocomplete for topics; show "typing…" status;
+  offer the "Mentions" message feed. (#310, #665, #250)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers
+
+* Many "stream" names in the codebase have been renamed to
+  say "channel". (toward #631)
+
+* Resolved: #803, #351, #613, #665, #250, #675, #858, #228,
+  #712, #291, #150, #465, #554, #131, #421, #310, #879
+
+
+## 0.0.18 (2024-07-25)
+
+### Highlights for users
+
+* Attaching an image or video to a message works properly with
+  the new Zulip Server 9.0. (#829)
+* When opening an image in the lightbox with the new
+  Zulip Server 9.0, the image is shown at full scale from the
+  beginning. (#830)
+* Autocomplete for @-mentions now prioritizes showing users
+  recently active in the same conversation or channel. (#828)
+
+
+### Highlights for developers
+
+* New supplemental setup instructions for doing development on
+  a remote cloud server. (PR #802)
+
+* Resolved: #829, PR #828, #830
+
+
+## 0.0.17 (2024-07-19)
+
+### Highlights for users
+
+* (Android) Much richer notifications: multiple messages per
+  conversation, sender names and avatars, and more. (#128, #569,
+  #571, #572)
+* Full support for image thumbnails, a feature of the upcoming Zulip Server
+  9.0 which should greatly reduce Zulip's network consumption on messages
+  with images. (#799)
+* New "Copy link to message" option in message menu. (#673)
+* The channels screen shows muted channels as muted. (#424)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers
+
+* New test suite `tools/check android` that does the Android
+  build and runs the Android linter. (#772, PR #797)
+
+* The User-Agent header in HTTP requests to the server now includes
+  the app version and the OS name and version. (#467)
+
+* Resolved: PR #728, PR #727, #736, #569, #571, #572, #393, #749,
+  #771, #120, #673, #732, PR #789, #772, PR #797, #743, #467, #424,
+  #128, #616, #815, #799
+
+
 ## 0.0.16 (2024-06-13)
 
 ### Highlights for users

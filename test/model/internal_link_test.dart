@@ -2,6 +2,7 @@
 import 'package:checks/checks.dart';
 import 'package:test/scaffolding.dart';
 import 'package:zulip/api/model/model.dart';
+import 'package:zulip/api/model/narrow.dart';
 import 'package:zulip/model/internal_link.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/store.dart';
@@ -159,11 +160,11 @@ void main() {
       eg.stream(streamId: 123, name: 'topic'),
     ];
 
-    group('"/#narrow/stream/<...>" returns expected StreamNarrow', () {
+    group('"/#narrow/stream/<...>" returns expected ChannelNarrow', () {
       const testCases = [
-        ('/#narrow/stream/check',   StreamNarrow(1)),
-        ('/#narrow/stream/stream/', StreamNarrow(5)),
-        ('/#narrow/stream/topic/',  StreamNarrow(123)),
+        ('/#narrow/stream/check',   ChannelNarrow(1)),
+        ('/#narrow/stream/stream/', ChannelNarrow(5)),
+        ('/#narrow/stream/topic/',  ChannelNarrow(123)),
       ];
       testExpectedNarrows(testCases, streams: streams);
     });
@@ -185,8 +186,8 @@ void main() {
 
     group('Both `stream` and `channel` can be used interchangeably', () {
       const testCases = [
-        ('/#narrow/stream/check',                         StreamNarrow(1)),
-        ('/#narrow/channel/check',                        StreamNarrow(1)),
+        ('/#narrow/stream/check',                         ChannelNarrow(1)),
+        ('/#narrow/channel/check',                        ChannelNarrow(1)),
         ('/#narrow/stream/check/topic/test',              TopicNarrow(1, 'test')),
         ('/#narrow/channel/check/topic/test',             TopicNarrow(1, 'test')),
         ('/#narrow/stream/check/topic/test/near/378333',  TopicNarrow(1, 'test')),
@@ -219,6 +220,42 @@ void main() {
         ('/#narrow/pm-with/a.40b.2Ecom.2Ec.2Ed.2Ecom/with/3', null),
       ];
       testExpectedNarrows(testCases, streams: streams);
+    });
+
+    group('/#narrow/is/<...> returns corresponding narrow', () {
+      // For these tests, we are more interested in the internal links
+      // containing a single effective `is` operator.
+      // Internal links with multiple operators should be tested separately.
+      for (final operand in IsOperand.values) {
+        List<(String, Narrow?)> sharedCases(Narrow? narrow) => [
+            ('/#narrow/is/$operand',                                     narrow),
+            ('/#narrow/is/$operand/is/$operand',                         narrow),
+            ('/#narrow/is/$operand/near/1',                              narrow),
+            ('/#narrow/is/$operand/with/2',                              narrow),
+            ('/#narrow/channel/7-test-here/is/$operand',                 null),
+            ('/#narrow/channel/check/topic/test/is/$operand',            null),
+            ('/#narrow/topic/test/is/$operand',                          null),
+            ('/#narrow/dm/17327-Chris-Bobbe-(Test-Account)/is/$operand', null),
+            ('/#narrow/-is/$operand',                                    null),
+          ];
+        final List<(String, Narrow?)> testCases;
+        switch (operand) {
+          case IsOperand.mentioned:
+            testCases = sharedCases(const MentionsNarrow());
+          case IsOperand.starred:
+            testCases = sharedCases(const StarredMessagesNarrow());
+          case IsOperand.dm:
+          case IsOperand.private:
+          case IsOperand.alerted:
+          case IsOperand.followed:
+          case IsOperand.resolved:
+          case IsOperand.unread:
+          case IsOperand.unknown:
+            // Unsupported operands should not return any narrow.
+            testCases = sharedCases(null);
+        }
+        testExpectedNarrows(testCases, streams: streams);
+      }
     });
 
     group('unexpected link shapes are rejected', () {
@@ -267,9 +304,9 @@ void main() {
         eg.stream(streamId: 3, name: 'some.stream'),
       ];
       const testCases = [
-        ('/#narrow/stream/some_stream',                    StreamNarrow(1)),
-        ('/#narrow/stream/some.20stream',                  StreamNarrow(2)),
-        ('/#narrow/stream/some.2Estream',                  StreamNarrow(3)),
+        ('/#narrow/stream/some_stream',                    ChannelNarrow(1)),
+        ('/#narrow/stream/some.20stream',                  ChannelNarrow(2)),
+        ('/#narrow/stream/some.2Estream',                  ChannelNarrow(3)),
         ('/#narrow/stream/some_stream/topic/some_topic',   TopicNarrow(1, 'some_topic')),
         ('/#narrow/stream/some_stream/topic/some.20topic', TopicNarrow(1, 'some topic')),
         ('/#narrow/stream/some_stream/topic/some.2Etopic', TopicNarrow(1, 'some.topic')),
@@ -279,30 +316,30 @@ void main() {
   });
 
   group('parseInternalLink edge cases', () {
-    void testExpectedStreamNarrow(String testCase, int? streamId) {
-      final streamNarrow = (streamId != null) ? StreamNarrow(streamId) : null;
-      testExpectedNarrows([(testCase, streamNarrow)], streams: [
+    void testExpectedChannelNarrow(String testCase, int? streamId) {
+      final channelNarrow = (streamId != null) ? ChannelNarrow(streamId) : null;
+      testExpectedNarrows([(testCase, channelNarrow)], streams: [
         eg.stream(streamId: 1, name: "general"),
       ]);
     }
 
     group('basic', () {
-      testExpectedStreamNarrow('#narrow/stream/1-general',         1);
+      testExpectedChannelNarrow('#narrow/stream/1-general',         1);
     });
 
     group('if stream not found, use stream ID anyway', () {
-      testExpectedStreamNarrow('#narrow/stream/123-topic',         123);
+      testExpectedChannelNarrow('#narrow/stream/123-topic',         123);
     });
 
     group('on stream link with wrong name, ID wins', () {
-      testExpectedStreamNarrow('#narrow/stream/1-nonsense',        1);
-      testExpectedStreamNarrow('#narrow/stream/1-',                1);
+      testExpectedChannelNarrow('#narrow/stream/1-nonsense',        1);
+      testExpectedChannelNarrow('#narrow/stream/1-',                1);
     });
 
     group('on malformed stream link: reject', () {
-      testExpectedStreamNarrow('#narrow/stream/-1',                null);
-      testExpectedStreamNarrow('#narrow/stream/1nonsense-general', null);
-      testExpectedStreamNarrow('#narrow/stream/-general',          null);
+      testExpectedChannelNarrow('#narrow/stream/-1',                null);
+      testExpectedChannelNarrow('#narrow/stream/1nonsense-general', null);
+      testExpectedChannelNarrow('#narrow/stream/-general',          null);
     });
   });
 
@@ -316,11 +353,11 @@ void main() {
         eg.stream(streamId: 5, name: '--help'),
       ];
       const testCases = [
-        ('#narrow/stream/test-team/', StreamNarrow(1)),
-        ('#narrow/stream/311/',       StreamNarrow(2)),
-        ('#narrow/stream/311-/',      StreamNarrow(3)),
-        ('#narrow/stream/311-help/',  StreamNarrow(4)),
-        ('#narrow/stream/--help/',    StreamNarrow(5)),
+        ('#narrow/stream/test-team/', ChannelNarrow(1)),
+        ('#narrow/stream/311/',       ChannelNarrow(2)),
+        ('#narrow/stream/311-/',      ChannelNarrow(3)),
+        ('#narrow/stream/311-help/',  ChannelNarrow(4)),
+        ('#narrow/stream/--help/',    ChannelNarrow(5)),
       ];
       testExpectedNarrows(testCases, streams: streams);
     });
@@ -333,9 +370,9 @@ void main() {
         eg.stream(streamId: 311, name: 'collider'),
       ];
       const testCases = [
-        ('#narrow/stream/311/',      StreamNarrow(311)),
-        ('#narrow/stream/311-/',     StreamNarrow(311)),
-        ('#narrow/stream/311-help/', StreamNarrow(311)),
+        ('#narrow/stream/311/',      ChannelNarrow(311)),
+        ('#narrow/stream/311-/',     ChannelNarrow(311)),
+        ('#narrow/stream/311-help/', ChannelNarrow(311)),
       ];
       testExpectedNarrows(testCases, streams: streams);
     });
@@ -349,11 +386,11 @@ void main() {
         eg.stream(streamId: 5, name: 'topic'),
       ];
       const testCases = [
-        ('#narrow/stream/check/',         StreamNarrow(1)),
-        ('#narrow/stream/bot.20testing/', StreamNarrow(2)),
-        ('#narrow/stream/check.2EAPI/',   StreamNarrow(3)),
-        ('#narrow/stream/stream/',        StreamNarrow(4)),
-        ('#narrow/stream/topic/',         StreamNarrow(5)),
+        ('#narrow/stream/check/',         ChannelNarrow(1)),
+        ('#narrow/stream/bot.20testing/', ChannelNarrow(2)),
+        ('#narrow/stream/check.2EAPI/',   ChannelNarrow(3)),
+        ('#narrow/stream/stream/',        ChannelNarrow(4)),
+        ('#narrow/stream/topic/',         ChannelNarrow(5)),
 
         ('#narrow/stream/check.API/',     null),
       ];

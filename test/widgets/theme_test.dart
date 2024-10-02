@@ -2,15 +2,15 @@ import 'package:checks/checks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zulip/widgets/app.dart';
-import 'package:zulip/widgets/page.dart';
-import 'package:zulip/widgets/stream_colors.dart';
+import 'package:zulip/widgets/channel_colors.dart';
 import 'package:zulip/widgets/text.dart';
 import 'package:zulip/widgets/theme.dart';
 
 import '../example_data.dart' as eg;
 import '../flutter_checks.dart';
 import '../model/binding.dart';
+import 'colors_checks.dart';
+import 'test_app.dart';
 
 void main() {
   TestZulipBinding.ensureInitialized();
@@ -23,25 +23,20 @@ void main() {
       required Widget button,
       double? ambientTextScaleFactor,
     }) async {
-      testWidgets(description, (WidgetTester tester) async {
+      testWidgets(description, (tester) async {
+        addTearDown(testBinding.reset);
         if (ambientTextScaleFactor != null) {
           tester.platformDispatcher.textScaleFactorTestValue = ambientTextScaleFactor;
           addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
         }
-        late final double expectedFontSize;
-        late final double expectedLetterSpacing;
-        await tester.pumpWidget(
-          Builder(builder: (context) => MaterialApp(
-            theme: zulipThemeData(context),
-            home: Builder(builder: (context) {
-              expectedFontSize = Theme.of(context).textTheme.labelLarge!.fontSize!;
-              expectedLetterSpacing = proportionalLetterSpacing(context,
-                0.01, baseFontSize: expectedFontSize);
-              return button;
-            }))));
-
-        final text = tester.renderObject<RenderParagraph>(find.text(buttonText)).text;
-        check(text.style!)
+        await tester.pumpWidget(TestZulipApp(
+          child: button));
+        await tester.pump();
+        final context = tester.element(find.text(buttonText));
+        final expectedFontSize = Theme.of(context).textTheme.labelLarge!.fontSize!;
+        final expectedLetterSpacing = proportionalLetterSpacing(context,
+          0.01, baseFontSize: expectedFontSize);
+        check((context.renderObject as RenderParagraph).text.style!)
           ..fontSize.equals(expectedFontSize)
           ..letterSpacing.equals(expectedLetterSpacing);
       });
@@ -76,30 +71,66 @@ void main() {
       button: TextButton(onPressed: () {}, child: const Text(buttonText)));
   });
 
-  group('colorSwatchFor', () {
-    void doTest(String description, int baseColor, StreamColorSwatch expected) {
-      testWidgets('$description $baseColor', (WidgetTester tester) async {
-        addTearDown(testBinding.reset);
-
-        final subscription = eg.subscription(eg.stream(), color: baseColor);
-
-        await tester.pumpWidget(const ZulipApp());
-        await tester.pump();
-
-        late StreamColorSwatch actualSwatch;
-        final navigator = await ZulipApp.navigator;
-        navigator.push(MaterialWidgetRoute(page: Builder(builder: (context) {
-          actualSwatch = colorSwatchFor(context, subscription);
-          return const Placeholder();
-        })));
-        await tester.pumpAndSettle();
-
-        // Compares all the swatch's members; see [ColorSwatch]'s `operator ==`.
-        check(actualSwatch).equals(expected);
+  group('DesignVariables', () {
+    group('lerp', () {
+      testWidgets('light -> light', (tester) async {
+        final a = DesignVariables.light();
+        final b = DesignVariables.light();
+        check(() => a.lerp(b, 0.5)).returnsNormally();
       });
-    }
 
-    doTest('light', 0xff76ce90, StreamColorSwatch.light(0xff76ce90));
-    // TODO(#95) test with Brightness.dark and lerping between light/dark
+      testWidgets('light -> dark', (tester) async {
+        final a = DesignVariables.light();
+        final b = DesignVariables.dark();
+        check(() => a.lerp(b, 0.5)).returnsNormally();
+      });
+
+      testWidgets('dark -> light', (tester) async {
+        final a = DesignVariables.dark();
+        final b = DesignVariables.light();
+        check(() => a.lerp(b, 0.5)).returnsNormally();
+      });
+
+      testWidgets('dark -> dark', (tester) async {
+        final a = DesignVariables.dark();
+        final b = DesignVariables.dark();
+        check(() => a.lerp(b, 0.5)).returnsNormally();
+      });
+    });
+  });
+
+  group('colorSwatchFor', () {
+    const baseColor = 0xff76ce90;
+
+    testWidgets('light–dark animation', (tester) async {
+      addTearDown(testBinding.reset);
+
+      final subscription = eg.subscription(eg.stream(), color: baseColor);
+
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+      await tester.pumpWidget(const TestZulipApp());
+      await tester.pump();
+
+      final element = tester.element(find.byType(Placeholder));
+      // Compares all the swatch's members; see [ColorSwatch]'s `operator ==`.
+      check(colorSwatchFor(element, subscription))
+        .isSameColorSwatchAs(ChannelColorSwatch.light(baseColor));
+
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      await tester.pump();
+
+      await tester.pump(kThemeAnimationDuration * 0.4);
+      check(colorSwatchFor(element, subscription))
+        .isSameColorSwatchAs(ChannelColorSwatch.lerp(
+          ChannelColorSwatch.light(baseColor),
+          ChannelColorSwatch.dark(baseColor),
+          0.4)!);
+
+      await tester.pump(kThemeAnimationDuration * 0.6);
+      check(colorSwatchFor(element, subscription))
+        .isSameColorSwatchAs(ChannelColorSwatch.dark(baseColor));
+    });
   });
 }
