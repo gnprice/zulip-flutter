@@ -42,6 +42,10 @@ T awaitFakeAsync<T>(Future<T> Function(FakeAsync async) callback,
       'did not complete within timeout $timeout.');
   } else if (error != null) {
     Error.throwWithStackTrace(error!, stackTrace!);
+  } else if (async.pendingTimers.isNotEmpty) {
+    throw TimeoutException(
+      'At expiry of timeout $timeout there were ${async.pendingTimers.length} pending timers:\n\n'
+      '${async.pendingTimers.map((timer) => timer.debugString).join('\n')}');
   } else {
     return value;
   }
