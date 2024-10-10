@@ -58,6 +58,8 @@ and describing your progress.
 [picking an issue to work on]: https://zulip.readthedocs.io/en/latest/contributing/contributing.html#picking-an-issue-to-work-on
 
 
+<div id="hi-test-anchor" />
+
 ### Submitting a pull request
 
 Follow the Zulip project's guide to your first codebase contribution
