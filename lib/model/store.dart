@@ -91,7 +91,7 @@ abstract class GlobalStore extends ChangeNotifier {
 
   int get debugNumPerAccountStoresLoading => _perAccountStoresLoading.length;
 
-  void debugCheckInvariants() {
+  bool debugCheckInvariants() {
     for (final accountId in _perAccountStores.keys) {
       assert(_accounts.containsKey(accountId));
       assert(!_perAccountStoresLoading.containsKey(accountId));
@@ -99,6 +99,7 @@ abstract class GlobalStore extends ChangeNotifier {
     for (final accountId in _perAccountStoresLoading.keys) {
       assert(_accounts.containsKey(accountId));
     }
+    return true;
   }
 
   /// The store's per-account data for the given account, if already loaded.
@@ -252,6 +253,12 @@ abstract class GlobalStore extends ChangeNotifier {
   /// This method should be called only by [removeAccount].
   @protected
   Future<void> doRemoveAccount(int accountId);
+
+  @override
+  void notifyListeners() {
+    assert(debugCheckInvariants());
+    super.notifyListeners();
+  }
 
   @override
   String toString() => '${objectRuntimeType(this, 'GlobalStore')}#${shortHash(this)}';
