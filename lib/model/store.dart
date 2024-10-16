@@ -142,8 +142,10 @@ abstract class GlobalStore extends ChangeNotifier {
     future = loadPerAccount(accountId);
     _perAccountStoresLoading[accountId] = future;
     store = await future;
+    assert(!_perAccountStores.containsKey(accountId));
+    _perAccountStores[accountId] = store;
     unawaited(_perAccountStoresLoading.remove(accountId));
-    _setPerAccount(accountId, store);
+    notifyListeners();
     return store;
   }
 
@@ -151,10 +153,6 @@ abstract class GlobalStore extends ChangeNotifier {
     assert(_perAccountStores.containsKey(accountId));
     assert(!_perAccountStoresLoading.containsKey(accountId));
     final store = await loadPerAccount(accountId);
-    _setPerAccount(accountId, store);
-  }
-
-  void _setPerAccount(int accountId, PerAccountStore store) {
     final oldStore = _perAccountStores[accountId];
     _perAccountStores[accountId] = store;
     notifyListeners();
