@@ -78,15 +78,18 @@ abstract class GlobalStore extends ChangeNotifier {
       email: account.email, apiKey: account.apiKey);
   }
 
-  /// This store's per-account data,
+  /// This store's per-account data, keyed by [Account.id],
   /// for any accounts where that data has already been loaded.
+  ///
+  /// Any account ID found here must also be in [_accounts],
+  /// and must not still be in [_perAccountStoresLoading].
   final Map<int, PerAccountStore> _perAccountStores = {};
 
-  /// A future that will complete with the per-account data,
+  /// Maps [Account.id] to a future that will complete with the per-account data,
   /// for any accounts where this store is currently loading that data.
   ///
-  /// Once the data for a given account is loaded, that account
-  /// is removed from this map and appears in [_perAccountStores] instead.
+  /// Any account ID found here must also be in [_accounts],
+  /// and must not already be in [_perAccountStores].
   final Map<int, Future<PerAccountStore>> _perAccountStoresLoading = {};
 
   int get debugNumPerAccountStoresLoading => _perAccountStoresLoading.length;
@@ -240,9 +243,11 @@ abstract class GlobalStore extends ChangeNotifier {
     assert(_accounts.containsKey(accountId));
     await doRemoveAccount(accountId);
     if (!_accounts.containsKey(accountId)) return; // Already removed.
-    _accounts.remove(accountId);
+    // If we have, or are fetching, per-account data for this account,
+    // then remove it from those data structures to preserve their invariants.
     _perAccountStores.remove(accountId)?.dispose();
     unawaited(_perAccountStoresLoading.remove(accountId));
+    _accounts.remove(accountId);
     notifyListeners();
   }
 
