@@ -78,10 +78,18 @@ abstract class GlobalStore extends ChangeNotifier {
       email: account.email, apiKey: account.apiKey);
   }
 
+  /// This store's per-account data,
+  /// for any accounts where that data has already been loaded.
   final Map<int, PerAccountStore> _perAccountStores = {};
 
-  int get debugNumPerAccountStoresLoading => _perAccountStoresLoading.length;
+  /// A future that will complete with the per-account data,
+  /// for any accounts where this store is currently loading that data.
+  ///
+  /// Once the data for a given account is loaded, that account
+  /// is removed from this map and appears in [_perAccountStores] instead.
   final Map<int, Future<PerAccountStore>> _perAccountStoresLoading = {};
+
+  int get debugNumPerAccountStoresLoading => _perAccountStoresLoading.length;
 
   /// The store's per-account data for the given account, if already loaded.
   ///
@@ -159,7 +167,8 @@ abstract class GlobalStore extends ChangeNotifier {
     return store;
   }
 
-  /// Load per-account data for the given account, unconditionally.
+  /// Load per-account data for the given account,
+  /// from the underlying data source.
   ///
   /// This method should be called only by [loadPerAccount].
   @protected
@@ -357,6 +366,9 @@ class PerAccountStore extends ChangeNotifier with EmojiStore, ChannelStore, Mess
   final GlobalStore _globalStore;
   final ApiConnection connection; // TODO(#135): update zulipFeatureLevel with events
 
+  /// The update machine operating on this per-account store, if any.
+  ///
+  /// In the live app (which uses [LiveGlobalStore]), this is always non-null.
   UpdateMachine? get updateMachine => _updateMachine;
   UpdateMachine? _updateMachine;
   set updateMachine(UpdateMachine? value) {
