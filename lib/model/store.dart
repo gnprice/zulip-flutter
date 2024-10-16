@@ -91,6 +91,16 @@ abstract class GlobalStore extends ChangeNotifier {
 
   int get debugNumPerAccountStoresLoading => _perAccountStoresLoading.length;
 
+  void debugCheckInvariants() {
+    for (final accountId in _perAccountStores.keys) {
+      assert(_accounts.containsKey(accountId));
+      assert(!_perAccountStoresLoading.containsKey(accountId));
+    }
+    for (final accountId in _perAccountStoresLoading.keys) {
+      assert(_accounts.containsKey(accountId));
+    }
+  }
+
   /// The store's per-account data for the given account, if already loaded.
   ///
   /// When not null, this is the same [PerAccountStore] that would be returned
