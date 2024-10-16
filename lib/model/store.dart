@@ -147,6 +147,7 @@ abstract class GlobalStore extends ChangeNotifier {
   /// This method should be called only by the implementation of [perAccount].
   /// Other callers interested in per-account data should use [perAccount]
   /// and/or [perAccountSync].
+  @protected
   Future<PerAccountStore> loadPerAccount(int accountId) async {
     assert(_accounts.containsKey(accountId));
     final store = await doLoadPerAccount(accountId);
@@ -161,6 +162,7 @@ abstract class GlobalStore extends ChangeNotifier {
   /// Load per-account data for the given account, unconditionally.
   ///
   /// This method should be called only by [loadPerAccount].
+  @protected
   Future<PerAccountStore> doLoadPerAccount(int accountId);
 
   // Just the Iterables, not the actual Map, to avoid clients mutating the map.
@@ -185,6 +187,9 @@ abstract class GlobalStore extends ChangeNotifier {
   }
 
   /// Add an account to the underlying data store.
+  ///
+  /// This method should be called only by [insertAccount].
+  @protected
   Future<Account> doInsertAccount(AccountsCompanion data);
 
   /// Update an account in the store, returning the new version.
@@ -207,6 +212,9 @@ abstract class GlobalStore extends ChangeNotifier {
   }
 
   /// Update an account in the underlying data store.
+  ///
+  /// This method should be called only by [updateAccount].
+  @protected
   Future<void> doUpdateAccount(int accountId, AccountsCompanion data);
 
   /// Remove an account from the store.
@@ -221,6 +229,9 @@ abstract class GlobalStore extends ChangeNotifier {
   }
 
   /// Remove an account from the underlying data store.
+  ///
+  /// This method should be called only by [removeAccount].
+  @protected
   Future<void> doRemoveAccount(int accountId);
 
   @override
