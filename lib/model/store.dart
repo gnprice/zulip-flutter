@@ -796,7 +796,9 @@ class UpdateMachine {
          // case of unauthenticated access to a web-public realm.  We authenticated.
          throw Exception("bad initial snapshot: missing queueId");
        })(),
-       lastEventId = initialSnapshot.lastEventId {
+       lastEventId = initialSnapshot.lastEventId,
+       _notificationTokenRegistrant = NotificationTokenRegistrant(
+         connection: store.connection) {
     store.updateMachine = this;
   }
 
@@ -1047,23 +1049,14 @@ class UpdateMachine {
     }
   }
 
-  /// Send this client's notification token to the server, now and if it changes.
+  final NotificationTokenRegistrant _notificationTokenRegistrant;
+
+  /// A transitional wrapper for [NotificationTokenRegistrant.start].
   ///
-  /// TODO The returned future isn't especially meaningful (it may or may not
-  ///   mean we actually sent the token).  Make it just `void` once we fix the
-  ///   one test that relies on the future.
-  // TODO(#322) save acked token, to dedupe updating it on the server
-  // TODO(#323) track the addFcmToken/etc request, warn if not succeeding
+  /// TODO update references and remove wrapper
   Future<void> registerNotificationToken() async {
     assert(!_disposed);
-    NotificationService.instance.token.addListener(_registerNotificationToken);
-    await _registerNotificationToken();
-  }
-
-  Future<void> _registerNotificationToken() async {
-    final token = NotificationService.instance.token.value;
-    if (token == null) return;
-    await NotificationService.registerToken(store.connection, token: token);
+    await _notificationTokenRegistrant.start();
   }
 
   /// Cleans up resources and tells the instance not to make new API requests.
@@ -1076,7 +1069,7 @@ class UpdateMachine {
   /// requests to error. [PerAccountStore.dispose] does that.
   void dispose() {
     assert(!_disposed);
-    NotificationService.instance.token.removeListener(_registerNotificationToken);
+    _notificationTokenRegistrant.dispose();
     _disposed = true;
   }
 

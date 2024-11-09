@@ -204,3 +204,43 @@ class NotificationService {
     NotificationDisplayManager.onFcmMessage(data, message.data);
   }
 }
+
+/// An object that keeps a given Zulip server up to date
+/// on this client's notification token.
+class NotificationTokenRegistrant {
+  NotificationTokenRegistrant({required this.connection});
+
+  final ApiConnection connection;
+
+  bool _disposed = false;
+
+  /// Send this client's notification token to the server, now and if it changes.
+  ///
+  /// TODO The returned future isn't especially meaningful (it may or may not
+  ///   mean we actually sent the token).  Make it just `void` once we fix the
+  ///   one test that relies on the future.
+  // TODO(#322) save acked token, to dedupe updating it on the server
+  // TODO(#323) track the addFcmToken/etc request, warn if not succeeding
+  Future<void> start() async {
+    assert(!_disposed);
+    NotificationService.instance.token.addListener(_register);
+    await _register();
+  }
+
+  Future<void> _register() async {
+    assert(!_disposed);
+    final token = NotificationService.instance.token.value;
+    if (token == null) return;
+    await NotificationService.registerToken(connection, token: token);
+  }
+
+  /// Cleans up resources and tells the instance not to make new API requests.
+  ///
+  /// After this is called, the instance is not in a usable state
+  /// and should be abandoned.
+  void dispose() {
+    assert(!_disposed);
+    NotificationService.instance.token.removeListener(_register);
+    _disposed = true;
+  }
+}
