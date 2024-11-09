@@ -840,9 +840,9 @@ class UpdateMachine {
       //   serverEmojiDataUrl are already unsupported at time of writing.)
       unawaited(updateMachine.fetchEmojiData(initialSnapshot.serverEmojiDataUrl!));
     }
-    // TODO do registerNotificationToken before registerQueue:
+    // TODO do [NotificationTokenRegistrant.start] before registerQueue:
     //   https://github.com/zulip/zulip-flutter/pull/325#discussion_r1365982807
-    unawaited(updateMachine.registerNotificationToken());
+    unawaited(updateMachine._notificationTokenRegistrant.start());
     return updateMachine;
   }
 
@@ -1050,14 +1050,6 @@ class UpdateMachine {
   }
 
   final NotificationTokenRegistrant _notificationTokenRegistrant;
-
-  /// A transitional wrapper for [NotificationTokenRegistrant.start].
-  ///
-  /// TODO update references and remove wrapper
-  Future<void> registerNotificationToken() async {
-    assert(!_disposed);
-    await _notificationTokenRegistrant.start();
-  }
 
   /// Cleans up resources and tells the instance not to make new API requests.
   ///
