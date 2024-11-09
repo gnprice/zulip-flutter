@@ -844,7 +844,7 @@ class UpdateMachine {
     }
     // TODO do [NotificationTokenRegistrant.start] before registerQueue:
     //   https://github.com/zulip/zulip-flutter/pull/325#discussion_r1365982807
-    unawaited(registrant.start());
+    registrant.start();
     return updateMachine;
   }
 
