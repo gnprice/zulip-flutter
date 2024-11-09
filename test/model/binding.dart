@@ -451,6 +451,7 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
   @override
   Future<String?> getToken({String? vapidKey}) async {
     assert(vapidKey == null);
+    await Future<void>.delayed(Duration.zero);
     if (_token == null) {
       assert(_initialToken != null,
         'Tests that call [NotificationService.start], or otherwise cause'
@@ -469,6 +470,7 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
 
   @override
   Future<String?> getAPNSToken() async {
+    await Future<void>.delayed(Duration.zero);
     switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:

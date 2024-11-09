@@ -68,6 +68,7 @@ void main() {
       async.flushTimers(); // let NotificationService.start finish work
 
       // On startup, send the token.
+      check(NotificationService.instance.token.value).equals('012abc');
       prepare();
       connection.prepare(json: {});
       NotificationTokenRegistrant(connection: connection).start();
@@ -104,8 +105,10 @@ void main() {
       // including its `getToken` call.
 
       // On startup, send nothing (because we have nothing to send).
+      check(NotificationService.instance.token.value).isNull();
       prepare();
       NotificationTokenRegistrant(connection: connection).start();
+      async.flushMicrotasks();
       check(connection.lastRequest).isNull();
 
       // When the token later appears, send it.
