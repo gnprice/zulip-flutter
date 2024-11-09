@@ -105,7 +105,7 @@ void main() {
 
       // On startup, send nothing (because we have nothing to send).
       prepare();
-      await NotificationTokenRegistrant(connection: connection).start();
+      NotificationTokenRegistrant(connection: connection).start();
       check(connection.lastRequest).isNull();
 
       // When the token later appears, send it.
