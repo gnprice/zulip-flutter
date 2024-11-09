@@ -791,14 +791,13 @@ class UpdateMachine {
   UpdateMachine.fromInitialSnapshot({
     required this.store,
     required InitialSnapshot initialSnapshot,
+    this.notificationTokenRegistrant,
   }) : queueId = initialSnapshot.queueId ?? (() {
          // The queueId is optional in the type, but should only be missing in the
          // case of unauthenticated access to a web-public realm.  We authenticated.
          throw Exception("bad initial snapshot: missing queueId");
        })(),
-       lastEventId = initialSnapshot.lastEventId,
-       _notificationTokenRegistrant = NotificationTokenRegistrant(
-         connection: store.connection) {
+       lastEventId = initialSnapshot.lastEventId {
     store.updateMachine = this;
   }
 
@@ -831,8 +830,11 @@ class UpdateMachine {
       connection: connection,
       initialSnapshot: initialSnapshot,
     );
+    final registrant = NotificationTokenRegistrant(connection: connection);
     final updateMachine = UpdateMachine.fromInitialSnapshot(
-      store: store, initialSnapshot: initialSnapshot);
+      store: store, initialSnapshot: initialSnapshot,
+      notificationTokenRegistrant: registrant,
+    );
     updateMachine.poll();
     if (initialSnapshot.serverEmojiDataUrl != null) {
       // TODO(server-6): If the server is ancient, just skip trying to have
@@ -842,7 +844,7 @@ class UpdateMachine {
     }
     // TODO do [NotificationTokenRegistrant.start] before registerQueue:
     //   https://github.com/zulip/zulip-flutter/pull/325#discussion_r1365982807
-    unawaited(updateMachine._notificationTokenRegistrant.start());
+    unawaited(registrant.start());
     return updateMachine;
   }
 
@@ -1049,7 +1051,7 @@ class UpdateMachine {
     }
   }
 
-  final NotificationTokenRegistrant _notificationTokenRegistrant;
+  final NotificationTokenRegistrant? notificationTokenRegistrant;
 
   /// Cleans up resources and tells the instance not to make new API requests.
   ///
@@ -1061,7 +1063,7 @@ class UpdateMachine {
   /// requests to error. [PerAccountStore.dispose] does that.
   void dispose() {
     assert(!_disposed);
-    _notificationTokenRegistrant.dispose();
+    notificationTokenRegistrant?.dispose();
     _disposed = true;
   }
 
