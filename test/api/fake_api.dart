@@ -144,7 +144,7 @@ class FakeApiConnection extends ApiConnection {
          useBinding: useBinding,
        );
 
-  FakeApiConnection.fromAccount(Account account, {required bool useBinding})
+  FakeApiConnection.fromAccount(Account account, {bool useBinding = false})
     : this(
         realmUrl: account.realmUrl,
         zulipFeatureLevel: account.zulipFeatureLevel,
