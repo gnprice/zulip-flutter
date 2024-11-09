@@ -113,17 +113,22 @@ void main() {
     return http.runWithClient(callback, httpClientFactory ?? () => fakeHttpClientGivingSuccess);
   }
 
-  Future<void> init() async {
+  void initUnfinished() {
     addTearDown(testBinding.reset);
     testBinding.firebaseMessagingInitialToken = '012abc';
     addTearDown(NotificationService.debugReset);
     NotificationService.debugBackgroundIsolateIsLive = false;
-    await NotificationService.instance.start();
+    NotificationService.instance.start();
+  }
+
+  void init(FakeAsync async) {
+    initUnfinished();
+    async.flushTimers(); // let NotificationService.start finish work
   }
 
   group('NotificationChannelManager', () {
-    test('smoke', () async {
-      await init();
+    test('smoke', () => awaitFakeAsync((async) async {
+      init(async);
       check(testBinding.androidNotificationHost.takeCreatedChannels()).single
         ..id.equals(NotificationChannelManager.kChannelId)
         ..name.equals('Messages')
@@ -132,7 +137,7 @@ void main() {
         ..vibrationPattern.isNotNull().deepEquals(
             NotificationChannelManager.kVibrationPattern)
       ;
-    });
+    }));
 
     test('channel is not recreated if one with same id already exists', () async {
       addTearDown(testBinding.reset);
@@ -361,7 +366,7 @@ void main() {
     }
 
     test('stream message', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final stream = eg.stream();
       final message = eg.streamMessage(stream: stream);
       await checkNotifications(async, messageFcmMessage(message, streamName: stream.name),
@@ -371,7 +376,7 @@ void main() {
     })));
 
     test('stream message: multiple messages, same topic', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final stream = eg.stream();
       const topic = 'topic 1';
       final message1 = eg.streamMessage(topic: topic, stream: stream);
@@ -407,7 +412,7 @@ void main() {
     })));
 
     test('stream message: multiple messages, different topics', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final stream = eg.stream();
       const topicA = 'topic A';
       const topicB = 'topic B';
@@ -441,7 +446,7 @@ void main() {
     })));
 
     test('stream message: conversation stays same when stream is renamed', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       var stream = eg.stream(streamId: 1, name: 'Before');
       const topic = 'topic';
       final message1 = eg.streamMessage(topic: topic, stream: stream);
@@ -467,7 +472,7 @@ void main() {
     })));
 
     test('stream message: stream name omitted', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final stream = eg.stream();
       final message = eg.streamMessage(stream: stream);
       await checkNotifications(async, messageFcmMessage(message, streamName: null),
@@ -477,7 +482,7 @@ void main() {
     })));
 
     test('group DM: 3 users', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final message = eg.dmMessage(from: eg.thirdUser, to: [eg.otherUser, eg.selfUser]);
       await checkNotifications(async, messageFcmMessage(message),
         expectedIsGroupConversation: true,
@@ -486,7 +491,7 @@ void main() {
     })));
 
     test('group DM: more than 3 users', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final message = eg.dmMessage(from: eg.thirdUser,
         to: [eg.otherUser, eg.selfUser, eg.fourthUser]);
       await checkNotifications(async, messageFcmMessage(message),
@@ -496,7 +501,7 @@ void main() {
     })));
 
     test('group DM: title updates with latest sender', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final message1 = eg.dmMessage(from: eg.otherUser, to: [eg.selfUser, eg.thirdUser]);
       final data1 = messageFcmMessage(message1);
       final message2 = eg.dmMessage(from: eg.thirdUser, to: [eg.selfUser, eg.otherUser]);
@@ -520,7 +525,7 @@ void main() {
     })));
 
     test('1:1 DM', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final message = eg.dmMessage(from: eg.otherUser, to: [eg.selfUser]);
       await checkNotifications(async, messageFcmMessage(message),
         expectedIsGroupConversation: false,
@@ -529,7 +534,7 @@ void main() {
     })));
 
     test('1:1 DM: title updates when sender name changes', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final otherUser = eg.user(fullName: 'Before');
       final message1 = eg.dmMessage(from: otherUser, to: [eg.selfUser]);
       final data1 = messageFcmMessage(message1);
@@ -556,7 +561,7 @@ void main() {
     })));
 
     test('1:1 DM: conversation stays same when sender email changes', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final otherUser = eg.user(email: 'before@example.com');
       final message1 = eg.dmMessage(from: otherUser, to: [eg.selfUser]);
       final data1 = messageFcmMessage(message1);
@@ -584,7 +589,7 @@ void main() {
 
     test('1:1 DM: sender avatar loading fails, remote error', () => runWithHttpClient(
       () => awaitFakeAsync((async) async {
-        await init();
+        init(async);
         final message = eg.dmMessage(from: eg.otherUser, to: [eg.selfUser]);
         final data = messageFcmMessage(message);
         receiveFcmMessage(async, data);
@@ -600,7 +605,7 @@ void main() {
 
     test('1:1 DM: sender avatar loading fails, local error', () => runWithHttpClient(
       () => awaitFakeAsync((async) async {
-        await init();
+        init(async);
         final message = eg.dmMessage(from: eg.otherUser, to: [eg.selfUser]);
         final data = messageFcmMessage(message);
         receiveFcmMessage(async, data);
@@ -615,7 +620,7 @@ void main() {
         exception: http.ClientException('Network failure'))));
 
     test('self-DM', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final message = eg.dmMessage(from: eg.selfUser, to: []);
       await checkNotifications(async, messageFcmMessage(message),
         expectedIsGroupConversation: false,
@@ -624,7 +629,7 @@ void main() {
     })));
 
     test('remove: smoke', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final message = eg.streamMessage();
       final data = messageFcmMessage(message);
       final expectedGroupKey = '${data.realmUrl}|${data.userId}';
@@ -655,7 +660,7 @@ void main() {
     })));
 
     test('remove: clears conversation only if the removal event is for the last message', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final stream = eg.stream();
       const topicA = 'Topic A';
       final message1 = eg.streamMessage(stream: stream, topic: topicA);
@@ -689,7 +694,7 @@ void main() {
     })));
 
     test('remove: clears summary notification only if all conversation notifications are cleared', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final stream = eg.stream();
       const topicA = 'Topic A';
       final message1 = eg.streamMessage(stream: stream, topic: topicA);
@@ -724,7 +729,7 @@ void main() {
     })));
 
     test('remove: different realm URLs but same user-ids and same message-ids', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final stream = eg.stream();
       const topic = 'Some Topic';
 
@@ -768,7 +773,7 @@ void main() {
     })));
 
     test('remove: different user-ids but same realm URL and same message-ids', () => runWithHttpClient(() => awaitFakeAsync((async) async {
-      await init();
+      init(async);
       final realmUrl = eg.realmUrl;
       final stream = eg.stream();
       const topic = 'Some Topic';
@@ -828,7 +833,8 @@ void main() {
 
     Future<void> prepare(WidgetTester tester,
         {bool early = false, bool withAccount = true}) async {
-      await init();
+      initUnfinished();
+      await tester.pump(Duration.zero);
       pushedRoutes = [];
       final testNavObserver = TestNavigatorObserver()
         ..onPushed = (route, prevRoute) => pushedRoutes.add(route);
