@@ -70,7 +70,7 @@ void main() {
       // On startup, send the token.
       prepare();
       connection.prepare(json: {});
-      await NotificationTokenRegistrant(connection: connection).start();
+      NotificationTokenRegistrant(connection: connection).start();
       async.flushMicrotasks();
       if (defaultTargetPlatform == TargetPlatform.android) {
         checkLastRequestFcm(token: '012abc');
