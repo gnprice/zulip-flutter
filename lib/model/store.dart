@@ -1056,9 +1056,6 @@ class UpdateMachine {
   // TODO(#323) track the addFcmToken/etc request, warn if not succeeding
   Future<void> registerNotificationToken() async {
     assert(!_disposed);
-    if (!debugEnableRegisterNotificationToken) {
-      return;
-    }
     NotificationService.instance.token.addListener(_registerNotificationToken);
     await _registerNotificationToken();
   }
@@ -1099,26 +1096,6 @@ class UpdateMachine {
   static set debugEnableFetchEmojiData(bool value) {
     assert(() {
       _debugEnableFetchEmojiData = value;
-      return true;
-    }());
-  }
-
-  /// In debug mode, controls whether [registerNotificationToken] should
-  /// have its normal effect.
-  ///
-  /// Outside of debug mode, this is always true and the setter has no effect.
-  static bool get debugEnableRegisterNotificationToken {
-    bool result = true;
-    assert(() {
-      result = _debugEnableRegisterNotificationToken;
-      return true;
-    }());
-    return result;
-  }
-  static bool _debugEnableRegisterNotificationToken = true;
-  static set debugEnableRegisterNotificationToken(bool value) {
-    assert(() {
-      _debugEnableRegisterNotificationToken = value;
       return true;
     }());
   }

@@ -315,8 +315,6 @@ void main() {
         as FakeApiConnection);
       UpdateMachine.debugEnableFetchEmojiData = false;
       addTearDown(() => UpdateMachine.debugEnableFetchEmojiData = true);
-      UpdateMachine.debugEnableRegisterNotificationToken = false;
-      addTearDown(() => UpdateMachine.debugEnableRegisterNotificationToken = true);
     }
 
     void checkLastRequest() {
@@ -333,6 +331,7 @@ void main() {
       connection.prepare(json: eg.initialSnapshot(realmUsers: users).toJson());
       final updateMachine = await UpdateMachine.load(
         globalStore, eg.selfAccount.id);
+      addTearDown(() => updateMachine.store.dispose());
       updateMachine.debugPauseLoop();
 
       // TODO UpdateMachine.debugPauseLoop is too late to prevent first poll attempt;
@@ -364,6 +363,7 @@ void main() {
         zulipFeatureLevel: 234,
       ).toJson());
       final updateMachine = await UpdateMachine.load(globalStore, account.id);
+      addTearDown(() => updateMachine.store.dispose());
       updateMachine.debugPauseLoop();
       check(globalStore.getAccount(account.id)).isNotNull()
         ..identicalTo(updateMachine.store.account)
@@ -395,6 +395,7 @@ void main() {
       final users = [eg.selfUser, eg.otherUser];
       connection.prepare(json: eg.initialSnapshot(realmUsers: users).toJson());
       final updateMachine = await future;
+      addTearDown(() => updateMachine.store.dispose());
       updateMachine.debugPauseLoop();
       check(complete).isTrue();
       // checkLastRequest(); TODO UpdateMachine.debugPauseLoop was too late; see comment above
