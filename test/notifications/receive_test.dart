@@ -66,9 +66,9 @@ void main() {
       addTearDown(NotificationService.debugReset);
       NotificationService.instance.start();
       async.flushTimers(); // let NotificationService.start finish work
+      check(NotificationService.instance.token.value).equals('012abc');
 
       // On startup, send the token.
-      check(NotificationService.instance.token.value).equals('012abc');
       prepare();
       connection.prepare(json: {});
       NotificationTokenRegistrant(connection: connection).start();
@@ -95,17 +95,11 @@ void main() {
       testBinding.firebaseMessagingInitialToken = '012abc';
       addTearDown(NotificationService.debugReset);
       NotificationService.instance.start();
-
-      // TODO this test is a bit brittle in its interaction with asynchrony;
-      //   to fix, probably extend TestZulipBinding to control when getToken finishes.
-      //
-      // The aim here is to first wait for `start()`
-      // to complete whatever it's going to do; then check no request was made;
-      // and only after that wait for `NotificationService.start` to finish,
-      // including its `getToken` call.
+      // No flushTimers call, so the getToken in NotificationService.start
+      // won't have finished yet.
+      check(NotificationService.instance.token.value).isNull();
 
       // On startup, send nothing (because we have nothing to send).
-      check(NotificationService.instance.token.value).isNull();
       prepare();
       NotificationTokenRegistrant(connection: connection).start();
       async.flushMicrotasks();

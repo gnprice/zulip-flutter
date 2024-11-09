@@ -215,19 +215,15 @@ class NotificationTokenRegistrant {
   bool _disposed = false;
 
   /// Send this client's notification token to the server, now and if it changes.
-  ///
-  /// TODO The returned future isn't especially meaningful (it may or may not
-  ///   mean we actually sent the token).  Make it just `void` once we fix the
-  ///   one test that relies on the future.
   // TODO(#322) save acked token, to dedupe updating it on the server
   // TODO(#323) track the addFcmToken/etc request, warn if not succeeding
   void start() async {
     assert(!_disposed);
     NotificationService.instance.token.addListener(_register);
-    await _register();
+    _register();
   }
 
-  Future<void> _register() async {
+  void _register() async {
     assert(!_disposed);
     final token = NotificationService.instance.token.value;
     if (token == null) return;
