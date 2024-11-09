@@ -49,7 +49,7 @@ class NotificationService {
   ///    https://firebase.google.com/docs/cloud-messaging/manage-tokens
   ValueNotifier<String?> token = ValueNotifier(null);
 
-  Future<void> start() async {
+  void start() async {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         await ZulipBinding.instance.firebaseInitializeApp(

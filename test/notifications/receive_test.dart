@@ -15,12 +15,12 @@ import '../stdlib_checks.dart';
 void main() {
   TestZulipBinding.ensureInitialized();
 
-  Future<void> init() async {
+  void init() async {
     addTearDown(testBinding.reset);
     testBinding.firebaseMessagingInitialToken = '012abc';
     addTearDown(NotificationService.debugReset);
     NotificationService.debugBackgroundIsolateIsLive = false;
-    await NotificationService.instance.start();
+    NotificationService.instance.start();
   }
 
   // The calls to firebaseMessagingOnMessage and firebaseMessagingOnBackgroundMessage
@@ -29,7 +29,8 @@ void main() {
 
   group('permissions', () {
     testWidgets('request permission', (tester) async {
-      await init();
+      init();
+      await tester.pump(Duration.zero);
       check(testBinding.firebaseMessaging.takeRequestPermissionCalls())
         .length.equals(1);
     }, variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}));
@@ -63,12 +64,14 @@ void main() {
       addTearDown(testBinding.reset);
       testBinding.firebaseMessagingInitialToken = '012abc';
       addTearDown(NotificationService.debugReset);
-      await NotificationService.instance.start();
+      NotificationService.instance.start();
+      async.flushTimers(); // let NotificationService.start finish work
 
       // On startup, send the token.
       prepare();
       connection.prepare(json: {});
       await NotificationTokenRegistrant(connection: connection).start();
+      async.flushMicrotasks();
       if (defaultTargetPlatform == TargetPlatform.android) {
         checkLastRequestFcm(token: '012abc');
       } else {
@@ -90,7 +93,7 @@ void main() {
       addTearDown(testBinding.reset);
       testBinding.firebaseMessagingInitialToken = '012abc';
       addTearDown(NotificationService.debugReset);
-      final startFuture = NotificationService.instance.start();
+      final Future<void> startFuture = NotificationService.instance.start() as Future<void>;
 
       // TODO this test is a bit brittle in its interaction with asynchrony;
       //   to fix, probably extend TestZulipBinding to control when getToken finishes.
