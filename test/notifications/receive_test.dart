@@ -93,7 +93,7 @@ void main() {
       addTearDown(testBinding.reset);
       testBinding.firebaseMessagingInitialToken = '012abc';
       addTearDown(NotificationService.debugReset);
-      final Future<void> startFuture = NotificationService.instance.start() as Future<void>;
+      NotificationService.instance.start();
 
       // TODO this test is a bit brittle in its interaction with asynchrony;
       //   to fix, probably extend TestZulipBinding to control when getToken finishes.
@@ -110,7 +110,7 @@ void main() {
 
       // When the token later appears, send it.
       connection.prepare(json: {});
-      await startFuture;
+      async.flushTimers(); // let NotificationService.start finish work
       if (defaultTargetPlatform == TargetPlatform.android) {
         checkLastRequestFcm(token: '012abc');
       } else {
