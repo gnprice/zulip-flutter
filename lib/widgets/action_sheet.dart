@@ -69,7 +69,7 @@ void showMessageActionSheet({required BuildContext context, required Message mes
     clipBehavior: Clip.antiAlias,
     useSafeArea: true,
     isScrollControlled: true,
-    builder: (BuildContext _) {
+    builder: (BuildContext context) {
       return SafeArea(
         minimum: const EdgeInsets.only(bottom: 16),
         child: Padding(
