@@ -155,10 +155,10 @@ make_android_icon() {
 }
 
 make_android() {
-    # Launcher icon goes in a mipmap:
+    # Launcher icons go into mipmaps:
     #   https://developer.android.com/training/multiscreen/screendensities#mipmap
-    # TODO split
-    make_android_icon "${src_icon_combined}" 48 main mipmap ic_launcher
+    make_android_icon "${src_icon_background}" 48 main mipmap ic_launcher_background
+    make_android_icon "${src_icon_foreground}" 48 main mipmap ic_launcher_monochrome
 }
 
 make_ios
