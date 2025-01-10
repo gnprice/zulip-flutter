@@ -860,7 +860,7 @@ String? _parseMath(dom.Element element, {required bool block}) {
 /// instance has been reset to its starting state, and can be re-used for
 /// parsing other subtrees.
 class _ZulipInlineContentParser {
-  InlineContentNode? parseInlineMath(dom.Element element) {
+  static InlineContentNode? parseInlineMath(dom.Element element) {
     final debugHtmlNode = kDebugMode ? element : null;
     final texSource = _parseMath(element, block: false);
     if (texSource == null) return null;
@@ -1055,7 +1055,7 @@ class _ZulipContentParser {
     return inlineParser.parseBlockInline(nodes);
   }
 
-  BlockContentNode parseMathBlock(dom.Element element) {
+  static BlockContentNode parseMathBlock(dom.Element element) {
     final debugHtmlNode = kDebugMode ? element : null;
     final texSource = _parseMath(element, block: true);
     if (texSource == null) return UnimplementedBlockContentNode(htmlNode: element);
@@ -1103,7 +1103,7 @@ class _ZulipContentParser {
     }
   }
 
-  BlockContentNode parseCodeBlock(dom.Element divElement) {
+  static BlockContentNode parseCodeBlock(dom.Element divElement) {
     final mainElement = () {
       assert(divElement.localName == 'div'
           && divElement.className == "codehilite");
@@ -1185,7 +1185,7 @@ class _ZulipContentParser {
 
   static final _imageDimensionsRegExp = RegExp(r'^(\d+)x(\d+)$');
 
-  BlockContentNode parseImageNode(dom.Element divElement) {
+  static BlockContentNode parseImageNode(dom.Element divElement) {
     final elements = () {
       assert(divElement.localName == 'div'
           && divElement.className == 'message_inline_image');
@@ -1276,7 +1276,7 @@ class _ZulipContentParser {
     return RegExp("^message_inline_image $sourceType|$sourceType message_inline_image\$");
   }();
 
-  BlockContentNode parseInlineVideoNode(dom.Element divElement) {
+  static BlockContentNode parseInlineVideoNode(dom.Element divElement) {
     assert(divElement.localName == 'div'
       && _videoClassNameRegexp.hasMatch(divElement.className));
 
@@ -1308,7 +1308,7 @@ class _ZulipContentParser {
     return InlineVideoNode(srcUrl: src, debugHtmlNode: debugHtmlNode);
   }
 
-  BlockContentNode parseEmbedVideoNode(dom.Element divElement) {
+  static BlockContentNode parseEmbedVideoNode(dom.Element divElement) {
     assert(divElement.localName == 'div'
       && _videoClassNameRegexp.hasMatch(divElement.className));
 
