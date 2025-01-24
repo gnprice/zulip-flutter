@@ -54,7 +54,9 @@ src_icon_foreground="${root_dir}"/assets/app-icons/app-icon-white-z-on-transpare
 # Gradient-colored square, full-bleed.
 src_icon_background="${root_dir}"/assets/app-icons/app-icon-gradient.svg
 
-# Combination of ${src_icon_foreground} upon ${src_icon_background}.
+# Combination of ${src_icon_foreground} upon ${src_icon_background}...
+# more or less.  (The foreground layer is larger, with less padding,
+# and the SVG is different in random other ways.)
 src_icon_combined="${root_dir}"/assets/app-icons/app-icon-combined.svg
 
 
