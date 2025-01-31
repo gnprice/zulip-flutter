@@ -610,9 +610,6 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
     child!.layout(constraints, parentUsesSize: true);
     SliverGeometry geometry = child!.geometry!;
 
-    print('constraints: $constraints');
-    print('child geometry: $geometry');
-
     if (geometry.scrollOffsetCorrection != null) {
       this.geometry = geometry;
       return;
@@ -712,7 +709,6 @@ class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelper
         constraints.axis.coordinateDirection, headerOffset);
     }
 
-    print('final geometry: $geometry');
     this.geometry = geometry;
   }
 
