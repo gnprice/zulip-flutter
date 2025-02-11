@@ -398,6 +398,7 @@ Future<void> _checkSequence(
     final expectedHeaderIndex = first
       ? (scrollOffset / 100).floor()
       : (extent ~/ 100 - 1) + (scrollOffset / 100).ceil();
+    // print('$scrollOffset -> $expectedHeaderIndex');
     check(tester.widget<_Item>(itemFinder).index).equals(expectedHeaderIndex);
     check(_headerIndex(tester)).equals(expectedHeaderIndex);
 
@@ -406,6 +407,8 @@ Future<void> _checkSequence(
       100 - (first ? scrollOffset % 100 : (-scrollOffset) % 100);
     final double expectedHeaderInsetExtent =
       allowOverflow ? 20 : math.min(20, expectedItemInsetExtent);
+    // print('  -> $expectedItemInsetExtent, $expectedHeaderInsetExtent');
+    // await Future.delayed(Duration(milliseconds: 150));
     if (expectedItemInsetExtent < expectedHeaderInsetExtent) {
       // TODO there's a bug here if the header isn't opaque;
       //   this check would exercise the bug:
