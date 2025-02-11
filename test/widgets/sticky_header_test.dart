@@ -665,3 +665,29 @@ class TouchSlop extends StatelessWidget {
       child: child);
   }
 }
+
+/// Finds the widget that corresponds to the given element.
+///
+/// This is useful when one has an [Element]
+/// (for example, from the result of another finder)
+/// and wants to pass it to an API that expects a finder.
+class ExactElementFinder extends FinderBase<Element> {
+  ExactElementFinder(this.element);
+
+  final Element element;
+
+  @override
+  Iterable<Element> get allCandidates => [element];
+
+  @override
+  String describeMatch(Plurality plurality) {
+    assert(plurality == Plurality.one);
+    return 'the given element ($element)';
+  }
+
+  @override
+  Iterable<Element> findInCandidates(Iterable<Element> candidates) {
+    assert(identical(candidates.single, element));
+    return candidates;
+  }
+}
