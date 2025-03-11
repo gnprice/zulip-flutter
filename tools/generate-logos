@@ -38,6 +38,9 @@ die() {
 inkscape --version >/dev/null 2>&1 \
     || die "Need inkscape -- try 'apt install inkscape'."
 
+rsvg-convert --version >/dev/null 2>&1 \
+    || die "Need rsvg-convert -- try 'apt install librsvg2-bin'."
+
 cwebp -version >/dev/null 2>&1 \
     || die "Need cwebp -- try 'apt install webp'."
 
@@ -68,7 +71,7 @@ make_one_ios_app_icon() {
     local output_basename=Icon-"${size_pt}x${size_pt}@${scale}x".png
     local output="${iconset}"/"${output_basename}"
     if [ ! -f "${output}" ]; then
-        inkscape "${src_icon_combined}" -w "${size_px}" -o "${output}"
+        rsvg-convert "${src_icon_combined}" -w "${size_px}" -o "${output}"
     fi
 
     printf >>"${contents}" \
