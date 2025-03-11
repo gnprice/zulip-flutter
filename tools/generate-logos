@@ -48,8 +48,8 @@ strip-nondeterminism --version >/dev/null 2>&1 \
     || die "Need strip-nondeterminism -- try 'apt install strip-nondeterminism'."
 
 
-# White Z on transparent background.
-src_icon_foreground="${root_dir}"/assets/app-icons/app-icon-white-z-on-transparent.svg
+# White Z above "BETA", on transparent background.
+src_icon_foreground="${root_dir}"/assets/app-icons/app-icon-white-z-beta-on-transparent.svg
 
 # Gradient-colored square, full-bleed.
 src_icon_background="${root_dir}"/assets/app-icons/app-icon-gradient.svg
