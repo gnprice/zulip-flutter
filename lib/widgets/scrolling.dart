@@ -245,6 +245,10 @@ class MessageListScrollPosition extends ScrollPositionWithSingleContext {
     // Inspired by _TabBarScrollPosition.applyContentDimensions upstream.
     bool changed = false;
 
+    print('applyContentDimensions: $pixels ($minScrollExtent..$maxScrollExtent'
+        ', was ${hasContentDimensions ? '${this.minScrollExtent}..${this.maxScrollExtent}' : 'null'}'
+        '); $viewportDimension');
+
     if (!_hasEverCompletedLayout) {
       // The list is being laid out for the first time (its first performLayout).
       // Start out scrolled down so the bottom sliver (the new messages)
@@ -255,14 +259,18 @@ class MessageListScrollPosition extends ScrollPositionWithSingleContext {
       final target = clampDouble(0.75 * viewportDimension,
         minScrollExtent, maxScrollExtent);
       if (!hasPixels || pixels != target) {
+        print('initial correction: -> $target');
         correctPixels(target);
         changed = true;
+      } else {
+        print('initial corrections complete');
       }
     } else if (_nearEqual(pixels, this.maxScrollExtent)
         && !_nearEqual(pixels, maxScrollExtent)) {
       // The list was scrolled to the end before this layout round.
       // Make sure it stays at the end.
       // (For example, show the new message that just arrived.)
+      print('  -> staying at end: $pixels -> $maxScrollExtent');
       correctPixels(maxScrollExtent);
       changed = true;
     }
@@ -287,6 +295,8 @@ class MessageListScrollPosition extends ScrollPositionWithSingleContext {
       // this will be the last round of this layout.
       _hasEverCompletedLayout = true;
     }
+
+    print('  -> ${!changed}; $pixels (${this.minScrollExtent}..${this.maxScrollExtent})');
 
     return !changed;
   }
