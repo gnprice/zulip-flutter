@@ -669,7 +669,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
 
           final itemIndex = topItems + childIndex;
           final data = model!.items[itemIndex];
-          return _buildItem(zulipLocalizations, data);
+          return _buildItem(zulipLocalizations, data, highlight: childIndex == 0);
         }));
 
     if (!ComposeBox.hasComposeBox(widget.narrow)) {
@@ -701,7 +701,8 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
       ]);
   }
 
-  Widget _buildItem(ZulipLocalizations zulipLocalizations, MessageListItem data) {
+  Widget _buildItem(ZulipLocalizations zulipLocalizations, MessageListItem data,
+      {bool highlight = false}) {
     switch (data) {
       case MessageListHistoryStartItem():
         return Center(
@@ -716,7 +717,10 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
       case MessageListRecipientHeaderItem():
         final header = RecipientHeader(message: data.message, narrow: widget.narrow);
         return StickyHeaderItem(allowOverflow: true,
-          header: header, child: header);
+          header: header, child: !highlight ? header
+            : Stack(children: [header,
+                Positioned(left: 0, right: 0, top: 0, bottom: 0,
+                  child: ColoredBox(color: Colors.red.withAlpha(127)))]));
       case MessageListDateSeparatorItem():
         final header = RecipientHeader(message: data.message, narrow: widget.narrow);
         return StickyHeaderItem(allowOverflow: true,
@@ -726,6 +730,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
         final header = RecipientHeader(message: data.message, narrow: widget.narrow);
         return MessageItem(
           key: ValueKey(data.message.id),
+          highlight: highlight,
           header: header,
           trailingWhitespace: 11,
           item: data);
@@ -999,11 +1004,13 @@ class DateSeparator extends StatelessWidget {
 class MessageItem extends StatelessWidget {
   const MessageItem({
     super.key,
+    this.highlight = false,
     required this.item,
     required this.header,
     this.trailingWhitespace,
   });
 
+  final bool highlight;
   final MessageListMessageItem item;
   final Widget header;
   final double? trailingWhitespace;
@@ -1018,7 +1025,7 @@ class MessageItem extends StatelessWidget {
       child: _UnreadMarker(
         isRead: message.flags.contains(MessageFlag.read),
         child: ColoredBox(
-          color: messageListTheme.bgMessageRegular,
+          color: highlight ? Colors.red : messageListTheme.bgMessageRegular,
           child: Column(children: [
             MessageWithPossibleSender(item: item),
             if (trailingWhitespace != null && item.isLastInBlock) SizedBox(height: trailingWhitespace!),
