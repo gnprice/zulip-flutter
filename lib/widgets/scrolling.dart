@@ -230,6 +230,8 @@ class MessageListScrollPosition extends ScrollPositionWithSingleContext {
     // sliver isn't empty), this would mean one can scroll up past
     // the top of the list, even though that scrolls other content offscreen.
 
+    print('applyContentDimensionsRaw: $pixels ($wholeMinScrollExtent..$wholeMaxScrollExtent); $viewportDimension');
+    print('  -> $effectiveMin..$effectiveMax');
     return applyContentDimensions(effectiveMin, effectiveMax);
   }
 
