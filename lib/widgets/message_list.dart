@@ -586,7 +586,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
     // The list has two slivers: a top sliver growing upward,
     // and a bottom sliver growing downward.
     // Each sliver has some of the items from `model!.items`.
-    const maxBottomItems = 1;
+    const maxBottomItems = 10;
     final totalItems = model!.items.length;
     final bottomItems = totalItems <= maxBottomItems ? totalItems : maxBottomItems;
     final topItems = totalItems - bottomItems;
