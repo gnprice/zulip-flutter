@@ -146,7 +146,7 @@ class _KatexParser {
     // with each case statement to keep track of updates.
     final spanClasses = List<String>.unmodifiable(element.className.split(' '));
     String? fontFamily;
-    double? fontScale;
+    double? fontSizeRem;
     KatexSpanFontWeight? fontWeight;
     KatexSpanFontStyle? fontStyle;
     KatexSpanTextAlign? textAlign;
@@ -298,7 +298,7 @@ class _KatexParser {
           // These indexes start at 1.
           if (resetSizeIdx > sizes.length) throw KatexHtmlParseError();
           if (sizeIdx > sizes.length) throw KatexHtmlParseError();
-          fontScale = sizes[sizeIdx - 1]; // TODO check assumption on reset-size
+          fontSizeRem = sizes[sizeIdx - 1]; // TODO check assumption on reset-size
 
         case 'delimsizing':
           // .delimsizing { ... }
@@ -339,7 +339,7 @@ class _KatexParser {
     }
     final styles = KatexSpanStyles(
       fontFamily: fontFamily,
-      fontScale: fontScale,
+      fontSizeRem: fontSizeRem,
       fontWeight: fontWeight,
       fontStyle: fontStyle,
       textAlign: textAlign,
@@ -380,9 +380,11 @@ enum KatexSpanTextAlign {
 class KatexSpanStyles {
   final String? fontFamily;
 
-  /// The font size, as a multiple of the font size for the enclosing [MathNode],
+  /// The font size, as a ratio to the KaTeX root's font size.
+  ///
+  /// The unit of this size is the font size for the enclosing [MathNode],
   /// or equivalently the enclosing `span.katex` element of the HTML.
-  final double? fontScale;
+  final double? fontSizeRem;
 
   final KatexSpanFontWeight? fontWeight;
   final KatexSpanFontStyle? fontStyle;
@@ -390,7 +392,7 @@ class KatexSpanStyles {
 
   const KatexSpanStyles({
     this.fontFamily,
-    this.fontScale,
+    this.fontSizeRem,
     this.fontWeight,
     this.fontStyle,
     this.textAlign,
@@ -400,7 +402,7 @@ class KatexSpanStyles {
   int get hashCode => Object.hash(
     'KatexSpanStyles',
     fontFamily,
-    fontScale,
+    fontSizeRem,
     fontWeight,
     fontStyle,
     textAlign,
@@ -410,7 +412,7 @@ class KatexSpanStyles {
   bool operator ==(Object other) {
     return other is KatexSpanStyles &&
       other.fontFamily == fontFamily &&
-      other.fontScale == fontScale &&
+      other.fontSizeRem == fontSizeRem &&
       other.fontWeight == fontWeight &&
       other.fontStyle == fontStyle &&
       other.textAlign == textAlign;
@@ -420,7 +422,7 @@ class KatexSpanStyles {
   String toString() {
     final args = <String>[];
     if (fontFamily != null) args.add('fontFamily: $fontFamily');
-    if (fontScale != null) args.add('fontScale: $fontScale');
+    if (fontSizeRem != null) args.add('fontSizeRem: $fontSizeRem');
     if (fontWeight != null) args.add('fontWeight: $fontWeight');
     if (fontStyle != null) args.add('fontStyle: $fontStyle');
     if (textAlign != null) args.add('textAlign: $textAlign');
