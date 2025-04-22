@@ -117,13 +117,13 @@ class _KatexParser {
   List<KatexNode> parseKatexHtml(dom.Element element) {
     assert(element.localName == 'span');
     assert(element.className == 'katex-html');
-    return _parseChildSpans(element);
+    return _parseChildSpans(element, fontSizeRem: 1.0);
   }
 
-  List<KatexNode> _parseChildSpans(dom.Element element) {
+  List<KatexNode> _parseChildSpans(dom.Element element, {required double fontSizeRem}) {
     return List.unmodifiable(element.nodes.map((node) {
       if (node case dom.Element(localName: 'span')) {
-        return _parseSpan(node);
+        return _parseSpan(node, fontSizeRem: fontSizeRem);
       } else {
         throw KatexHtmlParseError();
       }
@@ -133,7 +133,7 @@ class _KatexParser {
   static final _resetSizeClassRegExp = RegExp(r'^reset-size(\d\d?)$');
   static final _sizeClassRegExp = RegExp(r'^size(\d\d?)$');
 
-  KatexNode _parseSpan(dom.Element element) {
+  KatexNode _parseSpan(dom.Element element, {required double fontSizeRem}) {
     // TODO maybe check if the sequence of ancestors matter for spans.
 
     // Aggregate the CSS styles that apply, in the same order as the CSS
@@ -146,7 +146,7 @@ class _KatexParser {
     // with each case statement to keep track of updates.
     final spanClasses = List<String>.unmodifiable(element.className.split(' '));
     String? fontFamily;
-    double? fontSizeRem;
+    double? newFontSizeRem;
     KatexSpanFontWeight? fontWeight;
     KatexSpanFontStyle? fontStyle;
     KatexSpanTextAlign? textAlign;
@@ -287,17 +287,24 @@ class _KatexParser {
 
           const sizes = <double>[0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.44, 1.728, 2.074, 2.488];
 
-          final resetSizeClassSuffix = _resetSizeClassRegExp.firstMatch(resetSizeClass)?.group(1);
-          if (resetSizeClassSuffix == null) throw KatexHtmlParseError();
-          final resetSizeIdx = int.parse(resetSizeClassSuffix, radix: 10);
-          if (resetSizeIdx > sizes.length) throw KatexHtmlParseError();
-          // TODO check assumption on reset-size
+          assert(() {
+            final resetSizeClassSuffix = _resetSizeClassRegExp.firstMatch(resetSizeClass)?.group(1);
+            if (resetSizeClassSuffix == null) throw KatexHtmlParseError();
+            final resetSizeIdx = int.parse(resetSizeClassSuffix, radix: 10);
+            if (resetSizeIdx > sizes.length) throw KatexHtmlParseError();
+            if (sizes[resetSizeIdx - 1] != fontSizeRem) {
+              throw KatexHtmlParseError("size mismatch: "
+                "found .$resetSizeClass at fontSizeRem $fontSizeRem, "
+                "expected ${sizes[resetSizeIdx - 1]}");
+            }
+            return true;
+          }());
 
           final sizeClassSuffix = _sizeClassRegExp.firstMatch(sizeClass)?.group(1);
           if (sizeClassSuffix == null) throw KatexHtmlParseError();
           final sizeIdx = int.parse(sizeClassSuffix, radix: 10);
           if (sizeIdx > sizes.length) throw KatexHtmlParseError();
-          fontSizeRem = sizes[sizeIdx - 1];
+          newFontSizeRem = sizes[sizeIdx - 1];
 
         case 'delimsizing':
           // .delimsizing { ... }
@@ -338,7 +345,7 @@ class _KatexParser {
     }
     final styles = KatexSpanStyles(
       fontFamily: fontFamily,
-      fontSizeRem: fontSizeRem,
+      fontSizeRem: newFontSizeRem,
       fontWeight: fontWeight,
       fontStyle: fontStyle,
       textAlign: textAlign,
@@ -349,7 +356,8 @@ class _KatexParser {
     if (element.nodes case [dom.Text(:final data)]) {
       text = data;
     } else {
-      spans = _parseChildSpans(element);
+      spans = _parseChildSpans(element,
+        fontSizeRem: newFontSizeRem ?? fontSizeRem);
     }
     if (text == null && spans == null) throw KatexHtmlParseError();
 
