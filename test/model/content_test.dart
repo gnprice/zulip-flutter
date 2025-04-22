@@ -736,43 +736,43 @@ class ContentExample {
                 text: null,
                 nodes: []),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 2.488), // .reset-size6.size11
+                styles: KatexSpanStyles(fontSizeRem: 2.488), // .size11
                 text: '1',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 2.074), // .reset-size6.size10
+                styles: KatexSpanStyles(fontSizeRem: 2.074), // .size10
                 text: '2',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 1.728), // .reset-size6.size9
+                styles: KatexSpanStyles(fontSizeRem: 1.728), // .size9
                 text: '3',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 1.44), // .reset-size6.size8
+                styles: KatexSpanStyles(fontSizeRem: 1.44), // .size8
                 text: '4',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 1.2), // .reset-size6.size7
+                styles: KatexSpanStyles(fontSizeRem: 1.2), // .size7
                 text: '5',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 1.0), // .reset-size6.size6
+                styles: KatexSpanStyles(fontSizeRem: 1.0), // .size6
                 text: '6',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 0.9), // .reset-size6.size5
+                styles: KatexSpanStyles(fontSizeRem: 0.9), // .size5
                 text: '7',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 0.8), // .reset-size6.size4
+                styles: KatexSpanStyles(fontSizeRem: 0.8), // .size4
                 text: '8',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 0.7), // .reset-size6.size3
+                styles: KatexSpanStyles(fontSizeRem: 0.7), // .size3
                 text: '9',
                 nodes: null),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 0.5), // .reset-size6.size1
+                styles: KatexSpanStyles(fontSizeRem: 0.5), // .size1
                 text: '0',
                 nodes: null),
             ]),
@@ -805,7 +805,7 @@ class ContentExample {
                 text: null,
                 nodes: []),
               KatexNode(
-                styles: KatexSpanStyles(fontSizeRem: 0.5), // reset-size6 size1
+                styles: KatexSpanStyles(fontSizeRem: 0.5), // size1
                 text: null,
                 nodes: [
                   KatexNode(
@@ -813,7 +813,7 @@ class ContentExample {
                     text: '1',
                     nodes: null),
                   KatexNode(
-                    styles: KatexSpanStyles(fontSizeRem: 4.976), // reset-size1 size11
+                    styles: KatexSpanStyles(fontSizeRem: 2.488), // size11
                     text: '2',
                     nodes: null),
                 ]),
