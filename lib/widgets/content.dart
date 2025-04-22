@@ -838,7 +838,10 @@ class _Katex extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget widget = _KatexNodeList(nodes: nodes);
+    final style = kBaseKatexTextStyle.copyWith(
+      color: ContentTheme.of(context).textStylePlainParagraph.color);
+
+    Widget widget = _KatexNodeList(style: style, nodes: nodes);
 
     if (!inline) {
       widget = Center(
@@ -849,16 +852,14 @@ class _Katex extends StatelessWidget {
 
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: DefaultTextStyle(
-        style: kBaseKatexTextStyle.copyWith(
-          color: ContentTheme.of(context).textStylePlainParagraph.color),
-        child: widget));
+      child: widget);
   }
 }
 
 class _KatexNodeList extends StatelessWidget {
-  const _KatexNodeList({required this.nodes});
+  const _KatexNodeList({required this.style, required this.nodes});
 
+  final TextStyle style;
   final List<KatexNode> nodes;
 
   @override
@@ -868,26 +869,20 @@ class _KatexNodeList extends StatelessWidget {
         return WidgetSpan(
           alignment: PlaceholderAlignment.baseline,
           baseline: TextBaseline.alphabetic,
-          child: _KatexNodeWidget(e));
+          child: _KatexNodeWidget(style: style, node: e));
       }))));
   }
 }
 
 class _KatexNodeWidget extends StatelessWidget {
-  const _KatexNodeWidget(this.node);
+  const _KatexNodeWidget({required this.style, required this.node});
 
+  final TextStyle style;
   final KatexNode node;
 
   @override
   Widget build(BuildContext context) {
-    final em = DefaultTextStyle.of(context).style.fontSize!;
-
-    Widget widget = const SizedBox.shrink();
-    if (node.text != null) {
-      widget = Text(node.text!);
-    } else if (node.nodes != null && node.nodes!.isNotEmpty) {
-      widget = _KatexNodeList(nodes: node.nodes!);
-    }
+    double em = style.fontSize!;
 
     final styles = node.styles;
 
@@ -896,6 +891,7 @@ class _KatexNodeWidget extends StatelessWidget {
       double fontSizeEm => fontSizeEm * em,
       null => null,
     };
+    em = fontSize ?? em;
     final fontWeight = switch (styles.fontWeight) {
       KatexSpanFontWeight.bold => FontWeight.bold,
       null => null,
@@ -906,7 +902,7 @@ class _KatexNodeWidget extends StatelessWidget {
       null => null,
     };
 
-    TextStyle? textStyle;
+    TextStyle textStyle = style;
     if (fontFamily != null ||
         fontSize != null ||
         fontWeight != null ||
@@ -919,12 +915,12 @@ class _KatexNodeWidget extends StatelessWidget {
         fontStyle = FontStyle.normal;
       }
 
-      textStyle = TextStyle(
+      textStyle = style.merge(TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSize,
         fontWeight: fontWeight,
         fontStyle: fontStyle,
-      );
+      ));
     }
     final textAlign = switch (styles.textAlign) {
       KatexSpanTextAlign.left => TextAlign.left,
@@ -933,9 +929,15 @@ class _KatexNodeWidget extends StatelessWidget {
       null => null,
     };
 
-    if (textStyle != null || textAlign != null) {
+    Widget widget = const SizedBox.shrink();
+    if (node.text != null) {
+      widget = Text(style: textStyle, node.text!);
+    } else if (node.nodes != null && node.nodes!.isNotEmpty) {
+      widget = _KatexNodeList(style: textStyle, nodes: node.nodes!);
+    }
+
+    if (textAlign != null) {
       widget = DefaultTextStyle.merge(
-        style: textStyle,
         textAlign: textAlign,
         child: widget);
     }
