@@ -285,20 +285,19 @@ class _KatexParser {
           final resetSizeClass = spanClasses[index++];
           final sizeClass = spanClasses[index++];
 
-          final resetSizeClassSuffix = _resetSizeClassRegExp.firstMatch(resetSizeClass)?.group(1);
-          if (resetSizeClassSuffix == null) throw KatexHtmlParseError();
-          final sizeClassSuffix = _sizeClassRegExp.firstMatch(sizeClass)?.group(1);
-          if (sizeClassSuffix == null) throw KatexHtmlParseError();
-
           const sizes = <double>[0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.44, 1.728, 2.074, 2.488];
 
+          final resetSizeClassSuffix = _resetSizeClassRegExp.firstMatch(resetSizeClass)?.group(1);
+          if (resetSizeClassSuffix == null) throw KatexHtmlParseError();
           final resetSizeIdx = int.parse(resetSizeClassSuffix, radix: 10);
-          final sizeIdx = int.parse(sizeClassSuffix, radix: 10);
-
-          // These indexes start at 1.
           if (resetSizeIdx > sizes.length) throw KatexHtmlParseError();
+          // TODO check assumption on reset-size
+
+          final sizeClassSuffix = _sizeClassRegExp.firstMatch(sizeClass)?.group(1);
+          if (sizeClassSuffix == null) throw KatexHtmlParseError();
+          final sizeIdx = int.parse(sizeClassSuffix, radix: 10);
           if (sizeIdx > sizes.length) throw KatexHtmlParseError();
-          fontSizeRem = sizes[sizeIdx - 1]; // TODO check assumption on reset-size
+          fontSizeRem = sizes[sizeIdx - 1];
 
         case 'delimsizing':
           // .delimsizing { ... }
