@@ -887,8 +887,8 @@ class _KatexNodeWidget extends StatelessWidget {
     final styles = node.styles;
 
     final fontFamily = styles.fontFamily;
-    final fontSize = switch (styles.fontSizeEm) {
-      double fontSizeEm => fontSizeEm * em,
+    final fontSize = switch (styles.fontScale) {
+      double fontScale => fontScale * kBaseKatexTextStyle.fontSize!, // TODO get from _Katex root
       null => null,
     };
     em = fontSize ?? em;

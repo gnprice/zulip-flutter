@@ -599,7 +599,7 @@ void main() {
       final baseNode = mathBlockNode.nodes!.single;
       final nodes = baseNode.nodes!.skip(1); // Skip .strut node.
       for (final katexNode in nodes) {
-        final fontSize = katexNode.styles.fontSizeEm! * kBaseKatexTextStyle.fontSize!;
+        final fontSize = katexNode.styles.fontScale! * kBaseKatexTextStyle.fontSize!;
         checkKatexText(tester, katexNode.text!,
           fontFamily: 'KaTeX_Main',
           fontSize: fontSize,
