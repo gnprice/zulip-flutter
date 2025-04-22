@@ -868,13 +868,13 @@ class _KatexNodeList extends StatelessWidget {
         return WidgetSpan(
           alignment: PlaceholderAlignment.baseline,
           baseline: TextBaseline.alphabetic,
-          child: _KatexSpan(e));
+          child: _KatexNodeWidget(e));
       }))));
   }
 }
 
-class _KatexSpan extends StatelessWidget {
-  const _KatexSpan(this.node);
+class _KatexNodeWidget extends StatelessWidget {
+  const _KatexNodeWidget(this.node);
 
   final KatexNode node;
 
