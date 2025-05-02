@@ -249,6 +249,12 @@ mixin _MessageSequence {
   ///
   /// The caller is responsible for ensuring this is an appropriate thing to do
   /// given [narrow], our state of being caught up, and other concerns.
+  ///
+  /// The [items] list must be free of any trailing items.
+  /// The caller is responsible for stripping such items first
+  /// (e.g. with [_stripTrailingItems])
+  /// and calling [_updateEndMarkers] to restore them after,
+  /// possibly outside of a loop that calls this method repeatedly.
   void _addMessage(Message message) {
     assert(contents.length == messages.length);
     messages.add(message);
@@ -366,6 +372,12 @@ mixin _MessageSequence {
   ///
   /// The previous messages in the list must already have been processed.
   /// This message must already have been parsed and reflected in [contents].
+  ///
+  /// The existing [items] list must be free of any trailing items.
+  /// The caller is responsible for stripping such items first
+  /// (e.g. with [_stripTrailingItems])
+  /// and calling [_updateEndMarkers] to restore them after,
+  /// possibly outside of a loop that calls this method repeatedly.
   void _processMessage(int index) {
     // This will get more complicated to handle the ways that messages interact
     // with the display of neighboring messages: sender headings #175
@@ -395,6 +407,22 @@ mixin _MessageSequence {
       showSender: !canShareSender, isLastInBlock: true));
   }
 
+  void _stripTrailingItems() {
+    while (items.isNotEmpty) {
+      switch (items.last) {
+        case MessageListHistoryStartItem():
+        case MessageListLoadingItem(direction: MessageListDirection.older):
+        case MessageListRecipientHeaderItem():
+        case MessageListDateSeparatorItem():
+        case MessageListMessageItem():
+          return;
+
+        case MessageListLoadingItem(direction: MessageListDirection.newer):
+          items.removeLast();
+      }
+    }
+  }
+
   /// Update [items] to include markers at start and end as appropriate.
   void _updateEndMarkers() {
     assert(fetched);
@@ -421,7 +449,6 @@ mixin _MessageSequence {
       case (_,    _   ): break;
     }
 
-    // TODO(#82): deconflict end markers with _processMessage
     final endMarker = haveNewest ? null
       : busyFetchingMore ? const MessageListLoadingItem(MessageListDirection.newer)
       : null;
@@ -749,7 +776,9 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       return;
     }
     // TODO insert in middle instead, when appropriate
+    _stripTrailingItems();
     _addMessage(message);
+    _updateEndMarkers();
     notifyListeners();
   }
 
