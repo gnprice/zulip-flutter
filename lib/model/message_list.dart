@@ -395,15 +395,21 @@ mixin _MessageSequence {
 
   /// Update [items] to include markers at start and end as appropriate.
   void _updateEndMarkers() {
+    // In each direction, if we're done fetching in that direction, show that.
+    // Else if we're busy with fetching, then show a loading indicator.
+    //
+    // This applies even if the fetch is over, but failed, and we're still
+    // in backoff from it; and even if the fetch is/was for the other direction.
+    // The loading indicator really means "busy, working on it"; and that's the
+    // right summary even if the fetch is internally queued behind other work.
+
     assert(fetched);
     assert(!(fetchingOlder && fetchOlderCoolingDown));
-    final effectiveFetchingOlder = fetchingOlder || fetchOlderCoolingDown;
-    assert(!(effectiveFetchingOlder && haveOldest));
-    final startMarker = switch ((effectiveFetchingOlder, haveOldest)) {
-      (true, _) => const MessageListLoadingItem(MessageListDirection.older),
-      (_, true) => const MessageListHistoryStartItem(),
-      (_,    _) => null,
-    };
+    final busyFetchingMore = fetchingOlder || fetchOlderCoolingDown;
+
+    final startMarker = haveOldest ? const MessageListHistoryStartItem()
+      : busyFetchingMore ? const MessageListLoadingItem(MessageListDirection.older)
+      : null;
     final hasStartMarker = switch (items.firstOrNull) {
       MessageListLoadingItem()      => true,
       MessageListHistoryStartItem() => true,
