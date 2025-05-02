@@ -91,7 +91,7 @@ enum FetchingStatus {
   idle,
 
   /// The model has an active `fetchOlder` request.
-  fetchOlder,
+  fetchingMore,
 
   /// The model is in a backoff period from a failed request.
   backoff,
@@ -151,7 +151,7 @@ mixin _MessageSequence {
   /// and this field helps us avoid spamming the same request just to get
   /// the same response each time.
   bool get busyFetchingMore => switch (_status) {
-    FetchingStatus.fetchOlder || FetchingStatus.backoff => true,
+    FetchingStatus.fetchingMore || FetchingStatus.backoff => true,
     _ => false,
   };
 
@@ -622,7 +622,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       || (narrow as TopicNarrow).with_ == null);
     assert(messages.isNotEmpty);
     assert(_status == FetchingStatus.idle);
-    _status = FetchingStatus.fetchOlder;
+    _status = FetchingStatus.fetchingMore;
     _updateEndMarkers();
     notifyListeners();
     final generation = this.generation;
@@ -660,7 +660,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       _haveOldest = result.foundOldest;
     } finally {
       if (this.generation == generation) {
-        assert(_status == FetchingStatus.fetchOlder);
+        assert(_status == FetchingStatus.fetchingMore);
         if (hasFetchError) {
           _status = FetchingStatus.backoff;
           unawaited((_fetchCooldownBackoffMachine ??= BackoffMachine())
