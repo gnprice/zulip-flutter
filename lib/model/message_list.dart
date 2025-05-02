@@ -108,7 +108,8 @@ mixin _MessageSequence {
   ///
   /// This may or may not represent all the message history that
   /// conceptually belongs in this message list.
-  /// That information is expressed in [fetched] and [haveOldest].
+  /// That information is expressed in flags like
+  /// [fetched], [haveOldest], and [haveNewest].
   ///
   /// See also [middleMessage], an index which divides this list
   /// into a top slice and a bottom slice.
@@ -135,10 +136,18 @@ mixin _MessageSequence {
 
   /// Whether we know we have the oldest messages for this narrow.
   ///
-  /// (Currently we always have the newest messages for the narrow,
-  /// once [fetched] is true, because we start from the newest.)
+  /// See also [haveNewest].
   bool get haveOldest => _haveOldest;
   bool _haveOldest = false;
+
+  /// Whether we know we have the newest messages for this narrow.
+  ///
+  /// (Currently this is always true once [fetched] is true,
+  /// because we start from the newest.)
+  ///
+  /// See also [haveOldest].
+  bool get haveNewest => _haveNewest;
+  bool _haveNewest = false;
 
   /// Whether we are currently either fetching the next batch of older messages,
   /// or backing off from a recent failed such request.
@@ -174,7 +183,7 @@ mixin _MessageSequence {
   /// before, between, or after the messages.
   ///
   /// This information is completely derived from [messages] and
-  /// the flags [haveOldest] and [busyFetchingMore].
+  /// the flags [haveOldest], [haveNewest], and [busyFetchingMore].
   /// It exists as an optimization, to memoize that computation.
   ///
   /// See also [middleItem], an index which divides this list
@@ -336,6 +345,7 @@ mixin _MessageSequence {
     messages.clear();
     middleMessage = 0;
     _haveOldest = false;
+    _haveNewest = false;
     _status = FetchingStatus.unstarted;
     _fetchCooldownBackoffMachine = null;
     contents.clear();
@@ -410,6 +420,8 @@ mixin _MessageSequence {
       case (_,    true): items.removeFirst(); middleItem--;
       case (_,    _   ): break;
     }
+
+    // TODO(#82) use [haveNewest], show markers at end
   }
 
   /// Recompute [items] from scratch, based on [messages], [contents], and flags.
@@ -547,7 +559,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   Future<void> fetchInitial() async {
     // TODO(#80): fetch from anchor firstUnread, instead of newest
     // TODO(#82): fetch from a given message ID as anchor
-    assert(!fetched && !haveOldest && !busyFetchingMore);
+    assert(!fetched && !haveOldest && !haveNewest && !busyFetchingMore);
     assert(messages.isEmpty && contents.isEmpty);
     assert(_status == FetchingStatus.unstarted);
     _status = FetchingStatus.fetchInitial;
@@ -576,6 +588,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     assert(_status == FetchingStatus.fetchInitial);
     _status = FetchingStatus.idle;
     _haveOldest = result.foundOldest;
+    _haveNewest = true; // TODO(#82)
     _updateEndMarkers();
     notifyListeners();
   }
