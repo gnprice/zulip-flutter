@@ -64,14 +64,13 @@ class MessageListMessageItem extends MessageListMessageBaseItem {
 }
 
 /// Indicates the app is loading more messages at the top.
-// TODO(#80): or loading at the bottom, by adding a [MessageListDirection.newer]
 class MessageListLoadingItem extends MessageListItem {
   final MessageListDirection direction;
 
   const MessageListLoadingItem(this.direction);
 }
 
-enum MessageListDirection { older }
+enum MessageListDirection { older, newer }
 
 /// Indicates we've reached the oldest message in the narrow.
 class MessageListHistoryStartItem extends MessageListItem {
@@ -217,6 +216,7 @@ mixin _MessageSequence {
       case MessageListLoadingItem():
         switch (item.direction) {
           case MessageListDirection.older:       return -1;
+          case MessageListDirection.newer:       return 1;
         }
       case MessageListRecipientHeaderItem(:var message):
       case MessageListDateSeparatorItem(:var message):
@@ -421,7 +421,20 @@ mixin _MessageSequence {
       case (_,    _   ): break;
     }
 
-    // TODO(#82) use [haveNewest], show markers at end
+    // TODO(#82): deconflict end markers with _processMessage
+    final endMarker = haveNewest ? null
+      : busyFetchingMore ? const MessageListLoadingItem(MessageListDirection.newer)
+      : null;
+    final hasEndMarker = switch (items.lastOrNull) {
+      MessageListLoadingItem()      => true,
+      _                             => false,
+    };
+    switch ((endMarker != null, hasEndMarker)) {
+      case (true, true): break; // all end markers are the same
+      case (true, _   ): items.addLast(endMarker!);
+      case (_,    true): items.removeLast();
+      case (_,    _   ): break;
+    }
   }
 
   /// Recompute [items] from scratch, based on [messages], [contents], and flags.
