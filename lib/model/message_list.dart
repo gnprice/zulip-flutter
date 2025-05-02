@@ -93,8 +93,8 @@ enum FetchingStatus {
   /// The model has an active `fetchOlder` request.
   fetchOlder,
 
-  /// The model is in a backoff period from a failed `fetchOlder` request.
-  fetchOlderCoolingDown,
+  /// The model is in a backoff period from a failed request.
+  backoff,
 }
 
 /// The sequence of messages in a message list, and how to display them.
@@ -151,13 +151,13 @@ mixin _MessageSequence {
   /// and this field helps us avoid spamming the same request just to get
   /// the same response each time.
   bool get busyFetchingMore => switch (_status) {
-    FetchingStatus.fetchOlder || FetchingStatus.fetchOlderCoolingDown => true,
+    FetchingStatus.fetchOlder || FetchingStatus.backoff => true,
     _ => false,
   };
 
   FetchingStatus _status = FetchingStatus.unstarted;
 
-  BackoffMachine? _fetchOlderCooldownBackoffMachine;
+  BackoffMachine? _fetchCooldownBackoffMachine;
 
   /// The parsed message contents, as a list parallel to [messages].
   ///
@@ -337,7 +337,7 @@ mixin _MessageSequence {
     middleMessage = 0;
     _haveOldest = false;
     _status = FetchingStatus.unstarted;
-    _fetchOlderCooldownBackoffMachine = null;
+    _fetchCooldownBackoffMachine = null;
     contents.clear();
     items.clear();
     middleItem = 0;
@@ -662,18 +662,18 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       if (this.generation == generation) {
         assert(_status == FetchingStatus.fetchOlder);
         if (hasFetchError) {
-          _status = FetchingStatus.fetchOlderCoolingDown;
-          unawaited((_fetchOlderCooldownBackoffMachine ??= BackoffMachine())
+          _status = FetchingStatus.backoff;
+          unawaited((_fetchCooldownBackoffMachine ??= BackoffMachine())
             .wait().then((_) {
               if (this.generation != generation) return;
-              assert(_status == FetchingStatus.fetchOlderCoolingDown);
+              assert(_status == FetchingStatus.backoff);
               _status = FetchingStatus.idle;
               _updateEndMarkers();
               notifyListeners();
             }));
         } else {
           _status = FetchingStatus.idle;
-          _fetchOlderCooldownBackoffMachine = null;
+          _fetchCooldownBackoffMachine = null;
         }
         _updateEndMarkers();
         notifyListeners();
