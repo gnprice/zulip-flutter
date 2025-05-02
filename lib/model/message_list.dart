@@ -140,28 +140,20 @@ mixin _MessageSequence {
   bool get haveOldest => _haveOldest;
   bool _haveOldest = false;
 
-  /// Whether we are currently fetching the next batch of older messages.
+  /// Whether we are currently either fetching the next batch of older messages,
+  /// or backing off from a recent failed such request.
+  ///
+  /// "Recent" is decided by a [BackoffMachine] that resets
+  /// when a [fetchOlder] request succeeds.
   ///
   /// When this is true, [fetchOlder] is a no-op.
   /// That method is called frequently by Flutter's scrolling logic,
   /// and this field helps us avoid spamming the same request just to get
   /// the same response each time.
-  ///
-  /// See also [fetchOlderCoolingDown].
-  bool get fetchingOlder => _status == FetchingStatus.fetchOlder;
-
-  /// Whether [fetchOlder] had a request error recently.
-  ///
-  /// When this is true, [fetchOlder] is a no-op.
-  /// That method is called frequently by Flutter's scrolling logic,
-  /// and this field mitigates spamming the same request and getting
-  /// the same error each time.
-  ///
-  /// "Recently" is decided by a [BackoffMachine] that resets
-  /// when a [fetchOlder] request succeeds.
-  ///
-  /// See also [fetchingOlder].
-  bool get fetchOlderCoolingDown => _status == FetchingStatus.fetchOlderCoolingDown;
+  bool get busyFetchingMore => switch (_status) {
+    FetchingStatus.fetchOlder || FetchingStatus.fetchOlderCoolingDown => true,
+    _ => false,
+  };
 
   FetchingStatus _status = FetchingStatus.unstarted;
 
@@ -182,7 +174,7 @@ mixin _MessageSequence {
   /// before, between, or after the messages.
   ///
   /// This information is completely derived from [messages] and
-  /// the flags [haveOldest], [fetchingOlder] and [fetchOlderCoolingDown].
+  /// the flags [haveOldest] and [busyFetchingMore].
   /// It exists as an optimization, to memoize that computation.
   ///
   /// See also [middleItem], an index which divides this list
@@ -395,6 +387,7 @@ mixin _MessageSequence {
 
   /// Update [items] to include markers at start and end as appropriate.
   void _updateEndMarkers() {
+    assert(fetched);
     // In each direction, if we're done fetching in that direction, show that.
     // Else if we're busy with fetching, then show a loading indicator.
     //
@@ -402,10 +395,6 @@ mixin _MessageSequence {
     // in backoff from it; and even if the fetch is/was for the other direction.
     // The loading indicator really means "busy, working on it"; and that's the
     // right summary even if the fetch is internally queued behind other work.
-
-    assert(fetched);
-    assert(!(fetchingOlder && fetchOlderCoolingDown));
-    final busyFetchingMore = fetchingOlder || fetchOlderCoolingDown;
 
     final startMarker = haveOldest ? const MessageListHistoryStartItem()
       : busyFetchingMore ? const MessageListLoadingItem(MessageListDirection.older)
@@ -558,7 +547,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   Future<void> fetchInitial() async {
     // TODO(#80): fetch from anchor firstUnread, instead of newest
     // TODO(#82): fetch from a given message ID as anchor
-    assert(!fetched && !haveOldest && !fetchingOlder && !fetchOlderCoolingDown);
+    assert(!fetched && !haveOldest && !busyFetchingMore);
     assert(messages.isEmpty && contents.isEmpty);
     assert(_status == FetchingStatus.unstarted);
     _status = FetchingStatus.fetchInitial;
@@ -626,8 +615,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   /// Fetch the next batch of older messages, if applicable.
   Future<void> fetchOlder() async {
     if (haveOldest) return;
-    if (fetchingOlder) return;
-    if (fetchOlderCoolingDown) return;
+    if (busyFetchingMore) return;
     assert(fetched);
     assert(narrow is! TopicNarrow
       // We only intend to send "with" in [fetchInitial]; see there.

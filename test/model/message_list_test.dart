@@ -253,12 +253,12 @@ void main() {
       ).toJson());
       final fetchFuture = model.fetchOlder();
       checkNotifiedOnce();
-      check(model).fetchingOlder.isTrue();
+      check(model).busyFetchingMore.isTrue();
 
       await fetchFuture;
       checkNotifiedOnce();
       check(model)
-        ..fetchingOlder.isFalse()
+        ..busyFetchingMore.isFalse()
         ..messages.length.equals(200);
       checkLastRequest(
         narrow: narrow.apiEncode(),
@@ -281,12 +281,12 @@ void main() {
       ).toJson());
       final fetchFuture = model.fetchOlder();
       checkNotifiedOnce();
-      check(model).fetchingOlder.isTrue();
+      check(model).busyFetchingMore.isTrue();
 
       // Don't prepare another response.
       final fetchFuture2 = model.fetchOlder();
       checkNotNotified();
-      check(model).fetchingOlder.isTrue();
+      check(model).busyFetchingMore.isTrue();
 
       await fetchFuture;
       await fetchFuture2;
@@ -294,7 +294,7 @@ void main() {
       // prepare another response and didn't get an exception.
       checkNotifiedOnce();
       check(model)
-        ..fetchingOlder.isFalse()
+        ..busyFetchingMore.isFalse()
         ..messages.length.equals(200);
     });
 
@@ -326,18 +326,17 @@ void main() {
       check(async.pendingTimers).isEmpty();
       await check(model.fetchOlder()).throws<ZulipApiException>();
       checkNotified(count: 2);
-      check(model).fetchOlderCoolingDown.isTrue();
+      check(model).busyFetchingMore.isTrue();
       check(connection.takeRequests()).single;
 
       await model.fetchOlder();
       checkNotNotified();
-      check(model).fetchOlderCoolingDown.isTrue();
-      check(model).fetchingOlder.isFalse();
+      check(model).busyFetchingMore.isTrue();
       check(connection.lastRequest).isNull();
 
       // Wait long enough that a first backoff is sure to finish.
       async.elapse(const Duration(seconds: 1));
-      check(model).fetchOlderCoolingDown.isFalse();
+      check(model).busyFetchingMore.isFalse();
       checkNotifiedOnce();
       check(connection.lastRequest).isNull();
 
@@ -362,7 +361,7 @@ void main() {
       await model.fetchOlder();
       checkNotified(count: 2);
       check(model)
-        ..fetchingOlder.isFalse()
+        ..busyFetchingMore.isFalse()
         ..messages.length.equals(200);
     });
 
@@ -1064,7 +1063,7 @@ void main() {
           messages: olderMessages,
         ).toJson());
         final fetchFuture = model.fetchOlder();
-        check(model).fetchingOlder.isTrue();
+        check(model).busyFetchingMore.isTrue();
         checkHasMessages(initialMessages);
         checkNotifiedOnce();
 
@@ -1077,7 +1076,7 @@ void main() {
           origStreamId: otherStream.streamId,
           newMessages: movedMessages,
         ));
-        check(model).fetchingOlder.isFalse();
+        check(model).busyFetchingMore.isFalse();
         checkHasMessages([]);
         checkNotifiedOnce();
 
@@ -1100,7 +1099,7 @@ void main() {
         ).toJson());
         final fetchFuture = model.fetchOlder();
         checkHasMessages(initialMessages);
-        check(model).fetchingOlder.isTrue();
+        check(model).busyFetchingMore.isTrue();
         checkNotifiedOnce();
 
         connection.prepare(delay: const Duration(seconds: 1), json: newestResult(
@@ -1113,7 +1112,7 @@ void main() {
           newMessages: movedMessages,
         ));
         checkHasMessages([]);
-        check(model).fetchingOlder.isFalse();
+        check(model).busyFetchingMore.isFalse();
         checkNotifiedOnce();
 
         async.elapse(const Duration(seconds: 1));
@@ -1134,7 +1133,7 @@ void main() {
         BackoffMachine.debugDuration = const Duration(seconds: 1);
         await check(model.fetchOlder()).throws<ZulipApiException>();
         final backoffTimerA = async.pendingTimers.single;
-        check(model).fetchOlderCoolingDown.isTrue();
+        check(model).busyFetchingMore.isTrue();
         check(model).fetched.isTrue();
         checkHasMessages(initialMessages);
         checkNotified(count: 2);
@@ -1152,21 +1151,21 @@ void main() {
         check(model).fetched.isFalse();
         checkHasMessages([]);
         checkNotifiedOnce();
-        check(model).fetchOlderCoolingDown.isFalse();
+        check(model).busyFetchingMore.isFalse();
         check(backoffTimerA.isActive).isTrue();
 
         async.elapse(Duration.zero);
         check(model).fetched.isTrue();
         checkHasMessages(initialMessages + movedMessages);
         checkNotifiedOnce();
-        check(model).fetchOlderCoolingDown.isFalse();
+        check(model).busyFetchingMore.isFalse();
         check(backoffTimerA.isActive).isTrue();
 
         connection.prepare(apiException: eg.apiBadRequest());
         BackoffMachine.debugDuration = const Duration(seconds: 2);
         await check(model.fetchOlder()).throws<ZulipApiException>();
         final backoffTimerB = async.pendingTimers.last;
-        check(model).fetchOlderCoolingDown.isTrue();
+        check(model).busyFetchingMore.isTrue();
         check(backoffTimerA.isActive).isTrue();
         check(backoffTimerB.isActive).isTrue();
         checkNotified(count: 2);
@@ -1174,14 +1173,14 @@ void main() {
         // When `backoffTimerA` ends, `fetchOlderCoolingDown` remains `true`
         // because the backoff was from a previous generation.
         async.elapse(const Duration(seconds: 1));
-        check(model).fetchOlderCoolingDown.isTrue();
+        check(model).busyFetchingMore.isTrue();
         check(backoffTimerA.isActive).isFalse();
         check(backoffTimerB.isActive).isTrue();
         checkNotNotified();
 
         // When `backoffTimerB` ends, `fetchOlderCoolingDown` gets reset.
         async.elapse(const Duration(seconds: 1));
-        check(model).fetchOlderCoolingDown.isFalse();
+        check(model).busyFetchingMore.isFalse();
         check(backoffTimerA.isActive).isFalse();
         check(backoffTimerB.isActive).isFalse();
         checkNotifiedOnce();
@@ -1263,7 +1262,7 @@ void main() {
         ).toJson());
         final fetchFuture1 = model.fetchOlder();
         checkHasMessages(initialMessages);
-        check(model).fetchingOlder.isTrue();
+        check(model).busyFetchingMore.isTrue();
         checkNotifiedOnce();
 
         connection.prepare(delay: const Duration(seconds: 1), json: newestResult(
@@ -1276,7 +1275,7 @@ void main() {
           newMessages: movedMessages,
         ));
         checkHasMessages([]);
-        check(model).fetchingOlder.isFalse();
+        check(model).busyFetchingMore.isFalse();
         checkNotifiedOnce();
 
         async.elapse(const Duration(seconds: 1));
@@ -1289,19 +1288,19 @@ void main() {
         ).toJson());
         final fetchFuture2 = model.fetchOlder();
         checkHasMessages(initialMessages + movedMessages);
-        check(model).fetchingOlder.isTrue();
+        check(model).busyFetchingMore.isTrue();
         checkNotifiedOnce();
 
         await fetchFuture1;
         checkHasMessages(initialMessages + movedMessages);
         // The older fetchOlder call should not override fetchingOlder set by
         // the new fetchOlder call, nor should it notify the listeners.
-        check(model).fetchingOlder.isTrue();
+        check(model).busyFetchingMore.isTrue();
         checkNotNotified();
 
         await fetchFuture2;
         checkHasMessages(olderMessages + initialMessages + movedMessages);
-        check(model).fetchingOlder.isFalse();
+        check(model).busyFetchingMore.isFalse();
         checkNotifiedOnce();
       }));
     });
@@ -2132,15 +2131,10 @@ void checkInvariants(MessageListView model) {
     check(model)
       ..messages.isEmpty()
       ..haveOldest.isFalse()
-      ..fetchingOlder.isFalse()
-      ..fetchOlderCoolingDown.isFalse();
+      ..busyFetchingMore.isFalse();
   }
   if (model.haveOldest) {
-    check(model).fetchingOlder.isFalse();
-    check(model).fetchOlderCoolingDown.isFalse();
-  }
-  if (model.fetchingOlder) {
-    check(model).fetchOlderCoolingDown.isFalse();
+    check(model).busyFetchingMore.isFalse();
   }
 
   for (final message in model.messages) {
@@ -2199,7 +2193,7 @@ void checkInvariants(MessageListView model) {
   if (model.haveOldest) {
     check(model.items[i++]).isA<MessageListHistoryStartItem>();
   }
-  if (model.fetchingOlder || model.fetchOlderCoolingDown) {
+  if (model.busyFetchingMore) {
     check(model.items[i++]).isA<MessageListLoadingItem>();
   }
   for (int j = 0; j < model.messages.length; j++) {
@@ -2281,6 +2275,5 @@ extension MessageListViewChecks on Subject<MessageListView> {
   Subject<int> get middleItem => has((x) => x.middleItem, 'middleItem');
   Subject<bool> get fetched => has((x) => x.fetched, 'fetched');
   Subject<bool> get haveOldest => has((x) => x.haveOldest, 'haveOldest');
-  Subject<bool> get fetchingOlder => has((x) => x.fetchingOlder, 'fetchingOlder');
-  Subject<bool> get fetchOlderCoolingDown => has((x) => x.fetchOlderCoolingDown, 'fetchOlderCoolingDown');
+  Subject<bool> get busyFetchingMore => has((x) => x.busyFetchingMore, 'busyFetchingMore');
 }
