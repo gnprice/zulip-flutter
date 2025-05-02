@@ -78,6 +78,23 @@ class MessageListHistoryStartItem extends MessageListItem {
   const MessageListHistoryStartItem();
 }
 
+/// The status of outstanding or recent fetch requests from a [MessageListView].
+enum FetchingStatus {
+  /// The model hasn't successfully completed a `fetchInitial` request
+  /// (since its last reset, if any).
+  unfetched,
+
+  /// The model made a successful `fetchInitial` request,
+  /// and has no outstanding requests or backoff.
+  idle,
+
+  /// The model has an active `fetchOlder` request.
+  fetchOlder,
+
+  /// The model is in a backoff period from a failed `fetchOlder` request.
+  fetchOlderCoolingDown,
+}
+
 /// The sequence of messages in a message list, and how to display them.
 ///
 /// This comprises much of the guts of [MessageListView].
@@ -109,8 +126,7 @@ mixin _MessageSequence {
   ///
   /// This allows the UI to distinguish "still working on fetching messages"
   /// from "there are in fact no messages here".
-  bool get fetched => _fetched;
-  bool _fetched = false;
+  bool get fetched => _status != FetchingStatus.unfetched;
 
   /// Whether we know we have the oldest messages for this narrow.
   ///
@@ -127,8 +143,7 @@ mixin _MessageSequence {
   /// the same response each time.
   ///
   /// See also [fetchOlderCoolingDown].
-  bool get fetchingOlder => _fetchingOlder;
-  bool _fetchingOlder = false;
+  bool get fetchingOlder => _status == FetchingStatus.fetchOlder;
 
   /// Whether [fetchOlder] had a request error recently.
   ///
@@ -141,8 +156,9 @@ mixin _MessageSequence {
   /// when a [fetchOlder] request succeeds.
   ///
   /// See also [fetchingOlder].
-  bool get fetchOlderCoolingDown => _fetchOlderCoolingDown;
-  bool _fetchOlderCoolingDown = false;
+  bool get fetchOlderCoolingDown => _status == FetchingStatus.fetchOlderCoolingDown;
+
+  FetchingStatus _status = FetchingStatus.unfetched;
 
   BackoffMachine? _fetchOlderCooldownBackoffMachine;
 
@@ -322,10 +338,8 @@ mixin _MessageSequence {
     generation += 1;
     messages.clear();
     middleMessage = 0;
-    _fetched = false;
     _haveOldest = false;
-    _fetchingOlder = false;
-    _fetchOlderCoolingDown = false;
+    _status = FetchingStatus.unfetched;
     _fetchOlderCooldownBackoffMachine = null;
     contents.clear();
     items.clear();
@@ -535,6 +549,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     // TODO(#82): fetch from a given message ID as anchor
     assert(!fetched && !haveOldest && !fetchingOlder && !fetchOlderCoolingDown);
     assert(messages.isEmpty && contents.isEmpty);
+    assert(_status == FetchingStatus.unfetched);
     // TODO schedule all this in another isolate
     final generation = this.generation;
     final result = await getMessages(store.connection,
@@ -557,7 +572,8 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       _addMessage(message);
       // Now [middleMessage] is the last message (the one just added).
     }
-    _fetched = true;
+    assert(_status == FetchingStatus.unfetched);
+    _status = FetchingStatus.idle;
     _haveOldest = result.foundOldest;
     _updateEndMarkers();
     notifyListeners();
@@ -605,7 +621,8 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       // We only intend to send "with" in [fetchInitial]; see there.
       || (narrow as TopicNarrow).with_ == null);
     assert(messages.isNotEmpty);
-    _fetchingOlder = true;
+    assert(_status == FetchingStatus.idle);
+    _status = FetchingStatus.fetchOlder;
     _updateEndMarkers();
     notifyListeners();
     final generation = this.generation;
@@ -643,18 +660,19 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       _haveOldest = result.foundOldest;
     } finally {
       if (this.generation == generation) {
-        _fetchingOlder = false;
+        assert(_status == FetchingStatus.fetchOlder);
         if (hasFetchError) {
-          assert(!fetchOlderCoolingDown);
-          _fetchOlderCoolingDown = true;
+          _status = FetchingStatus.fetchOlderCoolingDown;
           unawaited((_fetchOlderCooldownBackoffMachine ??= BackoffMachine())
             .wait().then((_) {
               if (this.generation != generation) return;
-              _fetchOlderCoolingDown = false;
+              assert(_status == FetchingStatus.fetchOlderCoolingDown);
+              _status = FetchingStatus.idle;
               _updateEndMarkers();
               notifyListeners();
             }));
         } else {
+          _status = FetchingStatus.idle;
           _fetchOlderCooldownBackoffMachine = null;
         }
         _updateEndMarkers();
