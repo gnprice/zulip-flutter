@@ -588,7 +588,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     assert(_status == FetchingStatus.fetchInitial);
     _status = FetchingStatus.idle;
     _haveOldest = result.foundOldest;
-    _haveNewest = true; // TODO(#82)
+    _haveNewest = result.foundNewest;
     _updateEndMarkers();
     notifyListeners();
   }
