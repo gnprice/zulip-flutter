@@ -68,6 +68,11 @@ dependencies:
   # Keep list sorted when adding dependencies; it helps prevent merge conflicts.
 
 dependency_overrides:
+  drift:
+    path: ../drift/drift
+  drift_dev:
+    path: ../drift/drift_dev
+
   # TODO(#918) remove this and `flutter_color_models` when `flutter_color_models` accommodates
   #   wide-gamut adjustments to Flutter's `Color`. A PR to `flutter_color_models` is already open:
   #     https://github.com/james-alex/color_models/pull/10
