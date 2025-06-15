@@ -123,12 +123,14 @@ class UpgradeWelcomeDialog extends StatelessWidget {
   const UpgradeWelcomeDialog._();
 
   static void maybeShow() async {
+    print('maybeShow');
     final navigator = await ZulipApp.navigator;
     final context = navigator.context;
     assert(context.mounted);
     if (!context.mounted) return; // TODO(linter): this is impossible as there's no actual async gap, but the use_build_context_synchronously lint doesn't see that
 
     final globalSettings = GlobalStoreWidget.settingsOf(context);
+    print(globalSettings.legacyUpgradeState);
     switch (globalSettings.legacyUpgradeState) {
       case LegacyUpgradeState.noLegacy:
         // This install didn't replace the legacy app.
@@ -144,6 +146,7 @@ class UpgradeWelcomeDialog extends StatelessWidget {
       case LegacyUpgradeState.migrated:
         // This install replaced the legacy app.
         // Show the dialog, if we haven't already.
+        print(globalSettings.getBool(BoolGlobalSetting.upgradeWelcomeDialogShown));
         if (globalSettings.getBool(BoolGlobalSetting.upgradeWelcomeDialogShown)) {
           return;
         }
@@ -155,7 +158,8 @@ class UpgradeWelcomeDialog extends StatelessWidget {
 
     await future; // Wait for the dialog to be dismissed.
 
-    await globalSettings.setBool(BoolGlobalSetting.upgradeWelcomeDialogShown, true);
+    print('dismissing');
+    // await globalSettings.setBool(BoolGlobalSetting.upgradeWelcomeDialogShown, true);
   }
 
   static const String _announcementUrl =
