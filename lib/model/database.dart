@@ -200,6 +200,9 @@ class AppDatabase extends _$AppDatabase {
       // assume there wasn't also the legacy app before that.
       await m.database.update(schema.globalSettings).write(
         RawValuesInsertable({'legacy_upgrade_state': Constant('noLegacy')}));
+
+      await m.database.update(schema.globalSettings).write(
+        RawValuesInsertable({'legacy_upgrade_state': Constant('migrated')})); // TODO
     }
   );
 
