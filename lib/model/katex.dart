@@ -458,11 +458,11 @@ class _KatexParser {
   KatexSpanStyles? _parseSpanInlineStyles(dom.Element element) {
     final styleStr = element.attributes['style'];
     if (styleStr == null) return null;
-    final rule = _cssParseInlineStyle(styleStr);
+    final declarations = _cssParseInlineStyle(styleStr);
 
     double? heightEm;
 
-    for (final declaration in rule.declarationGroup.declarations) {
+    for (final declaration in declarations) {
       if (declaration case css_visitor.Declaration(
         :final property,
         expression: css_visitor.Expressions(
@@ -489,13 +489,13 @@ class _KatexParser {
     );
   }
 
-  css_visitor.RuleSet _cssParseInlineStyle(String styleStr) {
+  List<css_visitor.TreeNode> _cssParseInlineStyle(String styleStr) {
     // `package:csslib` doesn't seem to have a way to parse inline styles:
     //   https://github.com/dart-lang/tools/issues/1173
     // So, work around that by wrapping it in a universal declaration.
     final stylesheet = css_parser.parse('*{$styleStr}');
     if (stylesheet.topLevels case [css_visitor.RuleSet() && final rule]) {
-      return rule;
+      return rule.declarationGroup.declarations;
     } else {
       throw _KatexHtmlParseError();
     }
