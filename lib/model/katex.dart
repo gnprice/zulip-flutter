@@ -456,44 +456,49 @@ class _KatexParser {
   }
 
   KatexSpanStyles? _parseSpanInlineStyles(dom.Element element) {
-    if (element.attributes case {'style': final styleStr}) {
-      // `package:csslib` doesn't seem to have a way to parse inline styles:
-      //   https://github.com/dart-lang/tools/issues/1173
-      // So, work around that by wrapping it in a universal declaration.
-      final stylesheet = css_parser.parse('*{$styleStr}');
-      if (stylesheet.topLevels case [css_visitor.RuleSet() && final rule]) {
-        double? heightEm;
+    final styleStr = element.attributes['style'];
+    if (styleStr == null) return null;
+    final rule = _cssParseInlineStyle(styleStr);
 
-        for (final declaration in rule.declarationGroup.declarations) {
-          if (declaration case css_visitor.Declaration(
-            :final property,
-            expression: css_visitor.Expressions(
-              expressions: [css_visitor.Expression() && final expression]),
-          )) {
-            switch (property) {
-              case 'height':
-                heightEm = _getEm(expression);
-                if (heightEm != null) continue;
-            }
+    double? heightEm;
 
-            // TODO handle more CSS properties
-            assert(debugLog('KaTeX: Unsupported CSS expression:'
-              ' ${expression.toDebugString()}'));
-            unsupportedInlineCssProperties.add(property);
-            _hasError = true;
-          } else {
-            throw _KatexHtmlParseError();
-          }
+    for (final declaration in rule.declarationGroup.declarations) {
+      if (declaration case css_visitor.Declaration(
+        :final property,
+        expression: css_visitor.Expressions(
+          expressions: [css_visitor.Expression() && final expression]),
+      )) {
+        switch (property) {
+          case 'height':
+            heightEm = _getEm(expression);
+            if (heightEm != null) continue;
         }
 
-        return KatexSpanStyles(
-          heightEm: heightEm,
-        );
+        // TODO handle more CSS properties
+        assert(debugLog('KaTeX: Unsupported CSS expression:'
+          ' ${expression.toDebugString()}'));
+        unsupportedInlineCssProperties.add(property);
+        _hasError = true;
       } else {
         throw _KatexHtmlParseError();
       }
     }
-    return null;
+
+    return KatexSpanStyles(
+      heightEm: heightEm,
+    );
+  }
+
+  css_visitor.RuleSet _cssParseInlineStyle(String styleStr) {
+    // `package:csslib` doesn't seem to have a way to parse inline styles:
+    //   https://github.com/dart-lang/tools/issues/1173
+    // So, work around that by wrapping it in a universal declaration.
+    final stylesheet = css_parser.parse('*{$styleStr}');
+    if (stylesheet.topLevels case [css_visitor.RuleSet() && final rule]) {
+      return rule;
+    } else {
+      throw _KatexHtmlParseError();
+    }
   }
 
   /// Returns the CSS `em` unit value if the given [expression] is actually an
