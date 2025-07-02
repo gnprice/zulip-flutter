@@ -463,8 +463,10 @@ class _KatexParser {
     double? heightEm;
 
     for (final declaration in declarations) {
+      if (declaration is! css_visitor.Declaration) throw _KatexHtmlParseError();
+      final property = declaration.property;
+
       if (declaration case css_visitor.Declaration(
-        :final property,
         expression: css_visitor.Expressions(
           expressions: [css_visitor.Expression() && final expression]),
       )) {
