@@ -489,6 +489,8 @@ class _KatexParser {
     );
   }
 
+  /// Like [css_parser.parse], but for an inline style
+  /// found as an HTML element's `style` attribute.
   List<css_visitor.TreeNode> _cssParseInlineStyle(String styleStr) {
     // `package:csslib` doesn't seem to have a way to parse inline styles:
     //   https://github.com/dart-lang/tools/issues/1173
