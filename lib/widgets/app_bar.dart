@@ -29,6 +29,11 @@ class ZulipAppBar extends AppBar {
       bottom: _ZulipAppBarBottom(backgroundColor: backgroundColor),
       title: title ?? _Title(centerTitle: centerTitle, actions: actions, buildTitle: buildTitle!)
     );
+
+  static Size preferredSizeFor() {
+    return AppBar.preferredSizeFor(
+      bottomPreferredSize: _ZulipAppBarBottom.preferredSizeFor());
+  }
 }
 
 class _Title extends StatelessWidget {
@@ -69,12 +74,14 @@ class _Title extends StatelessWidget {
 }
 
 class _ZulipAppBarBottom extends StatelessWidget implements PreferredSizeWidget {
-  const _ZulipAppBarBottom({this.backgroundColor});
+  _ZulipAppBarBottom({this.backgroundColor});
 
   final Color? backgroundColor;
 
   @override
-  Size get preferredSize => const Size.fromHeight(4.0);
+  final Size preferredSize = preferredSizeFor();
+
+  static Size preferredSizeFor() => const Size.fromHeight(4.0);
 
   @override
   Widget build(BuildContext context) {

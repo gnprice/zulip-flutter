@@ -295,7 +295,7 @@ class _MessageListPageState extends State<MessageListPage> implements MessageLis
     }
 
     Widget result = Scaffold(
-      appBar: _MessageListAppBar.build(context, narrow: narrow),
+      appBar: _MessageListAppBar(narrow: narrow),
       // TODO question for Vlad: for a stream view, should we set the Scaffold's
       //   [backgroundColor] based on stream color, as in this frame:
       //     https://www.figma.com/file/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=132%3A9684&mode=dev
@@ -344,18 +344,18 @@ class _MessageListPageState extends State<MessageListPage> implements MessageLis
   }
 }
 
-// Conceptually this should be a widget class.  But it needs to be a
-// PreferredSizeWidget, with the `preferredSize` that the underlying AppBar
-// will have... and there's currently no good way to get that value short of
-// constructing the whole AppBar widget with all its properties.
-// So this has to be built eagerly by its parent's build method,
-// making it a build function rather than a widget.  Discussion:
-//   https://github.com/zulip/zulip-flutter/pull/1662#discussion_r2183471883
-// Still we can organize it on a class, with the name the widget would have.
-// TODO(upstream): AppBar should expose a bit more API so that it's possible
-//   to customize by composition in a reasonable way.
-abstract class _MessageListAppBar {
-  static AppBar build(BuildContext context, {required Narrow narrow}) {
+class _MessageListAppBar extends StatelessWidget implements PreferredSizeWidget {
+  _MessageListAppBar({required this.narrow});
+
+  final Narrow narrow;
+
+  @override
+  final Size preferredSize = preferredSizeFor();
+
+  static Size preferredSizeFor() => ZulipAppBar.preferredSizeFor();
+
+  @override
+  Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
     final messageListTheme = MessageListTheme.of(context);
     final zulipLocalizations = ZulipLocalizations.of(context);
