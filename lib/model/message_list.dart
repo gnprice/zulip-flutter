@@ -788,7 +788,6 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     _adjustNarrowForTopicPermalink(result.messages.firstOrNull);
 
     store.reconcileMessages(result.messages);
-    store.recentSenders.handleMessages(result.messages); // TODO(#824)
 
     // The bottom slice will start at the "anchor message".
     // This is the first visible message at or past [anchor] if any,
@@ -872,7 +871,6 @@ class MessageListView with ChangeNotifier, _MessageSequence {
         }
 
         store.reconcileMessages(result.messages);
-        store.recentSenders.handleMessages(result.messages); // TODO(#824)
 
         final fetchedMessages = _allMessagesVisible
           ? result.messages // Avoid unnecessarily copying the list.
@@ -908,7 +906,6 @@ class MessageListView with ChangeNotifier, _MessageSequence {
         }
 
         store.reconcileMessages(result.messages);
-        store.recentSenders.handleMessages(result.messages); // TODO(#824)
 
         for (final message in result.messages) {
           if (_messageVisible(message)) {
