@@ -259,6 +259,19 @@ class _KatexParser {
     assert(element.localName == 'span');
     assert(element.className == 'vlist-t'
       || element.className == 'vlist-t vlist-t2');
+
+    // A .vlist-t element has .vlist-r children and .vlist grandchildren.
+    // These are tables, table rows, and table cells respectively
+    // in the layout specified in CSS:
+    //
+    // .vlist-t { display: inline-table;
+    //            table-layout: fixed; border-collapse: collapse; }
+    //
+    // .vlist-r { display: table-row; }
+    //
+    // .vlist {   display: table-cell;
+    //            vertical-align: bottom; position: relative; }
+
     final vlistT = element;
     if (vlistT.nodes.isEmpty) throw _KatexHtmlParseError();
     if (vlistT.attributes.containsKey('style')) throw _KatexHtmlParseError();
