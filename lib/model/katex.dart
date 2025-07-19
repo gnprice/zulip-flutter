@@ -238,6 +238,8 @@ class _KatexParser {
   KatexNode _parseStrut(dom.Element element) {
     assert(element.localName == 'span');
     assert(element.className == 'strut');
+    // .strut { display: inline-block; }
+
     if (element.nodes.isNotEmpty) throw _KatexHtmlParseError();
 
     final styles = _parseInlineStyles(element);
