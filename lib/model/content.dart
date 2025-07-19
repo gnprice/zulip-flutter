@@ -1027,6 +1027,8 @@ class GlobalTimeNode extends InlineContentNode {
 /// parsing other subtrees.
 class _ZulipInlineContentParser {
   InlineContentNode? parseInlineMath(dom.Element element) {
+    assert(element.localName == 'span');
+    assert(element.className == 'katex');
     final debugHtmlNode = kDebugMode ? element : null;
     final parsed = parseMath(element, block: false);
     if (parsed == null) return null;
