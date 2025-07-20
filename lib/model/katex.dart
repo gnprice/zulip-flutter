@@ -329,81 +329,82 @@ class _KatexParser {
       }
     }
 
-    if (vlistR.nodes.first
-        case dom.Element(localName: 'span', className: 'vlist') &&
-            final vlist) {
-      // Same as above for the second .vlist-r span, .vlist span in first
-      // .vlist-r span will have "height" inline style which we ignore,
-      // because it doesn't seem to have any effect in rendering on the web.
-      // But also make sure there aren't any other inline styles present.
-      final vlistStyles = _parseInlineStyles(vlist);
-      if (vlistStyles != null && vlistStyles.keys.any((p) => p != 'height')) {
-        throw _KatexHtmlParseError();
-      }
-
-      final rows = <KatexVlistRowNode>[];
-
-      for (final innerSpan in vlist.nodes) {
-        if (innerSpan case dom.Element(
-          localName: 'span',
-          nodes: [
-            dom.Element(localName: 'span', className: 'pstrut') &&
-                final pstrutSpan,
-            ...final otherSpans,
-          ],
-        )) {
-          if (innerSpan.className != '') {
-            throw _KatexHtmlParseError('unexpected CSS class for '
-              'vlist inner span: ${innerSpan.className}');
-          }
-
-          final inlineStyles = _parseInlineStyles(innerSpan);
-          if (inlineStyles == null) throw _KatexHtmlParseError();
-          final marginLeftEm = _takeStyleEm(inlineStyles, 'margin-left');
-          final marginLeftIsNegative = marginLeftEm?.isNegative ?? false;
-          final marginRightEm = _takeStyleEm(inlineStyles, 'margin-right');
-          if (marginRightEm?.isNegative ?? false) throw _KatexHtmlParseError();
-          final styles = KatexSpanStyles(
-            marginLeftEm: marginLeftIsNegative ? null : marginLeftEm,
-            marginRightEm: marginRightEm,
-          );
-          final topEm = _takeStyleEm(inlineStyles, 'top');
-          if (inlineStyles.isNotEmpty) throw _KatexHtmlParseError();
-
-          final pstrutStyles = _parseInlineStyles(pstrutSpan);
-          if (pstrutStyles == null) throw _KatexHtmlParseError();
-          final pstrutHeightEm = _takeStyleEm(pstrutStyles, 'height');
-          if (pstrutHeightEm == null) throw _KatexHtmlParseError();
-          if (pstrutStyles.isNotEmpty) throw _KatexHtmlParseError();
-
-          KatexSpanNode child = KatexSpanNode(
-            styles: styles,
-            nodes: _parseChildSpans(otherSpans));
-
-          if (marginLeftIsNegative) {
-            child = KatexSpanNode(
-              nodes: [KatexNegativeMarginNode(
-                leftOffsetEm: marginLeftEm!,
-                nodes: [child])]);
-          }
-
-          rows.add(KatexVlistRowNode(
-            verticalOffsetEm: (topEm ?? 0) + pstrutHeightEm,
-            debugHtmlNode: kDebugMode ? innerSpan : null,
-            node: child));
-        } else {
-          throw _KatexHtmlParseError();
-        }
-      }
-
-      // TODO(#1716) Handle styling for .vlist-t2 spans
-      return KatexVlistNode(
-        rows: rows,
-        debugHtmlNode: kDebugMode ? element : null,
-      );
+    // The first child of the `.vlist-r`, a `.vlist`, has the interesting content.
+    final vlist = vlistR.nodes.first;
+    if (vlist case dom.Element(localName: 'span', className: 'vlist')) {
     } else {
       throw _KatexHtmlParseError();
     }
+
+    // Same as above for the second .vlist-r span, .vlist span in first
+    // .vlist-r span will have "height" inline style which we ignore,
+    // because it doesn't seem to have any effect in rendering on the web.
+    // But also make sure there aren't any other inline styles present.
+    final vlistStyles = _parseInlineStyles(vlist);
+    if (vlistStyles != null && vlistStyles.keys.any((p) => p != 'height')) {
+      throw _KatexHtmlParseError();
+    }
+
+    final rows = <KatexVlistRowNode>[];
+
+    for (final innerSpan in vlist.nodes) {
+      if (innerSpan case dom.Element(
+        localName: 'span',
+        nodes: [
+          dom.Element(localName: 'span', className: 'pstrut') &&
+              final pstrutSpan,
+          ...final otherSpans,
+        ],
+      )) {
+        if (innerSpan.className != '') {
+          throw _KatexHtmlParseError('unexpected CSS class for '
+            'vlist inner span: ${innerSpan.className}');
+        }
+
+        final inlineStyles = _parseInlineStyles(innerSpan);
+        if (inlineStyles == null) throw _KatexHtmlParseError();
+        final marginLeftEm = _takeStyleEm(inlineStyles, 'margin-left');
+        final marginLeftIsNegative = marginLeftEm?.isNegative ?? false;
+        final marginRightEm = _takeStyleEm(inlineStyles, 'margin-right');
+        if (marginRightEm?.isNegative ?? false) throw _KatexHtmlParseError();
+        final styles = KatexSpanStyles(
+          marginLeftEm: marginLeftIsNegative ? null : marginLeftEm,
+          marginRightEm: marginRightEm,
+        );
+        final topEm = _takeStyleEm(inlineStyles, 'top');
+        if (inlineStyles.isNotEmpty) throw _KatexHtmlParseError();
+
+        final pstrutStyles = _parseInlineStyles(pstrutSpan);
+        if (pstrutStyles == null) throw _KatexHtmlParseError();
+        final pstrutHeightEm = _takeStyleEm(pstrutStyles, 'height');
+        if (pstrutHeightEm == null) throw _KatexHtmlParseError();
+        if (pstrutStyles.isNotEmpty) throw _KatexHtmlParseError();
+
+        KatexSpanNode child = KatexSpanNode(
+          styles: styles,
+          nodes: _parseChildSpans(otherSpans));
+
+        if (marginLeftIsNegative) {
+          child = KatexSpanNode(
+            nodes: [KatexNegativeMarginNode(
+              leftOffsetEm: marginLeftEm!,
+              nodes: [child])]);
+        }
+
+        rows.add(KatexVlistRowNode(
+          verticalOffsetEm: (topEm ?? 0) + pstrutHeightEm,
+          debugHtmlNode: kDebugMode ? innerSpan : null,
+          node: child));
+      } else {
+        throw _KatexHtmlParseError();
+      }
+    }
+
+    // TODO(#1716) Handle styling for .vlist-t2 spans
+    return KatexVlistNode(
+      rows: rows,
+      debugHtmlNode: kDebugMode ? element : null,
+    );
   }
 
   static final _resetSizeClassRegExp = RegExp(r'^reset-size(\d\d?)$');
