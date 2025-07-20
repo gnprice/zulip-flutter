@@ -273,21 +273,21 @@ class _KatexParser {
     //            vertical-align: bottom; position: relative; }
 
     final vlistT = element;
-    if (vlistT.nodes.isEmpty) throw _KatexHtmlParseError();
     if (vlistT.attributes.containsKey('style')) throw _KatexHtmlParseError();
 
-    final hasTwoVlistR = vlistT.className == 'vlist-t vlist-t2';
-    if (!hasTwoVlistR && vlistT.nodes.length != 1) throw _KatexHtmlParseError();
+    // The `.vlist-t` has either one or two children,
+    // depending on whether it also has the `vlist-t2` class.
+    final expectedNodeCount = (vlistT.className == 'vlist-t vlist-t2') ? 2 : 1;
+    if (vlistT.nodes.length != expectedNodeCount) throw _KatexHtmlParseError();
 
-    if (hasTwoVlistR) {
-      if (vlistT.nodes case [
-        _,
-        dom.Element(localName: 'span', className: 'vlist-r', nodes: [
-          dom.Element(localName: 'span', className: 'vlist', nodes: [
-            dom.Element(localName: 'span', className: '', nodes: []),
-          ]) && final vlist,
-        ]),
-      ]) {
+    if (vlistT.nodes.length == 2) {
+      // The second child, if present, is tightly structured.
+      if (vlistT.nodes[1] case
+          dom.Element(localName: 'span', className: 'vlist-r', nodes: [
+            dom.Element(localName: 'span', className: 'vlist', nodes: [
+              dom.Element(localName: 'span', className: '', nodes: []),
+            ]) && final vlist,
+          ])) {
         // In the generated HTML the .vlist in second .vlist-r span will have
         // a "height" inline style which we ignore, because it doesn't seem
         // to have any effect in rendering on the web.
@@ -301,9 +301,9 @@ class _KatexParser {
       }
     }
 
-    if (vlistT.nodes.first
-        case dom.Element(localName: 'span', className: 'vlist-r') &&
-            final vlistR) {
+    // The first child of the `.vlist-t`, a `.vlist-r`, has the interesting content.
+    final vlistR = vlistT.nodes.first;
+    if (vlistR case dom.Element(localName: 'span', className: 'vlist-r')) {
       if (vlistR.attributes.containsKey('style')) throw _KatexHtmlParseError();
 
       if (vlistR.nodes.first
