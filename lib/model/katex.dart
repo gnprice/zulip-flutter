@@ -271,6 +271,9 @@ class _KatexParser {
     //
     // .vlist {   display: table-cell;
     //            vertical-align: bottom; position: relative; }
+    //
+    // (There may also be .vlist-s grandchildren, but these have no effect;
+    // see below.)
 
     final vlistT = element;
     if (vlistT.attributes.containsKey('style')) throw _KatexHtmlParseError();
@@ -309,6 +312,22 @@ class _KatexParser {
     }
 
     if (vlistR.attributes.containsKey('style')) throw _KatexHtmlParseError();
+
+    // The `.vlist-r` has either one or two children.
+    if (vlistR.nodes.length != 1) {
+      if (vlistR.nodes.length > 2) throw _KatexHtmlParseError();
+      // The second child, if present, is `<span class="vlist-s">​</span>`.
+      // The katex.scss source file explains that these .vlist-s nodes are
+      // a workaround for "Safari rendering problems".  We ignore them.
+      final vlistS = vlistR.nodes[1];
+      if (vlistS.attributes.containsKey('style')) throw _KatexHtmlParseError();
+      if (vlistS
+          case dom.Element(localName: 'span', className: 'vlist-s',
+            nodes: [dom.Text(data: '\u{200b}')])) {
+      } else {
+        throw _KatexHtmlParseError();
+      }
+    }
 
     if (vlistR.nodes.first
         case dom.Element(localName: 'span', className: 'vlist') &&
