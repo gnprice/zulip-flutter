@@ -178,6 +178,13 @@ class _KatexParser {
 
       var span = _parseSpan(node);
 
+      // Sometimes KaTeX emits negative margins on empty spans,
+      // which CSS interprets to make the span's width negative.
+      // Our implementation of negative margin can reduce a widget's width,
+      // but only as far as zero.  So we move the negative margin to
+      // the whole series of sibling spans on one side (namely the later spans).
+      // We count on those having more total width than the negative margin,
+      // though we don't have a good way to verify that.
       double? negativeRightMarginEm;
       double? negativeLeftMarginEm;
       if (span is KatexSpanNode) {
