@@ -388,7 +388,7 @@ class _KatexParser {
 
       if (innerSpan.nodes.isEmpty) throw _KatexHtmlParseError();
       final pstrutSpan = innerSpan.nodes.first;
-      final otherSpans = innerSpan.nodes.sublist(1);
+      final otherSpans = innerSpan.nodes.slice(1);
 
       final double? pstrutHeightEm;
       if (pstrutSpan case dom.Element(localName: 'span', className: 'pstrut')) {
