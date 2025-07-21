@@ -366,32 +366,31 @@ class _KatexParser {
     final rows = <KatexVlistRowNode>[];
 
     for (final innerSpan in vlist.nodes) {
-      if (innerSpan case dom.Element(
-        localName: 'span',
-        nodes: [
+      if (innerSpan is! dom.Element) throw _KatexHtmlParseError();
+      if (innerSpan.localName != 'span') throw _KatexHtmlParseError();
+      if (innerSpan.className != '') {
+        throw _KatexHtmlParseError('unexpected CSS class for '
+          'vlist inner span: ${innerSpan.className}');
+      }
+
+      final inlineStyles = _parseInlineStyles(innerSpan);
+      if (inlineStyles == null) throw _KatexHtmlParseError();
+      final marginLeftEm = _takeStyleEm(inlineStyles, 'margin-left');
+      final marginLeftIsNegative = marginLeftEm?.isNegative ?? false;
+      final marginRightEm = _takeStyleEm(inlineStyles, 'margin-right');
+      if (marginRightEm?.isNegative ?? false) throw _KatexHtmlParseError();
+      final styles = KatexSpanStyles(
+        marginLeftEm: marginLeftIsNegative ? null : marginLeftEm,
+        marginRightEm: marginRightEm,
+      );
+      final topEm = _takeStyleEm(inlineStyles, 'top');
+      if (inlineStyles.isNotEmpty) throw _KatexHtmlParseError();
+
+      if (innerSpan.nodes case [
           dom.Element(localName: 'span', className: 'pstrut') &&
               final pstrutSpan,
           ...final otherSpans,
-        ],
-      )) {
-        if (innerSpan.className != '') {
-          throw _KatexHtmlParseError('unexpected CSS class for '
-            'vlist inner span: ${innerSpan.className}');
-        }
-
-        final inlineStyles = _parseInlineStyles(innerSpan);
-        if (inlineStyles == null) throw _KatexHtmlParseError();
-        final marginLeftEm = _takeStyleEm(inlineStyles, 'margin-left');
-        final marginLeftIsNegative = marginLeftEm?.isNegative ?? false;
-        final marginRightEm = _takeStyleEm(inlineStyles, 'margin-right');
-        if (marginRightEm?.isNegative ?? false) throw _KatexHtmlParseError();
-        final styles = KatexSpanStyles(
-          marginLeftEm: marginLeftIsNegative ? null : marginLeftEm,
-          marginRightEm: marginRightEm,
-        );
-        final topEm = _takeStyleEm(inlineStyles, 'top');
-        if (inlineStyles.isNotEmpty) throw _KatexHtmlParseError();
-
+      ]) {
         final pstrutStyles = _parseInlineStyles(pstrutSpan);
         if (pstrutStyles == null) throw _KatexHtmlParseError();
         final pstrutHeightEm = _takeStyleEm(pstrutStyles, 'height');
