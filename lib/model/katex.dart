@@ -411,6 +411,9 @@ class _KatexParser {
         throw _KatexHtmlParseError();
       }
 
+      // The remaining children are generic KaTeX spans.
+      //   .vlist > span > span { display: inline-block; }
+      // We group them together under one synthetic parent span.
       KatexSpanNode child = KatexSpanNode(
         styles: styles,
         nodes: _parseChildSpans(otherSpans));
@@ -428,7 +431,8 @@ class _KatexParser {
         node: child));
     }
 
-    // TODO(#1716) Handle styling for .vlist-t2 spans
+    // TODO(#1716) Handle styling for .vlist-t2 spans:
+    //   .vlist-t2 { margin-right: -2px; }
     return KatexVlistNode(
       rows: rows,
       debugHtmlNode: kDebugMode ? element : null,
