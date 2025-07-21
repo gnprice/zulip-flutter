@@ -168,6 +168,14 @@ class _KatexParser {
 
   List<KatexNode> _parseChildSpans(List<dom.Node> nodes) {
     var resultSpans = QueueList<KatexNode>();
+
+    void insertNegativeMargin(double marginEm) {
+      final wrapperNode = KatexNegativeMarginNode(leftOffsetEm: marginEm,
+        nodes: resultSpans);
+      resultSpans = QueueList<KatexNode>();
+      resultSpans.addFirst(wrapperNode);
+    }
+
     for (final node in nodes.reversed) {
       if (node is! dom.Element || node.localName != 'span') {
         throw _KatexHtmlParseError(
@@ -207,23 +215,16 @@ class _KatexParser {
       }
 
       if (negativeRightMarginEm != null) {
-        final previousSpans = resultSpans;
-        resultSpans = QueueList<KatexNode>();
-        resultSpans.addFirst(KatexNegativeMarginNode(
-          leftOffsetEm: negativeRightMarginEm,
-          nodes: previousSpans));
+        insertNegativeMargin(negativeRightMarginEm);
       }
 
       resultSpans.addFirst(span);
 
       if (negativeLeftMarginEm != null) {
-        final previousSpans = resultSpans;
-        resultSpans = QueueList<KatexNode>();
-        resultSpans.addFirst(KatexNegativeMarginNode(
-          leftOffsetEm: negativeLeftMarginEm,
-          nodes: previousSpans));
+        insertNegativeMargin(negativeLeftMarginEm);
       }
     }
+
     return resultSpans;
   }
 
