@@ -374,6 +374,8 @@ class _KatexParser {
           'vlist item span: ${vlistItem.className}');
       }
 
+      // The vlist items have the following CSS rule:
+      //   .vlist > span { display: block; height: 0; position: relative; }
       final inlineStyles = _parseInlineStyles(vlistItem);
       if (inlineStyles == null) throw _KatexHtmlParseError();
       final marginLeftEm = _takeStyleEm(inlineStyles, 'margin-left');
@@ -387,6 +389,9 @@ class _KatexParser {
       final topEm = _takeStyleEm(inlineStyles, 'top');
       if (inlineStyles.isNotEmpty) throw _KatexHtmlParseError();
 
+      // Each vlist item has a `.pstrut` child, and generic other children.
+      // The other children make up the content of the item;
+      // the pstrut adjusts the vertical position of that content.
       if (vlistItem.nodes.isEmpty) throw _KatexHtmlParseError();
       final pstrutSpan = vlistItem.nodes.first;
       final otherSpans = vlistItem.nodes.slice(1);
