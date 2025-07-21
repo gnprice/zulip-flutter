@@ -365,15 +365,16 @@ class _KatexParser {
 
     final rows = <KatexVlistRowNode>[];
 
-    for (final innerSpan in vlist.nodes) {
-      if (innerSpan is! dom.Element) throw _KatexHtmlParseError();
-      if (innerSpan.localName != 'span') throw _KatexHtmlParseError();
-      if (innerSpan.className != '') {
+    // The children of the `.vlist` node are the items in the "vertical list".
+    for (final vlistItem in vlist.nodes) {
+      if (vlistItem is! dom.Element) throw _KatexHtmlParseError();
+      if (vlistItem.localName != 'span') throw _KatexHtmlParseError();
+      if (vlistItem.className != '') {
         throw _KatexHtmlParseError('unexpected CSS class for '
-          'vlist inner span: ${innerSpan.className}');
+          'vlist item span: ${vlistItem.className}');
       }
 
-      final inlineStyles = _parseInlineStyles(innerSpan);
+      final inlineStyles = _parseInlineStyles(vlistItem);
       if (inlineStyles == null) throw _KatexHtmlParseError();
       final marginLeftEm = _takeStyleEm(inlineStyles, 'margin-left');
       final marginLeftIsNegative = marginLeftEm?.isNegative ?? false;
@@ -386,9 +387,9 @@ class _KatexParser {
       final topEm = _takeStyleEm(inlineStyles, 'top');
       if (inlineStyles.isNotEmpty) throw _KatexHtmlParseError();
 
-      if (innerSpan.nodes.isEmpty) throw _KatexHtmlParseError();
-      final pstrutSpan = innerSpan.nodes.first;
-      final otherSpans = innerSpan.nodes.slice(1);
+      if (vlistItem.nodes.isEmpty) throw _KatexHtmlParseError();
+      final pstrutSpan = vlistItem.nodes.first;
+      final otherSpans = vlistItem.nodes.slice(1);
 
       final double? pstrutHeightEm;
       if (pstrutSpan case dom.Element(localName: 'span', className: 'pstrut')) {
@@ -414,7 +415,7 @@ class _KatexParser {
 
       rows.add(KatexVlistRowNode(
         verticalOffsetEm: (topEm ?? 0) + pstrutHeightEm,
-        debugHtmlNode: kDebugMode ? innerSpan : null,
+        debugHtmlNode: kDebugMode ? vlistItem : null,
         node: child));
     }
 
