@@ -177,17 +177,18 @@ class _KatexParser {
       }
 
       var span = _parseSpan(node);
-      final negativeRightMarginEm = switch (span) {
-        KatexSpanNode(styles: KatexSpanStyles(:final marginRightEm?))
-          when marginRightEm.isNegative => marginRightEm,
-        _ => null,
-      };
-      final negativeLeftMarginEm = switch (span) {
-        KatexSpanNode(styles: KatexSpanStyles(:final marginLeftEm?))
-          when marginLeftEm.isNegative => marginLeftEm,
-        _ => null,
-      };
+
+      double? negativeRightMarginEm;
+      double? negativeLeftMarginEm;
       if (span is KatexSpanNode) {
+        negativeRightMarginEm = switch (span.styles.marginRightEm) {
+          final marginRightEm? when marginRightEm.isNegative => marginRightEm,
+          _ => null,
+        };
+        negativeLeftMarginEm = switch (span.styles.marginLeftEm) {
+          final marginLeftEm? when marginLeftEm.isNegative => marginLeftEm,
+          _ => null,
+        };
         if (negativeRightMarginEm != null || negativeLeftMarginEm != null) {
           span = KatexSpanNode(
             styles: span.styles.filter(
