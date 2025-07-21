@@ -363,7 +363,7 @@ class _KatexParser {
       throw _KatexHtmlParseError();
     }
 
-    final rows = <KatexVlistRowNode>[];
+    final items = <KatexVlistItemNode>[];
 
     // The children of the `.vlist` node are the items in the "vertical list".
     for (final vlistItem in vlist.nodes) {
@@ -425,7 +425,7 @@ class _KatexParser {
             nodes: [child])]);
       }
 
-      rows.add(KatexVlistRowNode(
+      items.add(KatexVlistItemNode(
         verticalOffsetEm: (topEm ?? 0) + pstrutHeightEm,
         debugHtmlNode: kDebugMode ? vlistItem : null,
         node: child));
@@ -434,7 +434,7 @@ class _KatexParser {
     // TODO(#1716) Handle styling for .vlist-t2 spans:
     //   .vlist-t2 { margin-right: -2px; }
     return KatexVlistNode(
-      rows: rows,
+      items: items,
       debugHtmlNode: kDebugMode ? element : null,
     );
   }

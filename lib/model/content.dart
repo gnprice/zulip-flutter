@@ -448,15 +448,15 @@ class KatexStrutNode extends KatexNode {
 /// of the `.vlist-t` node.
 class KatexVlistNode extends KatexNode {
   const KatexVlistNode({
-    required this.rows,
+    required this.items,
     super.debugHtmlNode,
   });
 
-  final List<KatexVlistRowNode> rows;
+  final List<KatexVlistItemNode> items;
 
   @override
   List<DiagnosticsNode> debugDescribeChildren() {
-    return rows.map((row) => row.toDiagnosticsNode()).toList();
+    return items.map((item) => item.toDiagnosticsNode()).toList();
   }
 }
 
@@ -465,8 +465,8 @@ class KatexVlistNode extends KatexNode {
 /// These correspond to certain `.vlist-t > .vlist-r > .vlist > span` nodes
 /// in KaTeX HTML.  The [KatexVlistNode] parent in our tree
 /// corresponds to the `.vlist-t` great-grandparent in the HTML.
-class KatexVlistRowNode extends ContentNode {
-  const KatexVlistRowNode({
+class KatexVlistItemNode extends ContentNode {
+  const KatexVlistItemNode({
     required this.verticalOffsetEm,
     required this.node,
     super.debugHtmlNode,

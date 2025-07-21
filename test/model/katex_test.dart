@@ -217,8 +217,8 @@ class KatexExample extends ContentExample {
           KatexSpanNode(
             styles: KatexSpanStyles(textAlign: KatexSpanTextAlign.left),
             nodes: [
-              KatexVlistNode(rows: [
-                KatexVlistRowNode(
+              KatexVlistNode(items: [
+                KatexVlistItemNode(
                   verticalOffsetEm: -3.113 + 2.7,
                   node: KatexSpanNode(
                     styles: KatexSpanStyles(marginRightEm: 0.05),
@@ -269,8 +269,8 @@ class KatexExample extends ContentExample {
           KatexSpanNode(
             styles: KatexSpanStyles(textAlign: KatexSpanTextAlign.left),
             nodes: [
-              KatexVlistNode(rows: [
-                KatexVlistRowNode(
+              KatexVlistNode(items: [
+                KatexVlistItemNode(
                   verticalOffsetEm: -2.55 + 2.7,
                   node: KatexSpanNode(
                     styles: KatexSpanStyles(marginLeftEm: 0, marginRightEm: 0.05),
@@ -324,8 +324,8 @@ class KatexExample extends ContentExample {
           KatexSpanNode(
             styles: KatexSpanStyles(textAlign: KatexSpanTextAlign.left),
             nodes: [
-              KatexVlistNode(rows: [
-                KatexVlistRowNode(
+              KatexVlistNode(items: [
+                KatexVlistItemNode(
                   verticalOffsetEm: -2.453 + 2.7,
                   node: KatexSpanNode(
                     styles: KatexSpanStyles(marginRightEm: 0.05),
@@ -338,7 +338,7 @@ class KatexExample extends ContentExample {
                             text: 'u'),
                         ]),
                     ])),
-                KatexVlistRowNode(
+                KatexVlistItemNode(
                   verticalOffsetEm: -3.113 + 2.7,
                   node: KatexSpanNode(
                     styles: KatexSpanStyles(marginRightEm: 0.05),
@@ -382,8 +382,8 @@ class KatexExample extends ContentExample {
         KatexSpanNode(
           styles: KatexSpanStyles(fontFamily: 'KaTeX_Math', fontStyle: KatexSpanFontStyle.italic),
           text: 'a'),
-        KatexVlistNode(rows: [
-          KatexVlistRowNode(
+        KatexVlistNode(items: [
+          KatexVlistItemNode(
             verticalOffsetEm: -3.25 + 3,
             node: KatexSpanNode(nodes: [
               KatexSpanNode(nodes: [
@@ -484,8 +484,8 @@ class KatexExample extends ContentExample {
             text: 'K'),
           KatexSpanNode(nodes: []),
           KatexNegativeMarginNode(leftOffsetEm: -0.17, nodes: [
-            KatexVlistNode(rows: [
-              KatexVlistRowNode(
+            KatexVlistNode(items: [
+              KatexVlistItemNode(
                 verticalOffsetEm: -2.905 + 2.7,
                 node: KatexSpanNode(nodes: [
                   KatexSpanNode(nodes: [
@@ -503,8 +503,8 @@ class KatexExample extends ContentExample {
                   text: 'T'),
                 KatexSpanNode(nodes: []),
                 KatexNegativeMarginNode(leftOffsetEm: -0.1667, nodes: [
-                  KatexVlistNode(rows: [
-                    KatexVlistRowNode(
+                  KatexVlistNode(items: [
+                    KatexVlistItemNode(
                       verticalOffsetEm: -2.7845 + 3,
                       node: KatexSpanNode(nodes: [
                         KatexSpanNode(nodes: [
@@ -562,8 +562,8 @@ class KatexExample extends ContentExample {
           KatexSpanNode(
             styles: KatexSpanStyles(textAlign: KatexSpanTextAlign.left),
             nodes: [
-              KatexVlistNode(rows: [
-                KatexVlistRowNode(
+              KatexVlistNode(items: [
+                KatexVlistItemNode(
                   verticalOffsetEm: -2.55 + 2.7,
                   node: KatexSpanNode(nodes: [
                     KatexNegativeMarginNode(leftOffsetEm: -0.0785, nodes: [

@@ -98,7 +98,7 @@ class _KatexSpan extends StatelessWidget {
     final styles = node.styles;
 
     // Currently, we expect `top` to be only present with the
-    // vlist inner row span, and parser handles that explicitly.
+    // vlist item span, and parser handles that explicitly.
     assert(styles.topEm == null);
 
     final fontFamily = styles.fontFamily;
@@ -210,10 +210,10 @@ class _KatexVlist extends StatelessWidget {
   Widget build(BuildContext context) {
     final em = DefaultTextStyle.of(context).style.fontSize!;
 
-    return Stack(children: List.unmodifiable(node.rows.map((row) {
+    return Stack(children: List.unmodifiable(node.items.map((item) {
       return Transform.translate(
-        offset: Offset(0, row.verticalOffsetEm * em),
-        child: _KatexSpan(row.node));
+        offset: Offset(0, item.verticalOffsetEm * em),
+        child: _KatexSpan(item.node));
     })));
   }
 }
