@@ -422,6 +422,24 @@ class KatexExample extends ContentExample {
       ]),
     ]);
 
+  static final negativeMarginWithoutSiblings = KatexExample.inline(
+    'KaTeX span with negative margin but no siblings',
+    // https://chat.zulip.org/#narrow/channel/7-test-here/topic/math/near/2226189
+    r"\coloneqq",
+    '<p><span class="katex">'
+      '<span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo><mi mathvariant="normal">≔</mi></mo></mrow>'
+        '<annotation encoding="application/x-tex"> \\coloneqq </annotation></semantics></math></span>'
+      '<span class="katex-html" aria-hidden="true">'
+        '<span class="base">'
+          '<span class="strut" style="height:0.4306em;"></span>'
+          '<span class="mrel">'
+            '<span class="mrel"><span class="mop" style="position:relative;top:-0.0347em;">:</span></span>'
+            '<span class="mrel"><span class="mspace" style="margin-right:-0.0667em;"></span></span>'
+            '<span class="mrel">=</span></span></span></span></span></p>',
+    // Better would be to successfully parse these... and then render correctly.
+    // That requires getting the negative spacing right.
+    null);
+
   static final mathBlockKatexLogo = KatexExample.block(
     'math block, KaTeX logo',
     // https://chat.zulip.org/#narrow/channel/7-test-here/topic/Rajesh/near/2141902
@@ -584,6 +602,7 @@ void main() async {
   testParseExample(KatexExample.mathBlockKatexSubSuperScript);
   testParseExample(KatexExample.mathBlockKatexRaisebox);
   testParseExample(KatexExample.mathBlockKatexNegativeMargin);
+  testParseExample(KatexExample.negativeMarginWithoutSiblings);
   testParseExample(KatexExample.mathBlockKatexLogo);
   testParseExample(KatexExample.mathBlockKatexNegativeMarginsOnVlistRow);
 

@@ -170,6 +170,15 @@ class _KatexParser {
     var resultSpans = QueueList<KatexNode>();
 
     void insertNegativeMargin(double marginEm) {
+      if (resultSpans.isEmpty) {
+        // Negative margin on an empty list would have no effect; see below.
+        // This situation does happen, though rarely; e.g.,
+        // $$ \coloneqq $$ involves a .mspace with negative margin-right as
+        // the only child of a .mrel, between the ":" and the "=".
+        // TODO handle these; we'll need more cleverness in finding a
+        //   place to apply the negative margin.
+        throw _KatexHtmlParseError('trailing negative margin');
+      }
       final wrapperNode = KatexNegativeMarginNode(leftOffsetEm: marginEm,
         nodes: resultSpans);
       resultSpans = QueueList<KatexNode>();
