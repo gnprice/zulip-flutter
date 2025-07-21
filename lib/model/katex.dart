@@ -386,35 +386,36 @@ class _KatexParser {
       final topEm = _takeStyleEm(inlineStyles, 'top');
       if (inlineStyles.isNotEmpty) throw _KatexHtmlParseError();
 
-      if (innerSpan.nodes case [
-          dom.Element(localName: 'span', className: 'pstrut') &&
-              final pstrutSpan,
-          ...final otherSpans,
-      ]) {
+      if (innerSpan.nodes.isEmpty) throw _KatexHtmlParseError();
+      final pstrutSpan = innerSpan.nodes.first;
+      final otherSpans = innerSpan.nodes.sublist(1);
+
+      final double? pstrutHeightEm;
+      if (pstrutSpan case dom.Element(localName: 'span', className: 'pstrut')) {
         final pstrutStyles = _parseInlineStyles(pstrutSpan);
         if (pstrutStyles == null) throw _KatexHtmlParseError();
-        final pstrutHeightEm = _takeStyleEm(pstrutStyles, 'height');
+        pstrutHeightEm = _takeStyleEm(pstrutStyles, 'height');
         if (pstrutHeightEm == null) throw _KatexHtmlParseError();
         if (pstrutStyles.isNotEmpty) throw _KatexHtmlParseError();
-
-        KatexSpanNode child = KatexSpanNode(
-          styles: styles,
-          nodes: _parseChildSpans(otherSpans));
-
-        if (marginLeftIsNegative) {
-          child = KatexSpanNode(
-            nodes: [KatexNegativeMarginNode(
-              leftOffsetEm: marginLeftEm!,
-              nodes: [child])]);
-        }
-
-        rows.add(KatexVlistRowNode(
-          verticalOffsetEm: (topEm ?? 0) + pstrutHeightEm,
-          debugHtmlNode: kDebugMode ? innerSpan : null,
-          node: child));
       } else {
         throw _KatexHtmlParseError();
       }
+
+      KatexSpanNode child = KatexSpanNode(
+        styles: styles,
+        nodes: _parseChildSpans(otherSpans));
+
+      if (marginLeftIsNegative) {
+        child = KatexSpanNode(
+          nodes: [KatexNegativeMarginNode(
+            leftOffsetEm: marginLeftEm!,
+            nodes: [child])]);
+      }
+
+      rows.add(KatexVlistRowNode(
+        verticalOffsetEm: (topEm ?? 0) + pstrutHeightEm,
+        debugHtmlNode: kDebugMode ? innerSpan : null,
+        node: child));
     }
 
     // TODO(#1716) Handle styling for .vlist-t2 spans
