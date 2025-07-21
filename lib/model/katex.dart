@@ -396,8 +396,12 @@ class _KatexParser {
       final pstrutSpan = vlistItem.nodes.first;
       final otherSpans = vlistItem.nodes.slice(1);
 
+      // The `.pstrut` has a simple structure: no children, and
+      // one inline style property, namely `height`.  Its CSS rule is:
+      //   .vlist > span > .pstrut { overflow: hidden; width: 0; }
       final double? pstrutHeightEm;
-      if (pstrutSpan case dom.Element(localName: 'span', className: 'pstrut')) {
+      if (pstrutSpan case dom.Element(localName: 'span', className: 'pstrut',
+            nodes: [])) {
         final pstrutStyles = _parseInlineStyles(pstrutSpan);
         if (pstrutStyles == null) throw _KatexHtmlParseError();
         pstrutHeightEm = _takeStyleEm(pstrutStyles, 'height');
