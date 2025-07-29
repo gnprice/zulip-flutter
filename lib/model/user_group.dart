@@ -50,11 +50,30 @@ abstract class HasUserGroupStore extends PerAccountStoreBase with UserGroupStore
 
 /// The implementation of [UserGroupStore] that does the work.
 class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
-  UserGroupStoreImpl({required super.core, required List<UserGroup> groups})
-    : _groups = {
-        for (final group in groups)
-          group.id: group,
-      };
+  factory UserGroupStoreImpl({
+      required CorePerAccountStore core, required List<UserGroup> groups}) {
+    final groupMap = <int, UserGroup>{};
+    final reverseSubgroups = <int, Set<int>>{};
+    final selfUserDirectGroups = <int>{};
+    for (final group in groups) {
+      groupMap[group.id] = group;
+      reverseSubgroups[group.id] ??= {};
+      for (final subgroupId in group.directSubgroupIds) {
+        (reverseSubgroups[subgroupId] ??= {}).add(group.id);
+      }
+      if (group.members.contains(core.selfUserId)) {
+        selfUserDirectGroups.add(group.id);
+      }
+    }
+    return UserGroupStoreImpl._(core: core, groupMap,
+      reverseSubgroups, selfUserDirectGroups);
+  }
+
+  UserGroupStoreImpl._(
+    this._groups,
+    this._reverseSubgroups, this._selfUserDirectGroups, {
+    required super.core,
+  });
 
   @override
   UserGroup? getGroup(int userGroupId) {
@@ -93,6 +112,26 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
 
   final Map<int, UserGroup> _groups;
 
+  final Map<int, Set<int>> _reverseSubgroups;
+  final Set<int> _selfUserDirectGroups;
+
+  Set<int> get _selfUserTransitiveGroups =>
+    __selfUserTransitiveGroups ??= _computeSelfUserTransitiveGroups();
+  Set<int>? __selfUserTransitiveGroups;
+
+  Set<int> _computeSelfUserTransitiveGroups() {
+    final result = <int>{};
+    final toVisit = List.of(_selfUserDirectGroups);
+    while (toVisit.isNotEmpty) {
+      final groupId = toVisit.removeLast();
+      if (!result.add(groupId)) continue;
+      final containing = _reverseSubgroups[groupId];
+      if (containing == null) continue; // TODO(log)
+      toVisit.addAll(containing);
+    }
+    return result;
+  }
+
   UserGroup? _expectGroup(int groupId) {
     final group = _groups[groupId];
     // TODO(log) if group not found
@@ -104,8 +143,25 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
       case UserGroupAddEvent():
         _groups[event.group.id] = event.group;
 
+        _reverseSubgroups[event.group.id] = {};
+        for (final subgroupId in event.group.directSubgroupIds) {
+          _reverseSubgroups[subgroupId]?.add(event.group.id);
+        }
+        if (event.group.members.contains(selfUserId)) {
+          _selfUserDirectGroups.add(event.group.id);
+        }
+        // TODO transitive
+
       case UserGroupRemoveEvent():
-        _groups.remove(event.groupId);
+        final group = _groups.remove(event.groupId);
+        if (group == null) return; // TODO(log)
+
+        _reverseSubgroups.remove(event.groupId);
+        for (final subgroupId in group.directSubgroupIds) {
+          _reverseSubgroups[subgroupId]?.remove(event.groupId);
+        }
+        _selfUserDirectGroups.remove(event.groupId);
+        // TODO transitive
 
       case UserGroupUpdateEvent():
         final group = _expectGroup(event.groupId);
@@ -120,20 +176,44 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         if (group == null) return;
         group.members.addAll(event.userIds);
 
+        if (event.userIds.contains(selfUserId)) {
+          _selfUserDirectGroups.add(event.groupId);
+        }
+        // TODO transitive
+
       case UserGroupRemoveMembersEvent():
         final group = _expectGroup(event.groupId);
         if (group == null) return;
         group.members.removeAll(event.userIds);
+
+        if (event.userIds.contains(selfUserId)) {
+          _selfUserDirectGroups.remove(event.groupId);
+        }
+        // TODO transitive
 
       case UserGroupAddSubgroupsEvent():
         final group = _expectGroup(event.groupId);
         if (group == null) return;
         group.directSubgroupIds.addAll(event.directSubgroupIds);
 
+        for (final subgroupId in event.directSubgroupIds) {
+          final containing = _reverseSubgroups[subgroupId];
+          if (containing == null) continue; // TODO(log)
+          containing.add(event.groupId);
+        }
+        // TODO transitive
+
       case UserGroupRemoveSubgroupsEvent():
         final group = _expectGroup(event.groupId);
         if (group == null) return;
         group.directSubgroupIds.removeAll(event.directSubgroupIds);
+
+        for (final subgroupId in event.directSubgroupIds) {
+          final containing = _reverseSubgroups[subgroupId];
+          if (containing == null) continue; // TODO(log)
+          containing.remove(event.groupId);
+        }
+        // TODO transitive
     }
   }
 
