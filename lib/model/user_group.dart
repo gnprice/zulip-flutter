@@ -150,7 +150,19 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         if (event.group.members.contains(selfUserId)) {
           _selfUserDirectGroups.add(event.group.id);
         }
-        // TODO transitive
+
+        transitive: if (__selfUserTransitiveGroups != null) {
+          if (event.group.members.contains(selfUserId)) {
+            __selfUserTransitiveGroups!.add(event.group.id);
+            break transitive;
+          }
+          for (final subgroupId in event.group.directSubgroupIds) {
+            if (__selfUserTransitiveGroups!.contains(subgroupId)) {
+              __selfUserTransitiveGroups!.add(event.group.id);
+              break transitive;
+            }
+          }
+        }
 
       case UserGroupRemoveEvent():
         final group = _groups.remove(event.groupId);
@@ -161,7 +173,22 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
           _reverseSubgroups[subgroupId]?.remove(event.groupId);
         }
         _selfUserDirectGroups.remove(event.groupId);
-        // TODO transitive
+
+        if (__selfUserTransitiveGroups != null
+            && __selfUserTransitiveGroups!.contains(event.groupId)) {
+          __selfUserTransitiveGroups!.remove(event.groupId);
+          final containing = _reverseSubgroups[event.groupId];
+          if (containing == null) break; // TODO(log)
+          for (final parentId in containing) {
+            assert(__selfUserTransitiveGroups!.contains(parentId));
+            final parent = _groups[parentId]!;
+            if (!parent.members.contains(selfUserId)
+                && !parent.directSubgroupIds.any(
+                      __selfUserTransitiveGroups!.contains)) {
+              __selfUserTransitiveGroups!.remove(parentId); // TODO but transitively
+            }
+          }
+        }
 
       case UserGroupUpdateEvent():
         final group = _expectGroup(event.groupId);
