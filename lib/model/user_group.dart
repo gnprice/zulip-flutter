@@ -230,6 +230,9 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
       case UserGroupRemoveEvent():
         final group = _groups.remove(event.groupId);
         if (group == null) return; // TODO(log)
+        for (final parent in _groups.values) {
+          parent.directSubgroupIds.remove(event.groupId);
+        }
 
         for (final subgroupId in group.directSubgroupIds) {
           _directSupergroups[subgroupId]?.remove(event.groupId);
