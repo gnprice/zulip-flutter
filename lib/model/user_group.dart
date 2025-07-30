@@ -207,19 +207,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         for (final subgroupId in event.group.directSubgroupIds) {
           _directSupergroups[subgroupId]?.add(event.group.id);
         }
-
-        transitive: {
-          if (event.group.members.contains(selfUserId)) {
-            _selfUserGroups.add(event.group.id);
-            break transitive;
-          }
-          for (final subgroupId in event.group.directSubgroupIds) {
-            if (_selfUserGroups.contains(subgroupId)) {
-              _selfUserGroups.add(event.group.id);
-              break transitive;
-            }
-          }
-        }
+        if (_containsSelf(event.group)) _addSelfGroup(event.group.id);
 
       case UserGroupRemoveEvent():
         final group = _groups.remove(event.groupId);
@@ -260,16 +248,15 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         if (group == null) return;
         group.directSubgroupIds.addAll(event.directSubgroupIds);
 
-        bool willAdd = _selfUserGroups.contains(event.groupId);
         for (final subgroupId in event.directSubgroupIds) {
           final containing = _directSupergroups[subgroupId];
           if (containing == null) continue; // TODO(log)
           containing.add(event.groupId);
-          if (!willAdd && _selfUserGroups.contains(subgroupId)) {
-            willAdd = true;
-          }
         }
-        if (willAdd) _addSelfGroup(event.groupId);
+        if (!_selfUserGroups.contains(event.groupId)
+            && event.directSubgroupIds.any(_selfUserGroups.contains)) {
+          _addSelfGroup(event.groupId);
+        }
 
       case UserGroupRemoveSubgroupsEvent():
         final group = _expectGroup(event.groupId);
