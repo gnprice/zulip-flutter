@@ -78,7 +78,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
     this._directSupergroups,
     Iterable<int> selfUserDirectGroups, {
     required super.core,
-  }) : _selfUserTransitiveGroups = {} {
+  }) : _selfUserGroups = {} {
     for (final groupId in selfUserDirectGroups) {
       _addTransitively(groupId);
     }
@@ -145,36 +145,36 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
   ///      g.id`.
   final Map<int, Set<int>> _directSupergroups;
 
-  /// The groups that the self-user is transitively a member of.
-  final Set<int> _selfUserTransitiveGroups;
+  /// The groups that the self-user is a member of, transitively.
+  final Set<int> _selfUserGroups;
 
   void _addTransitively(int groupId) {
-    if (!_selfUserTransitiveGroups.add(groupId)) return;
+    if (!_selfUserGroups.add(groupId)) return;
     final toVisit = List.of(_directSupergroups[groupId]!);
     while (toVisit.isNotEmpty) {
       final parentId = toVisit.removeLast();
-      if (!_selfUserTransitiveGroups.add(parentId)) continue;
+      if (!_selfUserGroups.add(parentId)) continue;
       toVisit.addAll(_directSupergroups[parentId]!);
     }
   }
 
   bool _containsTransitively(UserGroup group) {
     return group.members.contains(selfUserId)
-      || group.directSubgroupIds.any(_selfUserTransitiveGroups.contains);
+      || group.directSubgroupIds.any(_selfUserGroups.contains);
   }
 
   void _removeTransitively(int groupId) {
-    if (!_selfUserTransitiveGroups.remove(groupId)) return;
+    if (!_selfUserGroups.remove(groupId)) return;
     final toVisit = List.of(_directSupergroups[groupId]!);
     while (toVisit.isNotEmpty) {
       final parentId = toVisit.removeLast();
-      if (!_selfUserTransitiveGroups.contains(parentId)) {
+      if (!_selfUserGroups.contains(parentId)) {
         // Already removed; must have been visited previously in this loop.
         continue;
       }
       final parent = _groups[parentId]!;
       if (!_containsTransitively(parent)) {
-        _selfUserTransitiveGroups.remove(parentId);
+        _selfUserGroups.remove(parentId);
         toVisit.addAll(_directSupergroups[parentId]!);
       }
     }
@@ -198,12 +198,12 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
 
         transitive: {
           if (event.group.members.contains(selfUserId)) {
-            _selfUserTransitiveGroups.add(event.group.id);
+            _selfUserGroups.add(event.group.id);
             break transitive;
           }
           for (final subgroupId in event.group.directSubgroupIds) {
-            if (_selfUserTransitiveGroups.contains(subgroupId)) {
-              _selfUserTransitiveGroups.add(event.group.id);
+            if (_selfUserGroups.contains(subgroupId)) {
+              _selfUserGroups.add(event.group.id);
               break transitive;
             }
           }
@@ -251,12 +251,12 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         if (group == null) return;
         group.directSubgroupIds.addAll(event.directSubgroupIds);
 
-        bool willAdd = _selfUserTransitiveGroups.contains(event.groupId);
+        bool willAdd = _selfUserGroups.contains(event.groupId);
         for (final subgroupId in event.directSubgroupIds) {
           final containing = _directSupergroups[subgroupId];
           if (containing == null) continue; // TODO(log)
           containing.add(event.groupId);
-          if (!willAdd && _selfUserTransitiveGroups.contains(subgroupId)) {
+          if (!willAdd && _selfUserGroups.contains(subgroupId)) {
             willAdd = true;
           }
         }
