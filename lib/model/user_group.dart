@@ -80,7 +80,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
     required super.core,
   }) : _selfUserGroups = {} {
     for (final groupId in selfUserDirectGroups) {
-      _addTransitively(groupId);
+      _addSelfGroup(groupId);
     }
   }
 
@@ -148,7 +148,11 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
   /// The groups that the self-user is a member of, transitively.
   final Set<int> _selfUserGroups;
 
-  void _addTransitively(int groupId) {
+  /// The self-user now belongs to this group; update [_selfUserGroups].
+  ///
+  /// This walks the graph provided by [_directSupergroups],
+  /// which must be up to date.
+  void _addSelfGroup(int groupId) {
     if (!_selfUserGroups.add(groupId)) return;
     final toVisit = List.of(_directSupergroups[groupId]!);
     while (toVisit.isNotEmpty) {
@@ -158,12 +162,20 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
     }
   }
 
-  bool _containsTransitively(UserGroup group) {
+  bool _containsSelf(UserGroup group) {
     return group.members.contains(selfUserId)
       || group.directSubgroupIds.any(_selfUserGroups.contains);
   }
 
-  void _removeTransitively(int groupId) {
+  /// The self-user no longer belongs to this group; update [_selfUserGroups].
+  ///
+  /// This walks the graph [_directSupergroups], and consults [_groups].
+  /// Those data structures must be up to date,
+  /// and [_selfUserGroups] must be
+  /// TODO WORK HERE
+  /// which must be up to date.
+  /// This requires [_directSupergroups] to be up to date.
+  void _removeSelfGroup(int groupId) {
     if (!_selfUserGroups.remove(groupId)) return;
     final toVisit = List.of(_directSupergroups[groupId]!);
     while (toVisit.isNotEmpty) {
@@ -173,7 +185,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         continue;
       }
       final parent = _groups[parentId]!;
-      if (!_containsTransitively(parent)) {
+      if (!_containsSelf(parent)) {
         _selfUserGroups.remove(parentId);
         toVisit.addAll(_directSupergroups[parentId]!);
       }
@@ -213,12 +225,11 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         final group = _groups.remove(event.groupId);
         if (group == null) return; // TODO(log)
 
-        _directSupergroups.remove(event.groupId);
         for (final subgroupId in group.directSubgroupIds) {
           _directSupergroups[subgroupId]?.remove(event.groupId);
         }
-
-        _removeTransitively(event.groupId);
+        _removeSelfGroup(event.groupId);
+        _directSupergroups.remove(event.groupId);
 
       case UserGroupUpdateEvent():
         final group = _expectGroup(event.groupId);
@@ -234,7 +245,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         group.members.addAll(event.userIds);
 
         if (event.userIds.contains(selfUserId)) {
-          _addTransitively(event.groupId);
+          _addSelfGroup(event.groupId);
         }
 
       case UserGroupRemoveMembersEvent():
@@ -242,9 +253,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         if (group == null) return;
         group.members.removeAll(event.userIds);
 
-        if (event.userIds.contains(selfUserId)) {
-          if (!_containsTransitively(group)) _removeTransitively(group.id);
-        }
+        if (!_containsSelf(group)) _removeSelfGroup(group.id);
 
       case UserGroupAddSubgroupsEvent():
         final group = _expectGroup(event.groupId);
@@ -260,7 +269,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
             willAdd = true;
           }
         }
-        if (willAdd) _addTransitively(event.groupId);
+        if (willAdd) _addSelfGroup(event.groupId);
 
       case UserGroupRemoveSubgroupsEvent():
         final group = _expectGroup(event.groupId);
@@ -272,7 +281,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
           if (containing == null) continue; // TODO(log)
           containing.remove(event.groupId);
         }
-        if (!_containsTransitively(group)) _removeTransitively(group.id);
+        if (!_containsSelf(group)) _removeSelfGroup(group.id);
     }
   }
 
