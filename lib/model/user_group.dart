@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../api/model/events.dart';
+import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
 import 'store.dart';
 
@@ -52,14 +53,17 @@ abstract class HasUserGroupStore extends PerAccountStoreBase with UserGroupStore
 class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
   factory UserGroupStoreImpl({
       required CorePerAccountStore core, required List<UserGroup> groups}) {
-    final groupMap = <int, UserGroup>{};
-    final reverseSubgroups = <int, Set<int>>{};
+    final groupMap = {         for (final group in groups) group.id: group   };
+    final reverseSubgroups = { for (final group in groups) group.id: <int>{} };
     final selfUserDirectGroups = <int>{};
     for (final group in groups) {
-      groupMap[group.id] = group;
-      reverseSubgroups[group.id] ??= {};
+      if (group.directSubgroupIds.any((id) => !groupMap.containsKey(id))) {
+        // The group has an unknown subgroup.  TODO(log) that's a server bug.
+        // Forget the unknown subgroups so we don't crash in later processing.
+        group.directSubgroupIds.removeWhere((id) => !groupMap.containsKey(id));
+      }
       for (final subgroupId in group.directSubgroupIds) {
-        (reverseSubgroups[subgroupId] ??= {}).add(group.id);
+        reverseSubgroups[subgroupId]!.add(group.id);
       }
       if (group.members.contains(core.selfUserId)) {
         selfUserDirectGroups.add(group.id);
@@ -73,8 +77,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
     this._groups,
     this._reverseSubgroups, this._selfUserDirectGroups, {
     required super.core,
-  }) {
-    _selfUserTransitiveGroups = {};
+  }) : _selfUserTransitiveGroups = {} {
     for (final groupId in _selfUserDirectGroups) {
       _addTransitively(groupId);
     }
@@ -115,12 +118,39 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
       || group.directSubgroupIds.any(_selfInGroup);
   }
 
+  /// All the (named) user groups in the realm.
+  ///
+  /// This corresponds to [InitialSnapshot.realmUserGroups] in the API.
+  /// These are all the groups that exist as groups in the Zulip API,
+  /// including system groups.
+  ///
+  /// These are the "named" groups in contrast with "anonymous" groups.
+  /// Those exist in the Zulip server, but appear in the API only in the form
+  /// of group-setting values (<https://zulip.com/api/group-setting-values>),
+  /// never with a group ID of their own,
+  /// and are never members of other groups.
+  ///
+  /// Every subgroup mentioned in [UserGroup.directSubgroupIds]
+  /// of any of these groups is itself present in this map.
   final Map<int, UserGroup> _groups;
 
+  /// The set of groups with each given group as a direct subgroup.
+  ///
+  /// This has the same set of keys as [_groups].
+  ///
+  /// For each key `id`, the items in this map's value at `id` are
+  /// `for (final g in _groups.values)
+  ///    if (g.directSubgroupIds.contains(id))
+  ///      g.id`.
   final Map<int, Set<int>> _reverseSubgroups;
+
+  /// The groups that the self-user is directly a member of.
+  ///
+  /// See also [_selfUserTransitiveGroups].
   final Set<int> _selfUserDirectGroups;
 
-  late Set<int> _selfUserTransitiveGroups;
+  /// The groups that the self-user is transitively a member of.
+  final Set<int> _selfUserTransitiveGroups;
 
   void _addTransitively(int groupId) {
     if (!_selfUserTransitiveGroups.add(groupId)) return;
