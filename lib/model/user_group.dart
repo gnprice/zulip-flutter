@@ -244,7 +244,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         if (group == null) return;
         group.members.addAll(event.userIds);
 
-        if (event.userIds.contains(selfUserId)) {
+        if (group.members.contains(selfUserId)) {
           _addSelfGroup(event.groupId);
         }
 
