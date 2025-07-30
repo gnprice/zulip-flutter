@@ -54,29 +54,21 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
       required CorePerAccountStore core, required List<UserGroup> groups}) {
     final groupMap = {         for (final group in groups) group.id: group   };
     final reverseSubgroups = { for (final group in groups) group.id: <int>{} };
-    final selfUserDirectGroups = <int>[];
     for (final group in groups) {
       _pruneSubgroups(group, groupMap);
       for (final subgroupId in group.directSubgroupIds) {
         reverseSubgroups[subgroupId]!.add(group.id);
       }
-      if (group.members.contains(core.selfUserId)) {
-        selfUserDirectGroups.add(group.id);
-      }
     }
-    return UserGroupStoreImpl._(core: core, groupMap,
-      reverseSubgroups, selfUserDirectGroups);
+    return UserGroupStoreImpl._(core: core, groupMap, reverseSubgroups);
   }
 
   UserGroupStoreImpl._(
     this._groups,
-    this._directSupergroups,
-    Iterable<int> selfUserDirectGroups, {
+    this._directSupergroups, {
     required super.core,
   }) : _selfUserGroups = {} {
-    for (final groupId in selfUserDirectGroups) {
-      _addSelfGroup(groupId);
-    }
+    _recomputeSelfUserGroups();
   }
 
   static void _pruneSubgroups(UserGroup group, Map<int, UserGroup> groupMap) {
@@ -159,51 +151,18 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
   /// The groups that the self-user is a member of, transitively.
   final Set<int> _selfUserGroups;
 
-  /// The self-user now belongs to this group; update [_selfUserGroups].
-  ///
-  /// The group must be present in [_groups].
-  ///
-  /// This walks the graph provided by [_directSupergroups],
-  /// which must be up to date.
-  void _addSelfGroup(int groupId) {
-    if (!_selfUserGroups.add(groupId)) return;
-    final toVisit = List.of(_directSupergroups[groupId]!);
+  void _recomputeSelfUserGroups() {
+    // TODO(perf): maintain _selfUserGroups more incrementally on events
+    _selfUserGroups.clear();
+    final toVisit = <int>[
+      for (final group in _groups.values)
+        if (group.members.contains(selfUserId))
+          group.id,
+    ];
     while (toVisit.isNotEmpty) {
-      final parentId = toVisit.removeLast();
-      if (!_selfUserGroups.add(parentId)) continue;
-      toVisit.addAll(_directSupergroups[parentId]!);
-    }
-  }
-
-  bool _containsSelf(UserGroup group) {
-    return group.members.contains(selfUserId)
-      || group.directSubgroupIds.any(_selfUserGroups.contains);
-  }
-
-  /// The self-user no longer belongs to this group; update [_selfUserGroups].
-  ///
-  /// The group must be present in [_groups].
-  ///
-  /// This walks the graph [_directSupergroups], and consults [_groups].
-  /// Those data structures must be up to date,
-  /// and [_selfUserGroups] must be
-  /// TODO WORK HERE
-  /// which must be up to date.
-  /// This requires [_directSupergroups] to be up to date.
-  void _removeSelfGroup(int groupId) {
-    if (!_selfUserGroups.remove(groupId)) return;
-    final toVisit = List.of(_directSupergroups[groupId]!);
-    while (toVisit.isNotEmpty) {
-      final parentId = toVisit.removeLast();
-      if (!_selfUserGroups.contains(parentId)) {
-        // Already removed; must have been visited previously in this loop.
-        continue;
-      }
-      final parent = _groups[parentId]!;
-      if (!_containsSelf(parent)) {
-        _selfUserGroups.remove(parentId);
-        toVisit.addAll(_directSupergroups[parentId]!);
-      }
+      final groupId = toVisit.removeLast();
+      if (!_selfUserGroups.add(groupId)) continue;
+      toVisit.addAll(_directSupergroups[groupId]!);
     }
   }
 
@@ -224,7 +183,10 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         for (final subgroupId in group.directSubgroupIds) {
           _directSupergroups[subgroupId]!.add(group.id);
         }
-        if (_containsSelf(group)) _addSelfGroup(group.id);
+        if (group.members.contains(selfUserId)
+            || group.directSubgroupIds.any(_selfUserGroups.contains)) {
+          _recomputeSelfUserGroups();
+        }
 
       case UserGroupRemoveEvent():
         final group = _groups.remove(event.groupId);
@@ -236,8 +198,10 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         for (final subgroupId in group.directSubgroupIds) {
           _directSupergroups[subgroupId]!.remove(event.groupId);
         }
-        _removeSelfGroup(event.groupId);
         _directSupergroups.remove(event.groupId);
+        if (_selfUserGroups.contains(group.id)) {
+          _recomputeSelfUserGroups();
+        }
 
       case UserGroupUpdateEvent():
         final group = _expectGroup(event.groupId);
@@ -252,8 +216,9 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         if (group == null) return;
         group.members.addAll(event.userIds);
 
-        if (group.members.contains(selfUserId)) {
-          _addSelfGroup(event.groupId);
+        if (!_selfUserGroups.contains(group.id)
+            && group.members.contains(selfUserId)) {
+          _recomputeSelfUserGroups();
         }
 
       case UserGroupRemoveMembersEvent():
@@ -261,7 +226,10 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         if (group == null) return;
         group.members.removeAll(event.userIds);
 
-        if (!_containsSelf(group)) _removeSelfGroup(group.id);
+        if (_selfUserGroups.contains(group.id)
+            && !group.members.contains(selfUserId)) {
+          _recomputeSelfUserGroups();
+        }
 
       case UserGroupAddSubgroupsEvent():
         final group = _expectGroup(event.groupId);
@@ -273,9 +241,9 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         for (final subgroupId in subgroupIds) {
           _directSupergroups[subgroupId]!.add(event.groupId);
         }
-        if (!_selfUserGroups.contains(event.groupId)
+        if (!_selfUserGroups.contains(group.id)
             && subgroupIds.any(_selfUserGroups.contains)) {
-          _addSelfGroup(event.groupId);
+          _recomputeSelfUserGroups();
         }
 
       case UserGroupRemoveSubgroupsEvent():
@@ -286,7 +254,10 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         for (final subgroupId in event.directSubgroupIds) {
           _directSupergroups[subgroupId]!.remove(event.groupId);
         }
-        if (!_containsSelf(group)) _removeSelfGroup(group.id);
+        if (_selfUserGroups.contains(group.id)
+            && event.directSubgroupIds.any(_selfUserGroups.contains)) {
+          _recomputeSelfUserGroups();
+        }
     }
   }
 
