@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import '../api/model/events.dart';
-import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
 import 'store.dart';
 
@@ -235,7 +234,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         }
 
         for (final subgroupId in group.directSubgroupIds) {
-          _directSupergroups[subgroupId]?.remove(event.groupId);
+          _directSupergroups[subgroupId]!.remove(event.groupId);
         }
         _removeSelfGroup(event.groupId);
         _directSupergroups.remove(event.groupId);
@@ -285,7 +284,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         group.directSubgroupIds.removeAll(event.directSubgroupIds);
 
         for (final subgroupId in event.directSubgroupIds) {
-          _directSupergroups[subgroupId]?.remove(event.groupId);
+          _directSupergroups[subgroupId]!.remove(event.groupId);
         }
         if (!_containsSelf(group)) _removeSelfGroup(group.id);
     }
