@@ -55,7 +55,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
       required CorePerAccountStore core, required List<UserGroup> groups}) {
     final groupMap = {         for (final group in groups) group.id: group   };
     final reverseSubgroups = { for (final group in groups) group.id: <int>{} };
-    final selfUserDirectGroups = <int>{};
+    final selfUserDirectGroups = <int>[];
     for (final group in groups) {
       if (group.directSubgroupIds.any((id) => !groupMap.containsKey(id))) {
         // The group has an unknown subgroup.  TODO(log) that's a server bug.
@@ -75,10 +75,11 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
 
   UserGroupStoreImpl._(
     this._groups,
-    this._reverseSubgroups, this._selfUserDirectGroups, {
+    this._reverseSubgroups,
+    Iterable<int> selfUserDirectGroups, {
     required super.core,
   }) : _selfUserTransitiveGroups = {} {
-    for (final groupId in _selfUserDirectGroups) {
+    for (final groupId in selfUserDirectGroups) {
       _addTransitively(groupId);
     }
   }
@@ -144,11 +145,6 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
   ///      g.id`.
   final Map<int, Set<int>> _reverseSubgroups;
 
-  /// The groups that the self-user is directly a member of.
-  ///
-  /// See also [_selfUserTransitiveGroups].
-  final Set<int> _selfUserDirectGroups;
-
   /// The groups that the self-user is transitively a member of.
   final Set<int> _selfUserTransitiveGroups;
 
@@ -199,9 +195,6 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         for (final subgroupId in event.group.directSubgroupIds) {
           _reverseSubgroups[subgroupId]?.add(event.group.id);
         }
-        if (event.group.members.contains(selfUserId)) {
-          _selfUserDirectGroups.add(event.group.id);
-        }
 
         transitive: {
           if (event.group.members.contains(selfUserId)) {
@@ -224,8 +217,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         for (final subgroupId in group.directSubgroupIds) {
           _reverseSubgroups[subgroupId]?.remove(event.groupId);
         }
-        _selfUserDirectGroups.remove(event.groupId);
-        
+
         _removeTransitively(event.groupId);
 
       case UserGroupUpdateEvent():
@@ -242,7 +234,6 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         group.members.addAll(event.userIds);
 
         if (event.userIds.contains(selfUserId)) {
-          _selfUserDirectGroups.add(event.groupId);
           _addTransitively(event.groupId);
         }
 
@@ -252,7 +243,6 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         group.members.removeAll(event.userIds);
 
         if (event.userIds.contains(selfUserId)) {
-          _selfUserDirectGroups.remove(event.groupId);
           if (!_containsTransitively(group)) _removeTransitively(group.id);
         }
 
