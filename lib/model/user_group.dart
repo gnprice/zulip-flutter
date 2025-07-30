@@ -223,7 +223,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
 
         _directSupergroups[group.id] = {};
         for (final subgroupId in group.directSubgroupIds) {
-          _directSupergroups[subgroupId]?.add(group.id);
+          _directSupergroups[subgroupId]!.add(group.id);
         }
         if (_containsSelf(group)) _addSelfGroup(group.id);
 
@@ -269,9 +269,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         group.directSubgroupIds.addAll(subgroupIds);
 
         for (final subgroupId in subgroupIds) {
-          final containing = _directSupergroups[subgroupId];
-          if (containing == null) continue; // TODO(log)
-          containing.add(event.groupId);
+          _directSupergroups[subgroupId]!.add(event.groupId);
         }
         if (!_selfUserGroups.contains(event.groupId)
             && subgroupIds.any(_selfUserGroups.contains)) {
@@ -284,9 +282,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
         group.directSubgroupIds.removeAll(event.directSubgroupIds);
 
         for (final subgroupId in event.directSubgroupIds) {
-          final containing = _directSupergroups[subgroupId];
-          if (containing == null) continue; // TODO(log)
-          containing.remove(event.groupId);
+          _directSupergroups[subgroupId]?.remove(event.groupId);
         }
         if (!_containsSelf(group)) _removeSelfGroup(group.id);
     }
