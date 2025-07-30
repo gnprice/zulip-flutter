@@ -401,6 +401,15 @@ enum Emojiset {
 class UserGroup {
   final int id;
 
+  // TODO maybe split these two fields out for UserGroupStore to maintain separately?
+  //   Then they're private, which seems helpful to avoid accidentally using
+  //   non-transitive membership; and then they're more symmetric with the
+  //   reverse memberships.
+  // In that case perhaps UserGroup base class lacking these,
+  // and ApiUserGroup subclass having them; latter appears in API;
+  // secretly the values in data structures can be ApiUserGroup but
+  // with these nulled out by store upon consuming.
+  // Ooh or avoid those nulls: let ApiUserGroup *have* a UserGroup plus these.
   final Set<int> members;
   final Set<int> directSubgroupIds;
 
