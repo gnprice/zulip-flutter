@@ -57,11 +57,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
     final reverseSubgroups = { for (final group in groups) group.id: <int>{} };
     final selfUserDirectGroups = <int>[];
     for (final group in groups) {
-      if (group.directSubgroupIds.any((id) => !groupMap.containsKey(id))) {
-        // The group has an unknown subgroup.  TODO(log) that's a server bug.
-        // Forget the unknown subgroups so we don't crash in later processing.
-        group.directSubgroupIds.removeWhere((id) => !groupMap.containsKey(id));
-      }
+      _pruneSubgroups(group, groupMap);
       for (final subgroupId in group.directSubgroupIds) {
         reverseSubgroups[subgroupId]!.add(group.id);
       }
@@ -81,6 +77,22 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
   }) : _selfUserGroups = {} {
     for (final groupId in selfUserDirectGroups) {
       _addSelfGroup(groupId);
+    }
+  }
+
+  static void _pruneSubgroups(UserGroup group, Map<int, UserGroup> groupMap) {
+    if (group.directSubgroupIds.any((id) => !groupMap.containsKey(id))) {
+      // The group has an unknown subgroup.  TODO(log) that's a server bug.
+      // Forget the unknown subgroups so we don't crash in later processing.
+      group.directSubgroupIds.removeWhere((id) => !groupMap.containsKey(id));
+    }
+  }
+
+  static void _pruneSubgroupList(List<int> subgroupIds, Map<int, UserGroup> groupMap) {
+    if (subgroupIds.any((id) => !groupMap.containsKey(id))) {
+      // The group has an unknown subgroup.  TODO(log) that's a server bug.
+      // Forget the unknown subgroups so we don't crash in later processing.
+      subgroupIds.removeWhere((id) => !groupMap.containsKey(id));
     }
   }
 
@@ -150,6 +162,8 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
 
   /// The self-user now belongs to this group; update [_selfUserGroups].
   ///
+  /// The group must be present in [_groups].
+  ///
   /// This walks the graph provided by [_directSupergroups],
   /// which must be up to date.
   void _addSelfGroup(int groupId) {
@@ -168,6 +182,8 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
   }
 
   /// The self-user no longer belongs to this group; update [_selfUserGroups].
+  ///
+  /// The group must be present in [_groups].
   ///
   /// This walks the graph [_directSupergroups], and consults [_groups].
   /// Those data structures must be up to date,
@@ -201,13 +217,15 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
   void handleUserGroupEvent(UserGroupEvent event) {
     switch (event) {
       case UserGroupAddEvent():
-        _groups[event.group.id] = event.group;
+        final group = event.group;
+        _pruneSubgroups(group, _groups);
+        _groups[group.id] = group;
 
-        _directSupergroups[event.group.id] = {};
-        for (final subgroupId in event.group.directSubgroupIds) {
-          _directSupergroups[subgroupId]?.add(event.group.id);
+        _directSupergroups[group.id] = {};
+        for (final subgroupId in group.directSubgroupIds) {
+          _directSupergroups[subgroupId]?.add(group.id);
         }
-        if (_containsSelf(event.group)) _addSelfGroup(event.group.id);
+        if (_containsSelf(group)) _addSelfGroup(group.id);
 
       case UserGroupRemoveEvent():
         final group = _groups.remove(event.groupId);
@@ -246,15 +264,17 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
       case UserGroupAddSubgroupsEvent():
         final group = _expectGroup(event.groupId);
         if (group == null) return;
-        group.directSubgroupIds.addAll(event.directSubgroupIds);
+        final subgroupIds = event.directSubgroupIds;
+        _pruneSubgroupList(subgroupIds, _groups);
+        group.directSubgroupIds.addAll(subgroupIds);
 
-        for (final subgroupId in event.directSubgroupIds) {
+        for (final subgroupId in subgroupIds) {
           final containing = _directSupergroups[subgroupId];
           if (containing == null) continue; // TODO(log)
           containing.add(event.groupId);
         }
         if (!_selfUserGroups.contains(event.groupId)
-            && event.directSubgroupIds.any(_selfUserGroups.contains)) {
+            && subgroupIds.any(_selfUserGroups.contains)) {
           _addSelfGroup(event.groupId);
         }
 
