@@ -113,14 +113,7 @@ class UserGroupStoreImpl extends PerAccountStoreBase with UserGroupStore {
     };
   }
 
-  bool _selfInGroup(int groupId) {
-    final group = _groups[groupId];
-    if (group == null) return false; // TODO(log); should know all groups
-    // TODO(perf), TODO(#814): memoize which groups the self-user is in,
-    //   to save doing this depth-first search on each permission check
-    return group.members.contains(selfUserId)
-      || group.directSubgroupIds.any(_selfInGroup);
-  }
+  bool _selfInGroup(int groupId) => _selfUserGroups.contains(groupId);
 
   /// All the (named) user groups in the realm.
   ///
