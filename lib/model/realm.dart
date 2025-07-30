@@ -19,6 +19,9 @@ mixin RealmStore on PerAccountStoreBase, UserGroupStore {
   //|//////////////////////////////////////////////////////////////
   // Server settings, explicitly so named.
 
+  /// The metadata for how to interpret the given group-based permission setting.
+  PermissionSettingsItem groupSettingConfig(GroupSettingType type, String name);
+
   Duration get serverPresencePingInterval => Duration(seconds: serverPresencePingIntervalSeconds);
   int get serverPresencePingIntervalSeconds;
   Duration get serverPresenceOfflineThreshold => Duration(seconds: serverPresenceOfflineThresholdSeconds);
@@ -134,6 +137,9 @@ mixin ProxyRealmStore on RealmStore {
   RealmStore get realmStore;
 
   @override
+  PermissionSettingsItem groupSettingConfig(GroupSettingType type, String name) =>
+    realmStore.groupSettingConfig(type, name);
+  @override
   int get serverPresencePingIntervalSeconds => realmStore.serverPresencePingIntervalSeconds;
   @override
   int get serverPresenceOfflineThresholdSeconds => realmStore.serverPresenceOfflineThresholdSeconds;
@@ -219,14 +225,14 @@ class RealmStoreImpl extends HasUserGroupStore with RealmStore {
     // button, and if so then which users to offer in the dropdown;
     // it's predicting whether /api/get-stream-email-address would succeed.
     if (_selfUserRole == UserRole.guest) {
-      final config = _groupSettingConfig(type, name);
+      final config = groupSettingConfig(type, name);
       if (!config.allowEveryoneGroup) return false;
     }
     return selfInGroupSetting(value);
   }
 
-  /// The metadata for how to interpret the given group-based permission setting.
-  PermissionSettingsItem _groupSettingConfig(GroupSettingType type, String name) {
+  @override
+  PermissionSettingsItem groupSettingConfig(GroupSettingType type, String name) {
     final supportedSettings = SupportedPermissionSettings.fixture;
 
     // Compare web's group_permission_settings.get_group_permission_setting_config.
