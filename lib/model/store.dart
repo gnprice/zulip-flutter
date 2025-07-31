@@ -498,7 +498,7 @@ class PerAccountStore extends PerAccountStoreBase with
       typingNotifier: TypingNotifier(realm: realm),
       users: users,
       typingStatus: TypingStatus(realm: realm),
-      presence: Presence(realm: realm,
+      presence: Presence(users: users,
         initial: initialSnapshot.presences),
       channels: channels,
       messages: MessageStoreImpl(realm: realm),
