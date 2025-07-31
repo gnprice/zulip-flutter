@@ -131,7 +131,7 @@ class Presence extends HasRealmStore with ChangeNotifier {
   }
 
   void _handlePresenceResponse(Map<int, PerUserPresence> presences) {
-    _map = presences;
+    _map.addEntries(presences.entries);
     notifyListeners();
   }
 
