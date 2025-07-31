@@ -20,7 +20,9 @@ class Presence extends HasRealmStore with ChangeNotifier {
   Presence({
     required super.realm,
     required Map<int, PerUserPresence> initial,
-  }) : _map = initial;
+  }) : _map = initial {
+    print("Presence map size: ${_map.length}");
+  }
 
   Map<int, PerUserPresence> _map;
 
