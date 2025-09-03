@@ -40,10 +40,6 @@ class GroupSettingValueNamed extends GroupSettingValue {
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class GroupSettingValueNameless extends GroupSettingValue {
-  // TODO(server): The API docs say these should be "direct_member_ids" and
-  //   "direct_subgroup_ids", but empirically they're "direct_members"
-  //   and "direct_subgroups".  Discussion:
-  //     https://chat.zulip.org/#narrow/channel/378-api-design/topic/groups.20redesign/near/2247218
   final List<int> directMembers;
   final List<int> directSubgroups;
 
