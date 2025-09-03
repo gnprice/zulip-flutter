@@ -431,52 +431,42 @@ class SupportedPermissionSettings {
       // From the server's Stream.stream_permission_group_settings,
       // in zerver/models/streams.py.  Current as of f9dc13014, 2025-08.
       "can_add_subscribers_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: false,
           // default_group_name=SystemGroups.NOBODY,
       ),
       "can_administer_channel_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: false,
           // default_group_name="stream_creator_or_nobody",
       ),
       "can_delete_any_message_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: true,
           // default_group_name=SystemGroups.NOBODY,
       ),
       "can_delete_own_message_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: true,
           // default_group_name=SystemGroups.NOBODY,
       ),
       "can_move_messages_out_of_channel_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: true,
           // default_group_name=SystemGroups.NOBODY,
       ),
       "can_move_messages_within_channel_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: true,
           // default_group_name=SystemGroups.NOBODY,
       ),
       "can_remove_subscribers_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: true,
           // default_group_name=SystemGroups.ADMINISTRATORS,
       ),
       "can_send_message_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: true,
           // default_group_name=SystemGroups.EVERYONE,
       ),
       "can_subscribe_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: false,
           // default_group_name=SystemGroups.NOBODY,
       ),
       "can_resolve_topics_group": PermissionSettingsItem(
-          // allow_nobody_group=True,
           allowEveryoneGroup: true,
           // default_group_name=SystemGroups.NOBODY,
       ),
