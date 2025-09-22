@@ -1034,17 +1034,61 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _pushAccountIdMeta = const VerificationMeta(
+    'pushAccountId',
+  );
+  @override
+  late final GeneratedColumn<int> pushAccountId = GeneratedColumn<int>(
+    'push_account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pushKeyMeta = const VerificationMeta(
+    'pushKey',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> pushKey = GeneratedColumn<Uint8List>(
+    'push_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _pushTokenMeta = const VerificationMeta(
     'pushToken',
   );
   @override
   late final GeneratedColumn<String> pushToken = GeneratedColumn<String>(
-    'acked_push_token',
+    'push_token',
     aliasedName,
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pushRegistrationTimestampMeta =
+      const VerificationMeta('pushRegistrationTimestamp');
+  @override
+  late final GeneratedColumn<int> pushRegistrationTimestamp =
+      GeneratedColumn<int>(
+        'push_registration_timestamp',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _pushRegistrationResultMeta =
+      const VerificationMeta('pushRegistrationResult');
+  @override
+  late final GeneratedColumn<String> pushRegistrationResult =
+      GeneratedColumn<String>(
+        'push_registration_result',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1057,7 +1101,11 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     zulipVersion,
     zulipMergeBase,
     zulipFeatureLevel,
+    pushAccountId,
+    pushKey,
     pushToken,
+    pushRegistrationTimestamp,
+    pushRegistrationResult,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1135,12 +1183,42 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     } else if (isInserting) {
       context.missing(_zulipFeatureLevelMeta);
     }
-    if (data.containsKey('acked_push_token')) {
+    if (data.containsKey('push_account_id')) {
+      context.handle(
+        _pushAccountIdMeta,
+        pushAccountId.isAcceptableOrUnknown(
+          data['push_account_id']!,
+          _pushAccountIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('push_key')) {
+      context.handle(
+        _pushKeyMeta,
+        pushKey.isAcceptableOrUnknown(data['push_key']!, _pushKeyMeta),
+      );
+    }
+    if (data.containsKey('push_token')) {
       context.handle(
         _pushTokenMeta,
-        pushToken.isAcceptableOrUnknown(
-          data['acked_push_token']!,
-          _pushTokenMeta,
+        pushToken.isAcceptableOrUnknown(data['push_token']!, _pushTokenMeta),
+      );
+    }
+    if (data.containsKey('push_registration_timestamp')) {
+      context.handle(
+        _pushRegistrationTimestampMeta,
+        pushRegistrationTimestamp.isAcceptableOrUnknown(
+          data['push_registration_timestamp']!,
+          _pushRegistrationTimestampMeta,
+        ),
+      );
+    }
+    if (data.containsKey('push_registration_result')) {
+      context.handle(
+        _pushRegistrationResultMeta,
+        pushRegistrationResult.isAcceptableOrUnknown(
+          data['push_registration_result']!,
+          _pushRegistrationResultMeta,
         ),
       );
     }
@@ -1153,6 +1231,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   List<Set<GeneratedColumn>> get uniqueKeys => [
     {realmUrl, userId},
     {realmUrl, email},
+    {pushAccountId},
   ];
   @override
   Account map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -1202,9 +1281,25 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}zulip_feature_level'],
       )!,
+      pushAccountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}push_account_id'],
+      ),
+      pushKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}push_key'],
+      ),
       pushToken: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}acked_push_token'],
+        data['${effectivePrefix}push_token'],
+      ),
+      pushRegistrationTimestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}push_registration_timestamp'],
+      ),
+      pushRegistrationResult: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}push_registration_result'],
       ),
     );
   }
@@ -1258,6 +1353,8 @@ class Account extends DataClass implements Insertable<Account> {
   final String zulipVersion;
   final String? zulipMergeBase;
   final int zulipFeatureLevel;
+  final int? pushAccountId;
+  final Uint8List? pushKey;
 
   /// The push registration token sent to the server with [pushAccountId].
   ///
@@ -1266,6 +1363,14 @@ class Account extends DataClass implements Insertable<Account> {
   /// with a fresh [pushAccountId].  See ZAP 2:
   ///   https://github.com/zulip/zulip-architecture/blob/main/zaps/0002-encrypt-push-notifications.md#if-the-clients-device-token-changes
   final String? pushToken;
+
+  /// The time registration was *first* attempted for this [pushAccountId],
+  /// as seconds since the Unix epoch.
+  final int? pushRegistrationTimestamp;
+
+  /// The result from the *latest* completed retry attempt for this [pushAccountId],
+  /// as JSON meaningful to [PushDeviceManager].
+  final String? pushRegistrationResult;
   const Account({
     required this.id,
     required this.realmUrl,
@@ -1277,7 +1382,11 @@ class Account extends DataClass implements Insertable<Account> {
     required this.zulipVersion,
     this.zulipMergeBase,
     required this.zulipFeatureLevel,
+    this.pushAccountId,
+    this.pushKey,
     this.pushToken,
+    this.pushRegistrationTimestamp,
+    this.pushRegistrationResult,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1304,8 +1413,24 @@ class Account extends DataClass implements Insertable<Account> {
       map['zulip_merge_base'] = Variable<String>(zulipMergeBase);
     }
     map['zulip_feature_level'] = Variable<int>(zulipFeatureLevel);
+    if (!nullToAbsent || pushAccountId != null) {
+      map['push_account_id'] = Variable<int>(pushAccountId);
+    }
+    if (!nullToAbsent || pushKey != null) {
+      map['push_key'] = Variable<Uint8List>(pushKey);
+    }
     if (!nullToAbsent || pushToken != null) {
-      map['acked_push_token'] = Variable<String>(pushToken);
+      map['push_token'] = Variable<String>(pushToken);
+    }
+    if (!nullToAbsent || pushRegistrationTimestamp != null) {
+      map['push_registration_timestamp'] = Variable<int>(
+        pushRegistrationTimestamp,
+      );
+    }
+    if (!nullToAbsent || pushRegistrationResult != null) {
+      map['push_registration_result'] = Variable<String>(
+        pushRegistrationResult,
+      );
     }
     return map;
   }
@@ -1328,9 +1453,22 @@ class Account extends DataClass implements Insertable<Account> {
           ? const Value.absent()
           : Value(zulipMergeBase),
       zulipFeatureLevel: Value(zulipFeatureLevel),
+      pushAccountId: pushAccountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pushAccountId),
+      pushKey: pushKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pushKey),
       pushToken: pushToken == null && nullToAbsent
           ? const Value.absent()
           : Value(pushToken),
+      pushRegistrationTimestamp:
+          pushRegistrationTimestamp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pushRegistrationTimestamp),
+      pushRegistrationResult: pushRegistrationResult == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pushRegistrationResult),
     );
   }
 
@@ -1350,7 +1488,15 @@ class Account extends DataClass implements Insertable<Account> {
       zulipVersion: serializer.fromJson<String>(json['zulipVersion']),
       zulipMergeBase: serializer.fromJson<String?>(json['zulipMergeBase']),
       zulipFeatureLevel: serializer.fromJson<int>(json['zulipFeatureLevel']),
+      pushAccountId: serializer.fromJson<int?>(json['pushAccountId']),
+      pushKey: serializer.fromJson<Uint8List?>(json['pushKey']),
       pushToken: serializer.fromJson<String?>(json['pushToken']),
+      pushRegistrationTimestamp: serializer.fromJson<int?>(
+        json['pushRegistrationTimestamp'],
+      ),
+      pushRegistrationResult: serializer.fromJson<String?>(
+        json['pushRegistrationResult'],
+      ),
     );
   }
   @override
@@ -1367,7 +1513,15 @@ class Account extends DataClass implements Insertable<Account> {
       'zulipVersion': serializer.toJson<String>(zulipVersion),
       'zulipMergeBase': serializer.toJson<String?>(zulipMergeBase),
       'zulipFeatureLevel': serializer.toJson<int>(zulipFeatureLevel),
+      'pushAccountId': serializer.toJson<int?>(pushAccountId),
+      'pushKey': serializer.toJson<Uint8List?>(pushKey),
       'pushToken': serializer.toJson<String?>(pushToken),
+      'pushRegistrationTimestamp': serializer.toJson<int?>(
+        pushRegistrationTimestamp,
+      ),
+      'pushRegistrationResult': serializer.toJson<String?>(
+        pushRegistrationResult,
+      ),
     };
   }
 
@@ -1382,7 +1536,11 @@ class Account extends DataClass implements Insertable<Account> {
     String? zulipVersion,
     Value<String?> zulipMergeBase = const Value.absent(),
     int? zulipFeatureLevel,
+    Value<int?> pushAccountId = const Value.absent(),
+    Value<Uint8List?> pushKey = const Value.absent(),
     Value<String?> pushToken = const Value.absent(),
+    Value<int?> pushRegistrationTimestamp = const Value.absent(),
+    Value<String?> pushRegistrationResult = const Value.absent(),
   }) => Account(
     id: id ?? this.id,
     realmUrl: realmUrl ?? this.realmUrl,
@@ -1396,7 +1554,17 @@ class Account extends DataClass implements Insertable<Account> {
         ? zulipMergeBase.value
         : this.zulipMergeBase,
     zulipFeatureLevel: zulipFeatureLevel ?? this.zulipFeatureLevel,
+    pushAccountId: pushAccountId.present
+        ? pushAccountId.value
+        : this.pushAccountId,
+    pushKey: pushKey.present ? pushKey.value : this.pushKey,
     pushToken: pushToken.present ? pushToken.value : this.pushToken,
+    pushRegistrationTimestamp: pushRegistrationTimestamp.present
+        ? pushRegistrationTimestamp.value
+        : this.pushRegistrationTimestamp,
+    pushRegistrationResult: pushRegistrationResult.present
+        ? pushRegistrationResult.value
+        : this.pushRegistrationResult,
   );
   Account copyWithCompanion(AccountsCompanion data) {
     return Account(
@@ -1416,7 +1584,17 @@ class Account extends DataClass implements Insertable<Account> {
       zulipFeatureLevel: data.zulipFeatureLevel.present
           ? data.zulipFeatureLevel.value
           : this.zulipFeatureLevel,
+      pushAccountId: data.pushAccountId.present
+          ? data.pushAccountId.value
+          : this.pushAccountId,
+      pushKey: data.pushKey.present ? data.pushKey.value : this.pushKey,
       pushToken: data.pushToken.present ? data.pushToken.value : this.pushToken,
+      pushRegistrationTimestamp: data.pushRegistrationTimestamp.present
+          ? data.pushRegistrationTimestamp.value
+          : this.pushRegistrationTimestamp,
+      pushRegistrationResult: data.pushRegistrationResult.present
+          ? data.pushRegistrationResult.value
+          : this.pushRegistrationResult,
     );
   }
 
@@ -1433,7 +1611,11 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('zulipVersion: $zulipVersion, ')
           ..write('zulipMergeBase: $zulipMergeBase, ')
           ..write('zulipFeatureLevel: $zulipFeatureLevel, ')
-          ..write('pushToken: $pushToken')
+          ..write('pushAccountId: $pushAccountId, ')
+          ..write('pushKey: $pushKey, ')
+          ..write('pushToken: $pushToken, ')
+          ..write('pushRegistrationTimestamp: $pushRegistrationTimestamp, ')
+          ..write('pushRegistrationResult: $pushRegistrationResult')
           ..write(')'))
         .toString();
   }
@@ -1450,7 +1632,11 @@ class Account extends DataClass implements Insertable<Account> {
     zulipVersion,
     zulipMergeBase,
     zulipFeatureLevel,
+    pushAccountId,
+    $driftBlobEquality.hash(pushKey),
     pushToken,
+    pushRegistrationTimestamp,
+    pushRegistrationResult,
   );
   @override
   bool operator ==(Object other) =>
@@ -1466,7 +1652,11 @@ class Account extends DataClass implements Insertable<Account> {
           other.zulipVersion == this.zulipVersion &&
           other.zulipMergeBase == this.zulipMergeBase &&
           other.zulipFeatureLevel == this.zulipFeatureLevel &&
-          other.pushToken == this.pushToken);
+          other.pushAccountId == this.pushAccountId &&
+          $driftBlobEquality.equals(other.pushKey, this.pushKey) &&
+          other.pushToken == this.pushToken &&
+          other.pushRegistrationTimestamp == this.pushRegistrationTimestamp &&
+          other.pushRegistrationResult == this.pushRegistrationResult);
 }
 
 class AccountsCompanion extends UpdateCompanion<Account> {
@@ -1480,7 +1670,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> zulipVersion;
   final Value<String?> zulipMergeBase;
   final Value<int> zulipFeatureLevel;
+  final Value<int?> pushAccountId;
+  final Value<Uint8List?> pushKey;
   final Value<String?> pushToken;
+  final Value<int?> pushRegistrationTimestamp;
+  final Value<String?> pushRegistrationResult;
   const AccountsCompanion({
     this.id = const Value.absent(),
     this.realmUrl = const Value.absent(),
@@ -1492,7 +1686,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.zulipVersion = const Value.absent(),
     this.zulipMergeBase = const Value.absent(),
     this.zulipFeatureLevel = const Value.absent(),
+    this.pushAccountId = const Value.absent(),
+    this.pushKey = const Value.absent(),
     this.pushToken = const Value.absent(),
+    this.pushRegistrationTimestamp = const Value.absent(),
+    this.pushRegistrationResult = const Value.absent(),
   });
   AccountsCompanion.insert({
     this.id = const Value.absent(),
@@ -1505,7 +1703,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required String zulipVersion,
     this.zulipMergeBase = const Value.absent(),
     required int zulipFeatureLevel,
+    this.pushAccountId = const Value.absent(),
+    this.pushKey = const Value.absent(),
     this.pushToken = const Value.absent(),
+    this.pushRegistrationTimestamp = const Value.absent(),
+    this.pushRegistrationResult = const Value.absent(),
   }) : realmUrl = Value(realmUrl),
        userId = Value(userId),
        email = Value(email),
@@ -1523,7 +1725,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? zulipVersion,
     Expression<String>? zulipMergeBase,
     Expression<int>? zulipFeatureLevel,
+    Expression<int>? pushAccountId,
+    Expression<Uint8List>? pushKey,
     Expression<String>? pushToken,
+    Expression<int>? pushRegistrationTimestamp,
+    Expression<String>? pushRegistrationResult,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1536,7 +1742,13 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (zulipVersion != null) 'zulip_version': zulipVersion,
       if (zulipMergeBase != null) 'zulip_merge_base': zulipMergeBase,
       if (zulipFeatureLevel != null) 'zulip_feature_level': zulipFeatureLevel,
-      if (pushToken != null) 'acked_push_token': pushToken,
+      if (pushAccountId != null) 'push_account_id': pushAccountId,
+      if (pushKey != null) 'push_key': pushKey,
+      if (pushToken != null) 'push_token': pushToken,
+      if (pushRegistrationTimestamp != null)
+        'push_registration_timestamp': pushRegistrationTimestamp,
+      if (pushRegistrationResult != null)
+        'push_registration_result': pushRegistrationResult,
     });
   }
 
@@ -1551,7 +1763,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<String>? zulipVersion,
     Value<String?>? zulipMergeBase,
     Value<int>? zulipFeatureLevel,
+    Value<int?>? pushAccountId,
+    Value<Uint8List?>? pushKey,
     Value<String?>? pushToken,
+    Value<int?>? pushRegistrationTimestamp,
+    Value<String?>? pushRegistrationResult,
   }) {
     return AccountsCompanion(
       id: id ?? this.id,
@@ -1564,7 +1780,13 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       zulipVersion: zulipVersion ?? this.zulipVersion,
       zulipMergeBase: zulipMergeBase ?? this.zulipMergeBase,
       zulipFeatureLevel: zulipFeatureLevel ?? this.zulipFeatureLevel,
+      pushAccountId: pushAccountId ?? this.pushAccountId,
+      pushKey: pushKey ?? this.pushKey,
       pushToken: pushToken ?? this.pushToken,
+      pushRegistrationTimestamp:
+          pushRegistrationTimestamp ?? this.pushRegistrationTimestamp,
+      pushRegistrationResult:
+          pushRegistrationResult ?? this.pushRegistrationResult,
     );
   }
 
@@ -1605,8 +1827,24 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (zulipFeatureLevel.present) {
       map['zulip_feature_level'] = Variable<int>(zulipFeatureLevel.value);
     }
+    if (pushAccountId.present) {
+      map['push_account_id'] = Variable<int>(pushAccountId.value);
+    }
+    if (pushKey.present) {
+      map['push_key'] = Variable<Uint8List>(pushKey.value);
+    }
     if (pushToken.present) {
-      map['acked_push_token'] = Variable<String>(pushToken.value);
+      map['push_token'] = Variable<String>(pushToken.value);
+    }
+    if (pushRegistrationTimestamp.present) {
+      map['push_registration_timestamp'] = Variable<int>(
+        pushRegistrationTimestamp.value,
+      );
+    }
+    if (pushRegistrationResult.present) {
+      map['push_registration_result'] = Variable<String>(
+        pushRegistrationResult.value,
+      );
     }
     return map;
   }
@@ -1624,7 +1862,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('zulipVersion: $zulipVersion, ')
           ..write('zulipMergeBase: $zulipMergeBase, ')
           ..write('zulipFeatureLevel: $zulipFeatureLevel, ')
-          ..write('pushToken: $pushToken')
+          ..write('pushAccountId: $pushAccountId, ')
+          ..write('pushKey: $pushKey, ')
+          ..write('pushToken: $pushToken, ')
+          ..write('pushRegistrationTimestamp: $pushRegistrationTimestamp, ')
+          ..write('pushRegistrationResult: $pushRegistrationResult')
           ..write(')'))
         .toString();
   }
@@ -2221,7 +2463,11 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required String zulipVersion,
       Value<String?> zulipMergeBase,
       required int zulipFeatureLevel,
+      Value<int?> pushAccountId,
+      Value<Uint8List?> pushKey,
       Value<String?> pushToken,
+      Value<int?> pushRegistrationTimestamp,
+      Value<String?> pushRegistrationResult,
     });
 typedef $$AccountsTableUpdateCompanionBuilder =
     AccountsCompanion Function({
@@ -2235,7 +2481,11 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String> zulipVersion,
       Value<String?> zulipMergeBase,
       Value<int> zulipFeatureLevel,
+      Value<int?> pushAccountId,
+      Value<Uint8List?> pushKey,
       Value<String?> pushToken,
+      Value<int?> pushRegistrationTimestamp,
+      Value<String?> pushRegistrationResult,
     });
 
 class $$AccountsTableFilterComposer
@@ -2299,8 +2549,28 @@ class $$AccountsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get pushAccountId => $composableBuilder(
+    column: $table.pushAccountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get pushKey => $composableBuilder(
+    column: $table.pushKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get pushToken => $composableBuilder(
     column: $table.pushToken,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pushRegistrationTimestamp => $composableBuilder(
+    column: $table.pushRegistrationTimestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pushRegistrationResult => $composableBuilder(
+    column: $table.pushRegistrationResult,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2364,8 +2634,28 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get pushAccountId => $composableBuilder(
+    column: $table.pushAccountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get pushKey => $composableBuilder(
+    column: $table.pushKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get pushToken => $composableBuilder(
     column: $table.pushToken,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pushRegistrationTimestamp => $composableBuilder(
+    column: $table.pushRegistrationTimestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pushRegistrationResult => $composableBuilder(
+    column: $table.pushRegistrationResult,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -2415,8 +2705,26 @@ class $$AccountsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get pushAccountId => $composableBuilder(
+    column: $table.pushAccountId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get pushKey =>
+      $composableBuilder(column: $table.pushKey, builder: (column) => column);
+
   GeneratedColumn<String> get pushToken =>
       $composableBuilder(column: $table.pushToken, builder: (column) => column);
+
+  GeneratedColumn<int> get pushRegistrationTimestamp => $composableBuilder(
+    column: $table.pushRegistrationTimestamp,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pushRegistrationResult => $composableBuilder(
+    column: $table.pushRegistrationResult,
+    builder: (column) => column,
+  );
 }
 
 class $$AccountsTableTableManager
@@ -2457,7 +2765,11 @@ class $$AccountsTableTableManager
                 Value<String> zulipVersion = const Value.absent(),
                 Value<String?> zulipMergeBase = const Value.absent(),
                 Value<int> zulipFeatureLevel = const Value.absent(),
+                Value<int?> pushAccountId = const Value.absent(),
+                Value<Uint8List?> pushKey = const Value.absent(),
                 Value<String?> pushToken = const Value.absent(),
+                Value<int?> pushRegistrationTimestamp = const Value.absent(),
+                Value<String?> pushRegistrationResult = const Value.absent(),
               }) => AccountsCompanion(
                 id: id,
                 realmUrl: realmUrl,
@@ -2469,7 +2781,11 @@ class $$AccountsTableTableManager
                 zulipVersion: zulipVersion,
                 zulipMergeBase: zulipMergeBase,
                 zulipFeatureLevel: zulipFeatureLevel,
+                pushAccountId: pushAccountId,
+                pushKey: pushKey,
                 pushToken: pushToken,
+                pushRegistrationTimestamp: pushRegistrationTimestamp,
+                pushRegistrationResult: pushRegistrationResult,
               ),
           createCompanionCallback:
               ({
@@ -2483,7 +2799,11 @@ class $$AccountsTableTableManager
                 required String zulipVersion,
                 Value<String?> zulipMergeBase = const Value.absent(),
                 required int zulipFeatureLevel,
+                Value<int?> pushAccountId = const Value.absent(),
+                Value<Uint8List?> pushKey = const Value.absent(),
                 Value<String?> pushToken = const Value.absent(),
+                Value<int?> pushRegistrationTimestamp = const Value.absent(),
+                Value<String?> pushRegistrationResult = const Value.absent(),
               }) => AccountsCompanion.insert(
                 id: id,
                 realmUrl: realmUrl,
@@ -2495,7 +2815,11 @@ class $$AccountsTableTableManager
                 zulipVersion: zulipVersion,
                 zulipMergeBase: zulipMergeBase,
                 zulipFeatureLevel: zulipFeatureLevel,
+                pushAccountId: pushAccountId,
+                pushKey: pushKey,
                 pushToken: pushToken,
+                pushRegistrationTimestamp: pushRegistrationTimestamp,
+                pushRegistrationResult: pushRegistrationResult,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

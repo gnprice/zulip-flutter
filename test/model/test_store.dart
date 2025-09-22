@@ -108,6 +108,8 @@ mixin _DatabaseMixin on GlobalStore {
       zulipFeatureLevel: data.zulipFeatureLevel.value,
       zulipVersion: data.zulipVersion.value,
       zulipMergeBase: data.zulipMergeBase.value,
+      pushAccountId: data.pushAccountId.value,
+      pushKey: data.pushKey.value,
       pushToken: data.pushToken.value,
     );
   }

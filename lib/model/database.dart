@@ -156,18 +156,30 @@ class Accounts extends Table {
   Column<String> get zulipMergeBase => text().nullable()();
   Column<int>    get zulipFeatureLevel => integer()();
 
+  Column<int>    get pushAccountId => integer().nullable()(); // TODO(#1764) exclude from device backups
+  Column<Uint8List> get pushKey => blob().nullable()(); // TODO(#1764) exclude from device backups
+
   /// The push registration token sent to the server with [pushAccountId].
   ///
   /// This value will have come from [NotificationService.token].
   /// If the value there changes, then the new token should be sent
   /// with a fresh [pushAccountId].  See ZAP 2:
   ///   https://github.com/zulip/zulip-architecture/blob/main/zaps/0002-encrypt-push-notifications.md#if-the-clients-device-token-changes
-  Column<String> get pushToken => text().nullable().named('acked_push_token')();
+  Column<String> get pushToken => text().nullable()();
+
+  /// The time registration was *first* attempted for this [pushAccountId],
+  /// as seconds since the Unix epoch.
+  Column<int>    get pushRegistrationTimestamp => integer().nullable()();
+
+  /// The result from the *latest* completed retry attempt for this [pushAccountId],
+  /// as JSON meaningful to [PushDeviceManager].
+  Column<String> get pushRegistrationResult => text().nullable()();
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
     {realmUrl, userId},
     {realmUrl, email},
+    {pushAccountId},
   ];
 }
 
@@ -194,7 +206,7 @@ class AppDatabase extends _$AppDatabase {
   //  * Fix resulting analyzer errors; in particular,
   //    write a migration in `_migrationSteps` below.
   //  * Write tests.
-  static const int latestSchemaVersion = 12; // See note.
+  static const int latestSchemaVersion = 13; // See note.
 
   @override
   int get schemaVersion => latestSchemaVersion;
@@ -292,6 +304,14 @@ class AppDatabase extends _$AppDatabase {
     from11To12: (Migrator m, Schema12 schema) async {
       await m.addColumn(schema.accounts, schema.accounts.realmName);
       await m.addColumn(schema.accounts, schema.accounts.realmIcon);
+    },
+    from12To13: (m, schema) async {
+      await m.addColumn(schema.accounts, schema.accounts.pushAccountId);
+      await m.addColumn(schema.accounts, schema.accounts.pushKey);
+      await m.renameColumn(schema.accounts,
+        'acked_push_token', schema.accounts.pushToken);
+      await m.addColumn(schema.accounts, schema.accounts.pushRegistrationTimestamp);
+      await m.addColumn(schema.accounts, schema.accounts.pushRegistrationResult);
     },
   );
 

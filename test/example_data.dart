@@ -335,8 +335,9 @@ Account account({
   // wouldn't be realistic: it's going to be a fake email address
   // generated to serve as a "Zulip API email".
   final email = user.deliveryEmail ?? _nextEmail();
+  id ??= 1000; // TODO generate example IDs
   return Account(
-    id: id ?? 1000, // TODO generate example IDs
+    id: id,
     realmUrl: realmUrl ?? _realmUrl,
     realmName: realmName ?? 'Example Zulip organization',
     realmIcon: realmIcon ?? _realmIcon,
@@ -346,6 +347,8 @@ Account account({
     zulipFeatureLevel: zulipFeatureLevel ?? recentZulipFeatureLevel,
     zulipVersion: zulipVersion ?? recentZulipVersion,
     zulipMergeBase: zulipMergeBase ?? recentZulipVersion,
+    pushAccountId: 1000000 + id,
+    pushKey: pushKey(),
     pushToken: pushToken,
   );
 }

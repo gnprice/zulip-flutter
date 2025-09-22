@@ -225,7 +225,11 @@ void main() {
     /// Check the account is as expected, ignoring fields that are
     /// freshly generated at login time.
     void checkMatchesAccount(Account actual, Account expected) {
-      check(actual).equals(expected.copyWith(id: actual.id));
+      check(actual).equals(expected.copyWith(
+        id: actual.id,
+        pushAccountId: Value(null),
+        pushKey: Value(null),
+      ));
     }
 
     group('username/password login', () {
