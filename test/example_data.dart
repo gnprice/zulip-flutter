@@ -1354,6 +1354,7 @@ InitialSnapshot initialSnapshot({
   Map<int, UserStatusChange>? userStatuses,
   UserSettings? userSettings,
   List<UserTopicItem>? userTopics,
+  Map<int, PushDeviceEntry>? pushDevices,
   GroupSettingValue? realmCanDeleteAnyMessageGroup,
   GroupSettingValue? realmCanDeleteOwnMessageGroup,
   RealmDeleteOwnMessagePolicy? realmDeleteOwnMessagePolicy,
@@ -1415,6 +1416,7 @@ InitialSnapshot initialSnapshot({
     userStatuses: userStatuses ?? {},
     userSettings: userSettings ?? _userSettings(),
     userTopics: userTopics ?? [],
+    pushDevices: pushDevices ?? {},
     // no default; allow `null` to simulate servers without this
     realmCanDeleteAnyMessageGroup: realmCanDeleteAnyMessageGroup,
     realmCanDeleteOwnMessageGroup: realmCanDeleteOwnMessageGroup,

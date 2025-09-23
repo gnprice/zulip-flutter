@@ -407,6 +407,30 @@ enum Emojiset {
   String toJson() => _$EmojisetEnumMap[this]!;
 }
 
+@JsonEnum(fieldRename: FieldRename.snake)
+enum PushDeviceStatus {
+  active,
+  pending,
+  failed;
+}
+
+/// An item in `push_devices` / [InitialSnapshot.pushDevices].
+///
+/// For docs, search for "push_device"
+/// in <https://zulip.com/api/register-queue>.
+@JsonSerializable(fieldRename: FieldRename.snake)
+class PushDeviceEntry {
+  final PushDeviceStatus status;
+  final String? errorCode;
+
+  PushDeviceEntry({required this.status, required this.errorCode});
+
+  factory PushDeviceEntry.fromJson(Map<String, dynamic> json) =>
+    _$PushDeviceEntryFromJson(json);
+
+  Map<String, dynamic> toJson() => _$PushDeviceEntryToJson(this);
+}
+
 /// As in [InitialSnapshot.realmUserGroups] or [UserGroupAddEvent].
 @JsonSerializable(fieldRename: FieldRename.snake)
 class UserGroup {

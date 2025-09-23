@@ -71,6 +71,24 @@ const _$UserSettingNameEnumMap = {
   UserSettingName.presenceEnabled: 'presence_enabled',
 };
 
+PushDeviceEvent _$PushDeviceEventFromJson(Map<String, dynamic> json) =>
+    PushDeviceEvent(
+      id: (json['id'] as num).toInt(),
+      pushAccountId:
+          (PushDeviceEvent._readIntAsString(json, 'push_account_id') as num)
+              .toInt(),
+      data: PushDeviceEntry.fromJson(
+        PushDeviceEvent._readWhole(json, 'data') as Map<String, dynamic>,
+      ),
+    );
+
+Map<String, dynamic> _$PushDeviceEventToJson(PushDeviceEvent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'push_account_id': instance.pushAccountId,
+    };
+
 CustomProfileFieldsEvent _$CustomProfileFieldsEventFromJson(
   Map<String, dynamic> json,
 ) => CustomProfileFieldsEvent(

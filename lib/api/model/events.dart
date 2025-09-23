@@ -29,6 +29,7 @@ sealed class Event {
           case 'update': return UserSettingsUpdateEvent.fromJson(json);
           default: return UnexpectedEvent.fromJson(json);
         }
+      case 'push_device': return PushDeviceEvent.fromJson(json);
       case 'custom_profile_fields': return CustomProfileFieldsEvent.fromJson(json);
       case 'user_group':
         switch (json['op'] as String) {
@@ -208,6 +209,48 @@ class UserSettingsUpdateEvent extends Event {
 
   @override
   Map<String, dynamic> toJson() => _$UserSettingsUpdateEventToJson(this);
+}
+
+/// A Zulip event of type `push_device`: https://zulip.com/api/get-events#push_device
+@JsonSerializable(fieldRename: FieldRename.snake)
+class PushDeviceEvent extends Event {
+  @override
+  @JsonKey(includeToJson: true)
+  String get type => 'push_device';
+
+  @JsonKey(readValue: _readIntAsString) // TODO(server-12)
+  final int pushAccountId;
+
+  @JsonKey(readValue: _readWhole, includeToJson: false)
+  final PushDeviceEntry data;
+
+  static Object? _readIntAsString(Map<dynamic, dynamic> json, String key) {
+    // TODO(#1764) cut `push_account_id` as string, if dropping server-11 E2EE
+    // The field `push_account_id` is logically an int, but was originally
+    // implemented as a string.  Fixed at the later feature level 450:
+    //    https://chat.zulip.org/#narrow/channel/378-api-design/topic/E2EE.20-.20push_device.20events/near/2348193
+    // As long as we support those older E2EE forms, though (i.e. server-11),
+    // accept both the old string form and the new cleaner int form.
+    final value = json[key];
+    if (value is String) return int.tryParse(value, radix: 10);
+    return value;
+  }
+
+  static Object? _readWhole(Map<dynamic, dynamic> json, String key) => json;
+
+  PushDeviceEvent({
+    required super.id,
+    required this.pushAccountId,
+    required this.data,
+  });
+
+  factory PushDeviceEvent.fromJson(Map<String, dynamic> json) =>
+    _$PushDeviceEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$PushDeviceEventToJson(this)
+    ..['status'] = data.status
+    ..['error_code'] = data.errorCode;
 }
 
 /// A Zulip event of type `custom_profile_fields`: https://zulip.com/api/get-events#custom_profile_fields

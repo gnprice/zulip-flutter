@@ -78,6 +78,8 @@ class InitialSnapshot {
 
   final List<UserTopicItem> userTopics;
 
+  final Map<int, PushDeviceEntry>? pushDevices; // TODO(server-11)
+
   final GroupSettingValue? realmCanDeleteAnyMessageGroup; // TODO(server-10)
 
   final GroupSettingValue? realmCanDeleteOwnMessageGroup; // TODO(server-10)
@@ -188,6 +190,7 @@ class InitialSnapshot {
     required this.userStatuses,
     required this.userSettings,
     required this.userTopics,
+    required this.pushDevices,
     required this.realmCanDeleteAnyMessageGroup,
     required this.realmCanDeleteOwnMessageGroup,
     required this.realmDeleteOwnMessagePolicy,

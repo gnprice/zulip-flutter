@@ -865,6 +865,9 @@ class PerAccountStore extends PerAccountStoreBase with
         }
         notifyListeners();
 
+      case PushDeviceEvent(): // TODO(#1764): handle
+        assert(debugLog("server event: push_device"));
+
       case CustomProfileFieldsEvent():
         assert(debugLog("server event: custom_profile_fields"));
         _realm.handleCustomProfileFieldsEvent(event);

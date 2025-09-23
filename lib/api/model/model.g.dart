@@ -112,6 +112,24 @@ Map<String, dynamic> _$RealmEmojiItemToJson(RealmEmojiItem instance) =>
       'author_id': instance.authorId,
     };
 
+PushDeviceEntry _$PushDeviceEntryFromJson(Map<String, dynamic> json) =>
+    PushDeviceEntry(
+      status: $enumDecode(_$PushDeviceStatusEnumMap, json['status']),
+      errorCode: json['error_code'] as String?,
+    );
+
+Map<String, dynamic> _$PushDeviceEntryToJson(PushDeviceEntry instance) =>
+    <String, dynamic>{
+      'status': _$PushDeviceStatusEnumMap[instance.status]!,
+      'error_code': instance.errorCode,
+    };
+
+const _$PushDeviceStatusEnumMap = {
+  PushDeviceStatus.active: 'active',
+  PushDeviceStatus.pending: 'pending',
+  PushDeviceStatus.failed: 'failed',
+};
+
 UserGroup _$UserGroupFromJson(Map<String, dynamic> json) => UserGroup(
   id: (json['id'] as num).toInt(),
   members: (json['members'] as List<dynamic>)
