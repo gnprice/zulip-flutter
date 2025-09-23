@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:sodium_libs/sodium_libs.dart';
 
@@ -112,8 +114,6 @@ class PushDeviceManager extends PerAccountStoreBase {
   }
 
   /// Send this client's notification token to the server, now and if it changes.
-  // TODO(#322) save acked token, to dedupe updating it on the server
-  // TODO(#323) track the addFcmToken/etc request, warn if not succeeding
   // TODO it would be nice to register the token before even registerQueue:
   //   https://github.com/zulip/zulip-flutter/pull/325#discussion_r1365982807
   void _registerTokenAndSubscribe() async {
@@ -179,6 +179,70 @@ class PushDeviceManager extends PerAccountStoreBase {
     final token = NotificationService.instance.token.value;
     if (token == null) return;
 
+    if (connection.zulipFeatureLevel! < 421) { // TODO(#1764): update this
+      return _legacyRegisterToken(token);
+    }
+
+    final timestamp = ZulipBinding.instance.utcNow().millisecondsSinceEpoch ~/ 1000;
+    if (token != account.pushToken) {
+      // TODO(#1764) if old pushToken not null, maybe tell server to forget
+      await updateAccount(AccountsCompanion(
+        pushAccountId: drift.Value(generatePushAccountId()),
+        pushKey: drift.Value(generatePushKey()),
+        pushToken: drift.Value(token),
+        pushRegistrationTimestamp: drift.Value(timestamp),
+      ));
+    } else {
+      // We've already attempted registering this token, perhaps succeeded.
+      // For now, just go ahead.
+      // TODO(#1764)/TODO(#322) if past registration succeeded, and recently,
+      //   then skip doing it again.
+    }
+
+    final pushAccountId = account.pushAccountId;
+    final pushKey = account.pushKey;
+    if (pushAccountId == null || pushKey == null) {
+      throw StateError('Account missing pushAccountId and/or pushKey, while has pushToken'); // TODO(log)
+    }
+
+    final tokenKind = switch (defaultTargetPlatform) {
+      TargetPlatform.android => PushTokenKind.fcm,
+      TargetPlatform.iOS => PushTokenKind.apns,
+      _ => throw StateError('unexpected platform: $defaultTargetPlatform'),
+    };
+
+    final pushRegistration = PushRegistration(
+      tokenKind: tokenKind, token: token,
+      timestamp: timestamp);
+
+    try {
+      final encryptedPushRegistration = await _encryptToBouncer(
+        _bouncerPublicKey, jsonEncode(pushRegistration));
+      await registerPushDevice(connection,
+        tokenKind: tokenKind,
+        pushAccountId: pushAccountId,
+        pushKey: base64Encode(pushKey),
+        bouncerPublicKey: base64Encode(_bouncerPublicKey), // TODO(#1764) confirm base64 intended; https://chat.zulip.org/#narrow/channel/412-api-documentation/topic/e2ee.20notifs.3A.20bouncer.20public.20key/near/2352465
+        encryptedPushRegistration: base64Encode(encryptedPushRegistration),
+      );
+    } finally {
+      await updateAccount(AccountsCompanion(
+        pushRegistrationResult: drift.Value('"completed"'), // TODO(#1764) more detail
+      ));
+    }
+    // TODO(#1764) handle errors
+  }
+
+  static final _bouncerPublicKey = utf8.encode('nonsense-bouncer-key-asdf-qwer-z'); // TODO(#1764) fill in
+
+  static Future<Uint8List> _encryptToBouncer(Uint8List publicKey, String plaintext) async {
+    // ?? WidgetsFlutterBinding.ensureInitialized();  // TODO(#1764)
+    final sodium = await SodiumInit.init();
+    return sodium.crypto.box.seal(publicKey: publicKey,
+      message: utf8.encode(plaintext));
+  }
+
+  Future<void> _legacyRegisterToken(String token) async {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         await addFcmToken(connection, token: token);
