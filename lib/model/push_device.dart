@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../api/model/events.dart';
+import '../api/model/initial_snapshot.dart';
+import '../api/model/model.dart';
 import '../api/route/notifications.dart';
 import '../notifications/receive.dart';
 import 'binding.dart';
@@ -11,7 +15,10 @@ import 'store.dart';
 /// and tracking the server's responses on the status of push devices.
 // TODO(#1764) do that tracking of responses
 class PushDeviceManager extends PerAccountStoreBase {
-  PushDeviceManager({required super.core}) {
+  PushDeviceManager({
+    required super.core,
+    required Map<int, PushDeviceEntry> pushDevices,
+  }) : _pushDevices = pushDevices {
     _registerTokenAndSubscribe();
   }
 
@@ -25,6 +32,21 @@ class PushDeviceManager extends PerAccountStoreBase {
     assert(!_disposed);
     NotificationService.instance.token.removeListener(_registerToken);
     _disposed = true;
+  }
+
+  /// Like [InitialSnapshot.pushDevices], but updated with events.
+  ///
+  /// For docs, search for "push_device"
+  /// in <https://zulip.com/api/register-queue>.
+  ///
+  /// An absent map in [InitialSnapshot] (from an old server) is treated
+  /// as empty, since a server without this feature has none of these records.
+  // TODO(server-11) simplify doc re an absent map
+  late Map<int, PushDeviceEntry> pushDevices = UnmodifiableMapView(_pushDevices);
+  final Map<int, PushDeviceEntry> _pushDevices;
+
+  void handlePushDeviceEvent(PushDeviceEvent event) {
+    _pushDevices[event.pushAccountId] = event.data;
   }
 
   /// Send this client's notification token to the server, now and if it changes.

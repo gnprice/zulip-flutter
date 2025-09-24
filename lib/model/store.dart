@@ -628,7 +628,8 @@ class PerAccountStore extends PerAccountStoreBase with
       emoji: EmojiStoreImpl(core: core,
         allRealmEmoji: initialSnapshot.realmEmoji),
       userSettings: initialSnapshot.userSettings,
-      pushDevices: PushDeviceManager(core: core),
+      pushDevices: PushDeviceManager(core: core,
+        pushDevices: initialSnapshot.pushDevices ?? {}),
       savedSnippets: SavedSnippetStoreImpl(core: core,
         savedSnippets: initialSnapshot.savedSnippets ?? []),
       typingNotifier: TypingNotifier(realm: realm),
@@ -865,8 +866,10 @@ class PerAccountStore extends PerAccountStoreBase with
         }
         notifyListeners();
 
-      case PushDeviceEvent(): // TODO(#1764): handle
+      case PushDeviceEvent():
         assert(debugLog("server event: push_device"));
+        pushDevices.handlePushDeviceEvent(event);
+        notifyListeners();
 
       case CustomProfileFieldsEvent():
         assert(debugLog("server event: custom_profile_fields"));
