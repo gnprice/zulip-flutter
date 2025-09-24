@@ -64,6 +64,69 @@ class PushDeviceManager extends PerAccountStoreBase {
   bool get _e2eeAvailable => zulipFeatureLevel >= 468 // TODO(server-12)
     && defaultTargetPlatform == TargetPlatform.android; // TODO(#1764)
 
+  PushRegistrationStatus pushRegistrationStatus() { // TODO(#323) warn user when status not OK
+    // TODO(#1764) TODO(i18n)
+
+    final currentToken = NotificationService.instance.token.value;
+    if (currentToken == null) {
+      return PushRegistrationStatus(.error,
+        'Device does not support notifications');
+    }
+
+    if (zulipFeatureLevel < 468) { // TODO(server-12)
+      return PushRegistrationStatus(.ok, 'legacy because old server');
+    }
+
+    if (defaultTargetPlatform != TargetPlatform.android) { // TODO(#1764)
+      return PushRegistrationStatus(.ok, 'legacy because not Android');
+    }
+
+    final fromServer = thisDevice;
+    if (fromServer == null) {
+      return switch (_ageOfPushRegistrationAttempt()) {
+        null =>                         PushRegistrationStatus(.pending,
+            'Preparing to set up notifications…'),
+        < const Duration(minutes: 5) => PushRegistrationStatus(.pending,
+            'Contacting server to set up notifications…'),
+        _ =>                            PushRegistrationStatus(.error,
+            'Timed out contacting server to set up notifications'),
+      };
+    }
+
+    final currentTokenId = NotificationService.computeTokenId(currentToken);
+    if (fromServer.pushTokenId == currentTokenId) {
+      return PushRegistrationStatus(.ok, 'success');
+    }
+
+    if (fromServer.pushRegistrationErrorCode != null) {
+      return PushRegistrationStatus(.error,
+        'Error from server: ${fromServer.pushRegistrationErrorCode}');
+    }
+
+    return switch (_ageOfPushRegistrationAttempt()) {
+      // TODO this null case should be impossible
+      null =>                         PushRegistrationStatus(.pending,
+          'Preparing to set up notifications…'),
+      < const Duration(minutes: 5) => PushRegistrationStatus(.pending,
+          'Waiting for server to complete notification setup…'),
+      _ =>                            PushRegistrationStatus(.error,
+          'Timed out waiting for server to complete notification setup'),
+    };
+  }
+
+  DateTime? _pushRegistrationAttemptTimestamp;
+
+  Duration? _ageOfPushRegistrationAttempt() {
+    final attemptTimestamp = _pushRegistrationAttemptTimestamp;
+    if (attemptTimestamp == null) {
+      // This condition should occur only briefly, before _registerToken
+      // does its work (and before it even starts the request to the server).
+      // TODO(#1764) detect if this situation persists
+      return null;
+    }
+    return ZulipBinding.instance.utcNow().difference(attemptTimestamp);
+  }
+
   void handleDeviceEvent(DeviceEvent event) {
     switch (event) {
       case DeviceAddEvent():
@@ -116,7 +179,6 @@ class PushDeviceManager extends PerAccountStoreBase {
   ///
   /// Also create on the server a device record (per [Account.deviceId]),
   /// if we don't have one already.
-  // TODO(#323) track the registerPushDevice/etc request, warn if not succeeding
   void _registerTokenAndSubscribe() async {
     _debugMaybePause();
     if (_debugRegisterTokenProceed != null) {
@@ -259,6 +321,7 @@ class PushDeviceManager extends PerAccountStoreBase {
       return;
     }
 
+    _pushRegistrationAttemptTimestamp = now;
     try {
       await registerPushDevice(connection,
         deviceId: account.deviceId!, key: keyArgs, token: tokenArgs);
@@ -337,4 +400,22 @@ class PushDeviceManager extends PerAccountStoreBase {
         assert(false);
     }
   }
+}
+
+class PushRegistrationStatus {
+  PushRegistrationStatus(this.code, this.message);
+
+  final PushRegistrationStatusCode code;
+  final String message;
+
+  @override
+  String toString() {
+    return 'PushRegistrationStatus(${code.name}, $message)';
+  }
+}
+
+enum PushRegistrationStatusCode {
+  ok,
+  pending,
+  error;
 }
