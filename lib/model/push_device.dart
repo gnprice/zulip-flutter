@@ -42,9 +42,68 @@ class PushDeviceManager extends PerAccountStoreBase {
   ///
   /// An absent map in [InitialSnapshot] (from an old server) is treated
   /// as empty, since a server without this feature has none of these records.
+  ///
+  /// See also [thisDevice].
   // TODO(server-11) simplify doc re an absent map
   late Map<int, PushDeviceEntry> pushDevices = UnmodifiableMapView(_pushDevices);
   final Map<int, PushDeviceEntry> _pushDevices;
+
+  /// The push-device registration status the server currently reports for
+  /// this very install of the app, if any.
+  ///
+  /// This is an entry in [pushDevices].
+  PushDeviceEntry? get thisDevice => _pushDevices[account.pushAccountId];
+
+  PushRegistrationStatus pushRegistrationStatus() { // TODO(#323) warn user when status not OK
+    // TODO(#1764) TODO(i18n)
+
+    if (connection.zulipFeatureLevel! < 421) { // TODO(#1764): update this
+      return PushRegistrationStatus(.ok, 'old server');
+    }
+
+    final fromServer = thisDevice;
+    switch (fromServer?.status) {
+      case PushDeviceStatus.active:
+        return PushRegistrationStatus(.ok,
+          'Notifications set up successfully');
+
+      case PushDeviceStatus.failed:
+        return PushRegistrationStatus(.error,
+          fromServer!.errorCode ?? 'Error'); // TODO(#1764) interpret known error codes
+
+      case PushDeviceStatus.pending:
+        return switch (_ageOfPushRegistrationAttempt()) {
+          null =>                         PushRegistrationStatus(.pending,
+              'Preparing to set up notifications…'),
+          < const Duration(minutes: 5) => PushRegistrationStatus(.pending,
+              'Waiting for server to complete notification setup…'),
+          _ =>                            PushRegistrationStatus(.error,
+              'Timed out waiting for server to complete notification setup'),
+        };
+
+      case null:
+        return switch (_ageOfPushRegistrationAttempt()) {
+          null =>                         PushRegistrationStatus(.pending,
+              'Preparing to set up notifications…'),
+          < const Duration(minutes: 5) => PushRegistrationStatus(.pending,
+              'Contacting server to set up notifications…'),
+          _ =>                            PushRegistrationStatus(.error,
+              'Timed out contacting server to set up notifications'),
+        };
+    }
+  }
+
+  Duration? _ageOfPushRegistrationAttempt() {
+    final attemptTimestamp = account.pushRegistrationTimestamp;
+    if (attemptTimestamp == null) {
+      // This condition should occur only briefly, before _registerToken
+      // does its work (and before it even starts the request to the server).
+      // TODO(#1764) detect if this situation persists
+      return null;
+    }
+    return ZulipBinding.instance.utcNow().difference(
+      DateTime.fromMillisecondsSinceEpoch(attemptTimestamp * 1000));
+  }
 
   void handlePushDeviceEvent(PushDeviceEvent event) {
     _pushDevices[event.pushAccountId] = event.data;
@@ -160,4 +219,22 @@ class PushDeviceManager extends PerAccountStoreBase {
   ///
   /// See API doc: https://zulip.com/api/register-push-device#parameter-push_key
   static const pushKeyTagSecretbox = 0x31;
+}
+
+class PushRegistrationStatus {
+  PushRegistrationStatus(this.code, this.message);
+
+  final PushRegistrationStatusCode code;
+  final String message;
+
+  @override
+  String toString() {
+    return 'PushRegistrationStatus(${code.name}, $message)';
+  }
+}
+
+enum PushRegistrationStatusCode {
+  ok,
+  pending,
+  error;
 }
