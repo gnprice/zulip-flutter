@@ -725,6 +725,21 @@ class PerAccountStore extends PerAccountStoreBase with
     super.dispose();
   }
 
+  Future<void> _handleRestartEvent(RestartEvent event) async {
+    if (event.zulipVersion != account.zulipVersion
+        || event.zulipMergeBase != account.zulipMergeBase
+        || event.zulipFeatureLevel != account.zulipFeatureLevel) {
+      // TODO(#1271): replace event queue, if zulipFeatureLevel makes it necessary
+      await _globalStore.updateAccount(accountId, AccountsCompanion(
+        zulipVersion: Value(event.zulipVersion),
+        zulipMergeBase: Value(event.zulipMergeBase),
+        zulipFeatureLevel: Value(event.zulipFeatureLevel),
+      ));
+      connection.zulipFeatureLevel = event.zulipFeatureLevel;
+      notifyListeners();
+    }
+  }
+
   Future<void> handleEvent(Event event) async {
     assert(!_disposed);
 
@@ -874,18 +889,7 @@ class PerAccountStore extends PerAccountStoreBase with
 
       case RestartEvent():
         assert(debugLog("server event: restart"));
-        if (event.zulipVersion != account.zulipVersion
-            || event.zulipMergeBase != account.zulipMergeBase
-            || event.zulipFeatureLevel != account.zulipFeatureLevel) {
-          // TODO(#1271): replace event queue, if zulipFeatureLevel makes it necessary
-          await _globalStore.updateAccount(accountId, AccountsCompanion(
-            zulipVersion: Value(event.zulipVersion),
-            zulipMergeBase: Value(event.zulipMergeBase),
-            zulipFeatureLevel: Value(event.zulipFeatureLevel),
-          ));
-          connection.zulipFeatureLevel = event.zulipFeatureLevel;
-          notifyListeners();
-        }
+        await _handleRestartEvent(event);
 
       case UnexpectedEvent():
         assert(debugLog("server event: ${jsonEncode(event.toJson())}")); // TODO log better
