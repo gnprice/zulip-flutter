@@ -726,18 +726,20 @@ class PerAccountStore extends PerAccountStoreBase with
   }
 
   Future<void> _handleRestartEvent(RestartEvent event) async {
-    if (event.zulipVersion != account.zulipVersion
-        || event.zulipMergeBase != account.zulipMergeBase
-        || event.zulipFeatureLevel != account.zulipFeatureLevel) {
-      // TODO(#1271): replace event queue, if zulipFeatureLevel makes it necessary
-      await _globalStore.updateAccount(accountId, AccountsCompanion(
-        zulipVersion: Value(event.zulipVersion),
-        zulipMergeBase: Value(event.zulipMergeBase),
-        zulipFeatureLevel: Value(event.zulipFeatureLevel),
-      ));
-      connection.zulipFeatureLevel = event.zulipFeatureLevel;
-      notifyListeners();
+    if (event.zulipVersion == account.zulipVersion
+        && event.zulipMergeBase == account.zulipMergeBase
+        && event.zulipFeatureLevel == account.zulipFeatureLevel) {
+      return;
     }
+
+    // TODO(#1271): replace event queue, if zulipFeatureLevel makes it necessary
+    await _globalStore.updateAccount(accountId, AccountsCompanion(
+      zulipVersion: Value(event.zulipVersion),
+      zulipMergeBase: Value(event.zulipMergeBase),
+      zulipFeatureLevel: Value(event.zulipFeatureLevel),
+    ));
+    connection.zulipFeatureLevel = event.zulipFeatureLevel;
+    notifyListeners();
   }
 
   Future<void> handleEvent(Event event) async {
