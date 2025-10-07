@@ -764,10 +764,16 @@ class PerAccountStore extends PerAccountStoreBase with
     // so as to fully pick up the new server's features.
 
     if (_postRestartTimer != null) return;
+    // Spread the reload out randomly in time, to avoid a thundering herd
+    // of clients hitting the server with reload requests.
     const minWaitMs = 1 * Duration.millisecondsPerMinute;
     const maxWaitMs = 1 * Duration.millisecondsPerHour;
+    // The random spread should cover at least 5 minutes;
+    // see https://zulip.com/api/get-events#restart .
+    assert(maxWaitMs - minWaitMs >= 5 * Duration.millisecondsPerMinute);
     final waitMs = minWaitMs + Random().nextInt(maxWaitMs - minWaitMs + 1);
     final waitDuration = Duration(milliseconds: waitMs);
+
     _postRestartTimer = Timer(waitDuration, _postRestart);
   }
 
