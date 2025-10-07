@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -712,6 +713,8 @@ class PerAccountStore extends PerAccountStoreBase with
   @override
   void dispose() {
     assert(!_disposed);
+    _postRestartTimer?.cancel();
+    _postRestartTimer = null;
     recentDmConversationsView.dispose();
     unreads.dispose();
     _messages.dispose();
@@ -725,14 +728,23 @@ class PerAccountStore extends PerAccountStoreBase with
     super.dispose();
   }
 
+  Timer? _postRestartTimer;
+
+  void _postRestart() {
+    assert(!_disposed);
+    // TODO(#1271): show user an explanation for the reload?  e.g.,
+    //   a snack bar saying the server was upgraded
+    _globalStore._reloadPerAccount(accountId);
+  }
+
   Future<void> _handleRestartEvent(RestartEvent event) async {
+    assert(!_disposed);
     if (event.zulipVersion == account.zulipVersion
         && event.zulipMergeBase == account.zulipMergeBase
         && event.zulipFeatureLevel == account.zulipFeatureLevel) {
       return;
     }
 
-    // TODO(#1271): replace event queue, if zulipFeatureLevel makes it necessary
     await _globalStore.updateAccount(accountId, AccountsCompanion(
       zulipVersion: Value(event.zulipVersion),
       zulipMergeBase: Value(event.zulipMergeBase),
@@ -740,6 +752,23 @@ class PerAccountStore extends PerAccountStoreBase with
     ));
     connection.zulipFeatureLevel = event.zulipFeatureLevel;
     notifyListeners();
+
+    // In principle, there could be an API change such that we should
+    // reload promptly after the server upgraded across it.
+    // The last known time that happened (as of 2025-10) was 2023-02,
+    // at FL-163 before server-7, and so before the oldest servers we support.
+    // See https://github.com/zulip/zulip-flutter/issues/1271 .
+    // TODO(#1271): what about *downgrade*?  Reload promptly then?
+    //
+    // Otherwise, a server upgrade means we should reload eventually,
+    // so as to fully pick up the new server's features.
+
+    if (_postRestartTimer != null) return;
+    const minWaitMs = 1 * Duration.millisecondsPerMinute;
+    const maxWaitMs = 1 * Duration.millisecondsPerHour;
+    final waitMs = minWaitMs + Random().nextInt(maxWaitMs - minWaitMs + 1);
+    final waitDuration = Duration(milliseconds: waitMs);
+    _postRestartTimer = Timer(waitDuration, _postRestart);
   }
 
   Future<void> handleEvent(Event event) async {
