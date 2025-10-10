@@ -253,7 +253,7 @@ abstract final class ZulipAction {
       final store = PerAccountStoreWidget.of(context);
       // TODO discuss on #api design that percent-encoded form accepted here
       resultUrl = (await messages_api.getFileTemporaryUrl(store.connection,
-        realmId: link.realmId, filename: link.path)).url;
+        fileUrlPath: link.urlPath)).url;
     } catch (e) {
       if (!context.mounted) return null;
       final errorMessage = switch (e) {
