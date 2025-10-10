@@ -286,12 +286,18 @@ class UploadFileResult {
 }
 
 /// https://zulip.com/api/get-file-temporary-url
+///
+/// [fileUrlPath] should be the full path in the URL for the uploaded file.
+/// In the terms used in this endpoint's API documentation, that string
+/// is '/user_uploads/$realmId/$filename'.
 Future<GetFileTemporaryUrlResult> getFileTemporaryUrl(ApiConnection connection, {
-  required int realmId,
-  required String filename,
+  required String fileUrlPath,
 }) {
+  if (!fileUrlPath.startsWith('/user_uploads/')) {
+    throw ArgumentError('getFileTemporaryUrl: invalid fileUrlPath');
+  }
   return connection.get('getFileTemporaryUrl', GetFileTemporaryUrlResult.fromJson,
-    'user_uploads/$realmId/$filename', {});
+    fileUrlPath.substring(1), {});
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
