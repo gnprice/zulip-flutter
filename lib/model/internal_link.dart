@@ -133,7 +133,7 @@ class NarrowLink extends InternalLink {
 /// The structure mirrors the data required for [getFileTemporaryUrl]:
 ///   https://zulip.com/api/get-file-temporary-url
 class UserUploadLink extends InternalLink {
-  UserUploadLink(this.realmId, this.path, {required super.realmUrl});
+  UserUploadLink(this.realmId, this.pathRest, {required super.realmUrl});
 
   static UserUploadLink? _tryParse(String urlPath, Uri realmUrl) {
     final match = _urlPathRegexp.matchAsPrefix(urlPath);
@@ -145,6 +145,8 @@ class UserUploadLink extends InternalLink {
   static const _urlPathPrefix = '/user_uploads/';
   static final _urlPathRegexp = RegExp(r'^/user_uploads/(\d+)/(.+)$');
 
+  String get urlPath => '/user_uploads/$realmId/$pathRest';
+
   final int realmId;
 
   /// The remaining path components after the realm ID.
@@ -155,7 +157,7 @@ class UserUploadLink extends InternalLink {
   /// This corresponds to `filename` in the arguments to [getFileTemporaryUrl];
   /// but it's typically several path components,
   /// not just one as that name would suggest.
-  final String path;
+  final String pathRest;
 }
 
 /// Try to parse the given URL as a page in this app, on `store`'s realm.

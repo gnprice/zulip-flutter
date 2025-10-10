@@ -608,8 +608,7 @@ void main() {
         } else {
           check(result).isA<UserUploadLink>();
           result as UserUploadLink;
-          final reconstructedPath = '/user_uploads/${result.realmId}/${result.path}';
-          check(reconstructedPath).equals(urlPath);
+          check(result.urlPath).equals(urlPath); // TODO checks-getter
         }
       });
     }
