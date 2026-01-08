@@ -840,7 +840,7 @@ class Shape8 extends i0.VersionedTable {
       columnsByName['zulip_merge_base']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<int> get zulipFeatureLevel =>
       columnsByName['zulip_feature_level']! as i1.GeneratedColumn<int>;
-  i1.GeneratedColumn<String> get ackedPushToken =>
+  i1.GeneratedColumn<String> get pushToken =>
       columnsByName['acked_push_token']! as i1.GeneratedColumn<String>;
 }
 

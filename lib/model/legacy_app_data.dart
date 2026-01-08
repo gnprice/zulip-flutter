@@ -102,11 +102,10 @@ Future<void> migrateLegacyAppData(AppDatabase db) async {
         zulipVersion: account.zulipVersion!,
         // no zulipMergeBase; legacy app didn't record it
         zulipFeatureLevel: account.zulipFeatureLevel!,
-        // This app doesn't yet maintain ackedPushToken (#322), so avoid recording
-        // a value that would then be allowed to get stale.  See discussion:
-        //   https://github.com/zulip/zulip-flutter/pull/1588#discussion_r2148817025
-        // TODO(#322): apply ackedPushToken
-        // ackedPushToken: drift.Value(account.ackedPushToken),
+        // Ignore the legacy app's `account.ackedPushToken`.  That was acked
+        // through the legacy notification protocol; this app records only
+        // whether the token has been acked through the E2EE notif protocol.
+        pushToken: drift.Value(null),
       ));
     } on AccountAlreadyExistsException {
       // There's one known way this can actually happen: the legacy app doesn't

@@ -37,11 +37,11 @@ void main() {
 
     Future<void> prepare(WidgetTester tester, {
       UnreadMessagesSnapshot? unreadMsgs,
-      String? ackedPushToken = '123',
+      String? pushToken = '123',
       bool skipAssertAccountExists = false,
     }) async {
       addTearDown(testBinding.reset);
-      final selfAccount = eg.selfAccount.copyWith(ackedPushToken: Value(ackedPushToken));
+      final selfAccount = eg.selfAccount.copyWith(pushToken: Value(pushToken));
       await testBinding.globalStore.add(selfAccount, eg.initialSnapshot(
         unreadMsgs: unreadMsgs));
       store = await testBinding.globalStore.perAccount(selfAccount.id);

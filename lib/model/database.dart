@@ -156,7 +156,13 @@ class Accounts extends Table {
   Column<String> get zulipMergeBase => text().nullable()();
   Column<int>    get zulipFeatureLevel => integer()();
 
-  Column<String> get ackedPushToken => text().nullable()();
+  /// The push registration token sent to the server with [pushAccountId].
+  ///
+  /// This value will have come from [NotificationService.token].
+  /// If the value there changes, then the new token should be sent
+  /// with a fresh [pushAccountId].  See ZAP 2:
+  ///   https://github.com/zulip/zulip-architecture/blob/main/zaps/0002-encrypt-push-notifications.md#if-the-clients-device-token-changes
+  Column<String> get pushToken => text().nullable().named('acked_push_token')();
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [

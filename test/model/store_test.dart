@@ -311,18 +311,18 @@ void main() {
       // Update a nullable field, and a non-nullable one.
       final account = eg.selfAccount.copyWith(
         zulipFeatureLevel: 123,
-        ackedPushToken: const Value('asdf'),
+        pushToken: const Value('asdf'),
       );
       final globalStore = eg.globalStore(accounts: [account]);
       final updated = await globalStore.updateAccount(account.id,
         const AccountsCompanion(
           zulipFeatureLevel: Value(234),
-          ackedPushToken: Value(null),
+          pushToken: Value(null),
         ));
       check(globalStore.getAccount(account.id)).identicalTo(updated);
       check(updated).equals(account.copyWith(
         zulipFeatureLevel: 234,
-        ackedPushToken: const Value(null),
+        pushToken: const Value(null),
       ));
     });
 

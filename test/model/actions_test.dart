@@ -46,9 +46,9 @@ void main() {
     return http.runWithClient(callback, httpClientFactory ?? () => fakeHttpClientGivingSuccess);
   }
 
-  Future<void> prepare({String? ackedPushToken = '123'}) async {
+  Future<void> prepare({String? pushToken = '123'}) async {
     addTearDown(testBinding.reset);
-    final selfAccount = eg.selfAccount.copyWith(ackedPushToken: Value(ackedPushToken));
+    final selfAccount = eg.selfAccount.copyWith(pushToken: Value(pushToken));
     await testBinding.globalStore.add(selfAccount, eg.initialSnapshot());
     store = await testBinding.globalStore.perAccount(selfAccount.id);
     connection = store.connection as FakeApiConnection;
@@ -170,7 +170,7 @@ void main() {
 
   group('unregisterToken', () {
     testAndroidIos('smoke, happy path', () => awaitFakeAsync((async) async {
-      await prepare(ackedPushToken: '123');
+      await prepare(pushToken: '123');
 
       final newConnection = separateConnection()
         ..prepare(json: {'msg': '', 'result': 'success'});
@@ -182,7 +182,7 @@ void main() {
     }));
 
     test('fallback to current token if acked is missing', () => awaitFakeAsync((async) async {
-      await prepare(ackedPushToken: null);
+      await prepare(pushToken: null);
       addTearDown(NotificationService.debugReset);
       NotificationService.instance.token = ValueNotifier('asdf');
 
@@ -196,7 +196,7 @@ void main() {
     }));
 
     test('no error if acked token and current token both missing', () => awaitFakeAsync((async) async {
-      await prepare(ackedPushToken: null);
+      await prepare(pushToken: null);
       addTearDown(NotificationService.debugReset);
       NotificationService.instance.token = ValueNotifier(null);
 
@@ -208,7 +208,7 @@ void main() {
     }));
 
     test('connection closed if request errors', () => awaitFakeAsync((async) async {
-      await prepare(ackedPushToken: '123');
+      await prepare(pushToken: '123');
 
       final exception = eg.apiExceptionUnauthorized(routeName: 'removeEtcEtcToken');
       final newConnection = separateConnection()
