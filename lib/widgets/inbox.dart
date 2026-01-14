@@ -87,6 +87,9 @@ class _InboxPageState extends State<InboxPageBody> with PerAccountStoreAwareStat
     final store = PerAccountStoreWidget.of(context);
     final subscriptions = store.subscriptions;
 
+    print(store.pushDevices.pushDevices);
+    print(store.pushDevices.pushRegistrationStatus());
+
     // TODO(#1065) make an incrementally-updated view-model for InboxPage
     final sections = <_InboxSectionData>[];
 

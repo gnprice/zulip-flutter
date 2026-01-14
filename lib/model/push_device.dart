@@ -185,6 +185,8 @@ class PushDeviceManager extends PerAccountStoreBase {
     }
 
     final timestamp = ZulipBinding.instance.utcNow().millisecondsSinceEpoch ~/ 1000;
+    print("token $token, account pushToken ${account.pushToken}");
+    print("account has pushAccountId ${account.pushAccountId}, pushKey.length ${account.pushKey?.length}, pRTimestamp ${account.pushRegistrationTimestamp}");
     if (token != account.pushToken) {
       // TODO(#1764) if old pushToken not null, maybe tell server to forget
       await updateAccount(AccountsCompanion(
