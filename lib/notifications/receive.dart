@@ -7,6 +7,7 @@ import '../api/route/notifications.dart';
 import '../firebase_options.dart';
 import '../log.dart';
 import '../model/binding.dart';
+import '../model/push_device.dart';
 import 'display.dart';
 import 'open.dart';
 
@@ -203,8 +204,33 @@ class NotificationService {
     NotificationDisplayManager.init(); // TODO call this just once per isolate
   }
 
-  static void _onRemoteMessage(FirebaseRemoteMessage message) {
-    final data = FcmMessage.fromJson(message.data);
-    NotificationDisplayManager.onFcmMessage(data, message.data);
+  static void _onRemoteMessage(FirebaseRemoteMessage message) async {
+    final origData = message.data;
+
+    EncryptedNotification? parsed;
+    try {
+      parsed = EncryptedNotification.fromJson(origData);
+    } catch (_) {
+      // Presumably a non-E2EE notification.  // TODO(server-12)
+    }
+    final rawData = parsed == null ? origData
+      : await _decryptNotification(parsed);
+
+    final data = FcmMessage.fromJson(rawData);
+    NotificationDisplayManager.onFcmMessage(data, rawData);
+  }
+
+  static Future<Map<String, dynamic>> _decryptNotification(
+      EncryptedNotification data) async {
+    final globalStore = await ZulipBinding.instance.getGlobalStore();
+    final pushKey = globalStore.getPushKeyById(data.pushKeyId);
+    if (pushKey == null) {
+      throw Exception("unknown pushKeyId"); // TODO(log)
+    }
+
+    final plaintext = await PushDeviceManager.decryptNotification(
+      pushKey.pushKey, data.encryptedData);
+    // TODO check pushKey.accountId matches account data in plaintext
+    return jsonUtf8Decoder.convert(plaintext) as Map<String, dynamic>;
   }
 }

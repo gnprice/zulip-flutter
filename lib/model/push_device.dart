@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sodium_libs/sodium_libs.dart';
 
 import '../api/model/events.dart';
 import '../api/model/model.dart';
@@ -164,6 +165,28 @@ class PushDeviceManager extends PerAccountStoreBase {
       case TargetPlatform.fuchsia:
         assert(false);
     }
+  }
+
+  static Future<Uint8List> decryptNotification(Uint8List pushKey, Uint8List cryptotext) async {
+    const keyLengthBytes = 32;
+    if (pushKey.length != 1 + keyLengthBytes) {
+      throw ArgumentError("Bad push key: length ${pushKey.length}");
+    }
+    if (pushKey[0] != pushKeyTagSecretbox) {
+      throw ArgumentError("Bad push key: tag 0x${pushKey[0].toRadixString(16)}");
+    }
+    final keyBytes = Uint8List.sublistView(pushKey, 1);
+
+    // TODO(#1764) document this; https://chat.zulip.org/#narrow/channel/378-api-design/topic/E2EE.20-.20cryptography/near/2352462
+    const nonceLength = 24;
+    final nonce = Uint8List.sublistView(cryptotext, 0, nonceLength);
+    final actualCryptotext = Uint8List.sublistView(cryptotext, nonceLength);
+
+    // ?? WidgetsFlutterBinding.ensureInitialized();  // TODO(#1764)
+    final sodium = await SodiumInit.init();
+    final key = SecureKey.fromList(sodium, keyBytes);
+    return sodium.crypto.secretBox.openEasy(key: key,
+      cipherText: actualCryptotext, nonce: nonce);
   }
 
   /// Generate a suitable value to pass as `pushKeyId` to [registerPushDevice].
