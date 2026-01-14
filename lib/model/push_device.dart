@@ -12,6 +12,7 @@ import '../api/model/events.dart';
 import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
 import '../api/route/notifications.dart';
+import '../log.dart';
 import '../notifications/receive.dart';
 import 'binding.dart';
 import 'store.dart';
@@ -225,6 +226,7 @@ class PushDeviceManager extends PerAccountStoreBase {
         bouncerPublicKey: base64Encode(_bouncerPublicKey), // TODO(#1764) confirm base64 intended; https://chat.zulip.org/#narrow/channel/412-api-documentation/topic/e2ee.20notifs.3A.20bouncer.20public.20key/near/2352465
         encryptedPushRegistration: base64Encode(encryptedPushRegistration),
       );
+      assert(debugLog('registerPushDevice: success'));
     } finally {
       await updateAccount(AccountsCompanion(
         pushRegistrationResult: drift.Value('"completed"'), // TODO(#1764) more detail
