@@ -1,9 +1,30 @@
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:json_annotation/json_annotation.dart';
 
 import 'model/model.dart';
 
 part 'notifications.g.dart';
+
+/// https://zulip.com/api/mobile-notifications#data-sent-to-fcm
+@JsonSerializable(fieldRename: FieldRename.snake)
+class EncryptedNotification {
+  @_IntConverter()
+  final int pushAccountId;
+
+  @JsonKey(fromJson: base64Decode, toJson: base64Encode)
+  final Uint8List encryptedData;
+
+  EncryptedNotification({
+    required this.pushAccountId, required this.encryptedData});
+
+  factory EncryptedNotification.fromJson(Map<String, dynamic> json) =>
+    _$EncryptedNotificationFromJson(json);
+
+  Map<String, dynamic> toJson() => _$EncryptedNotificationToJson(this);
+}
 
 /// Parsed version of an FCM message, of any type.
 ///

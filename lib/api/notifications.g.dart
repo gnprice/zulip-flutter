@@ -8,6 +8,22 @@ part of 'notifications.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+EncryptedNotification _$EncryptedNotificationFromJson(
+  Map<String, dynamic> json,
+) => EncryptedNotification(
+  pushAccountId: const _IntConverter().fromJson(
+    json['push_account_id'] as String,
+  ),
+  encryptedData: base64Decode(json['encrypted_data'] as String),
+);
+
+Map<String, dynamic> _$EncryptedNotificationToJson(
+  EncryptedNotification instance,
+) => <String, dynamic>{
+  'push_account_id': const _IntConverter().toJson(instance.pushAccountId),
+  'encrypted_data': base64Encode(instance.encryptedData),
+};
+
 MessageFcmMessage _$MessageFcmMessageFromJson(Map<String, dynamic> json) =>
     MessageFcmMessage(
       realmUrl: Uri.parse(
