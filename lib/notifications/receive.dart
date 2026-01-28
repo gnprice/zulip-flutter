@@ -207,7 +207,6 @@ class NotificationService {
 
   static void _onRemoteMessage(FirebaseRemoteMessage message) async {
     final origData = message.data;
-    print(origData);
 
     EncryptedNotification? parsed;
     try {
@@ -215,10 +214,8 @@ class NotificationService {
     } catch (_) {
       // Presumably a non-E2EE notification.  // TODO(server-12)
     }
-    print(parsed);
     final rawData = parsed == null ? origData
       : await _decryptNotification(parsed);
-    print(rawData);
 
     final data = FcmMessage.fromJson(rawData);
     NotificationDisplayManager.onFcmMessage(data, rawData);

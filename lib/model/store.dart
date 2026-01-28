@@ -521,8 +521,6 @@ abstract class PerAccountStoreBase {
   /// on this store.
   Account get account => _globalStore.getAccount(accountId)!;
 
-  Iterable<Account> get accounts => _globalStore.accounts;
-
   /// The user ID of the "self-user",
   /// i.e. the account the person using this app is logged into.
   ///
@@ -874,7 +872,6 @@ class PerAccountStore extends PerAccountStoreBase with
 
       case PushDeviceEvent():
         assert(debugLog("server event: push_device"));
-        print("GOT EVENT push_device: ${event.toJson()}");
         pushDevices.handlePushDeviceEvent(event);
         notifyListeners();
 
