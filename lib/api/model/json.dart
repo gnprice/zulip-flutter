@@ -46,6 +46,10 @@ class IdentityJsonConverter<T> extends JsonConverter<T, T> {
 // Just writing `@IdentityJsonConverter<…>` directly as the annotation
 // doesn't work, as json_serializable gets confused.  Possibly related:
 //   https://github.com/google/json_serializable.dart/issues/1398
+class NullableIntJsonConverter extends IdentityJsonConverter<JsonNullable<int>> {
+  const NullableIntJsonConverter();
+}
+
 class NullableStringJsonConverter extends IdentityJsonConverter<JsonNullable<String>> {
   const NullableStringJsonConverter();
 }
