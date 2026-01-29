@@ -2233,8 +2233,7 @@ enum MessageTimestampStyle {
     required ZulipLocalizations zulipLocalizations,
     required TwentyFourHourTimeMode twentyFourHourTimeMode,
   }) {
-    final asDateTime =
-      DateTime.fromMillisecondsSinceEpoch(1000 * messageTimestamp);
+    final asDateTime = dateTimeFromTimestamp(messageTimestamp);
 
     switch (this) {
       case none:     return null;
