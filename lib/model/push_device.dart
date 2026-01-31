@@ -203,7 +203,8 @@ class PushDeviceManager extends HasRealmStore {
       await _debugRegisterTokenProceed!.future;
     }
 
-    if (account.deviceId == null
+    if (debugEnableRegisterClientDevice
+        && account.deviceId == null
         && zulipFeatureLevel >= 468) { // TODO(server-12)
       // We haven't yet managed registerClientDevice for this account. Do it now.
       // (We'll need this logic here for as long as clients may be upgrading
@@ -220,6 +221,26 @@ class PushDeviceManager extends HasRealmStore {
     await _registerToken();
 
     _debugRegisterTokenCompleted?.complete();
+  }
+
+  /// In debug mode, controls whether this class should make
+  /// a [registerClientDevice] request when otherwise appropriate.
+  ///
+  /// Outside of debug mode, this is always true and the setter has no effect.
+  static bool get debugEnableRegisterClientDevice {
+    bool result = true;
+    assert(() {
+      result = _debugEnableRegisterClientDevice;
+      return true;
+    }());
+    return result;
+  }
+  static bool _debugEnableRegisterClientDevice = true;
+  static set debugEnableRegisterClientDevice(bool value) {
+    assert(() {
+      _debugEnableRegisterClientDevice = value;
+      return true;
+    }());
   }
 
   Completer<void>? _debugRegisterTokenProceed;
