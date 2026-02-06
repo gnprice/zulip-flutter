@@ -668,13 +668,18 @@ class MessageStoreImpl extends HasChannelStore with MessageStore, _OutboxMessage
       // So on a rendering-only update, the timestamp doesn't get updated.
       return;
     }
+
+    // BAD: This updates lastEditTimestamp but not lastMovedTimestamp.
+    //   ... Ah I see, it updates that in _handleUpdateMessageEventMove below.
+    //   Confusing to have them separated.
+
     // Only update lastEditTimestamp for content edits, not moves.
     // TODO(server-10) On old servers, lastEditTimestamp in the JSON includes
     //   moves too; we don't normalize that here because the UI only uses
     //   editState, not the raw timestamp value.
     if (event.origContent == null) return;
 
-    final message = messages[event.messageId];
+    final message = messages[event.messageId];  // BAD: what? why did this change?
     if (message != null) {
       message.lastEditTimestamp = event.editTimestamp;
     }

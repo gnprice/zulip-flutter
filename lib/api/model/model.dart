@@ -1115,9 +1115,7 @@ sealed class Message<T extends Conversation> extends MessageBase<T> {
   final int id;
   bool isMeMessage;
   int? lastEditTimestamp;
-  // TODO(server-10) Old servers don't send this field; for them,
-  //   we derive the value from edit_history via [_readLastMovedTimestamp].
-  @JsonKey(readValue: _readLastMovedTimestamp)
+  @JsonKey(readValue: _readLastMovedTimestamp) // TODO(server-10)
   int? lastMovedTimestamp;
 
   @JsonKey(fromJson: _reactionsFromJson, toJson: _reactionsToJson)
@@ -1163,16 +1161,21 @@ sealed class Message<T extends Conversation> extends MessageBase<T> {
   }
 
   static Object? _readLastMovedTimestamp(Map<dynamic, dynamic> json, String key) {
-    // New servers (FL 365+) provide `last_moved_timestamp` directly.
-    final lastMovedTimestamp = json['last_moved_timestamp'];
+    final lastMovedTimestamp = json['last_moved_timestamp'] as int?;
     if (lastMovedTimestamp != null) return lastMovedTimestamp;
 
-    // Old servers: derive from edit_history.
+    // TODO hmm it sure is awkward that even for new servers, we're walking
+    //   the history here.  I guess it's mostly fine in that most messages
+    //   have no edit history.
+    //
+    // Also awkward that this largely duplicates MessageEditState._readFromMessage .
+
+    // TODO(server-10) skip walking edit_history
     final editHistory = json['edit_history'] as List<dynamic>?;
     if (editHistory == null) return null;
     for (final entry in editHistory) {
       if (entry['prev_stream'] != null) {
-        return entry['timestamp'];
+        return entry['timestamp']; // TODO Ordering is subtle! Make sure to test we get the latest, not earliest.
       }
       final prevTopicStr = entry['prev_topic'] as String?;
       if (prevTopicStr != null) {
