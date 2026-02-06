@@ -512,10 +512,11 @@ void showChannelActionSheet(BuildContext context, {
         ChannelFeedButton(pageContext: pageContext, channelId: channelId),
       CopyChannelLinkButton(channelId: channelId, pageContext: pageContext)
     ],
-    if (isSubscribed)
-      [PinUnpinButton(pageContext: pageContext, channelId: channelId,
-         isPinned: channel.pinToTop),
-       UnsubscribeButton(pageContext: pageContext, channelId: channelId)],
+    if (isSubscribed) [
+      PinUnpinButton(pageContext: pageContext, channelId: channelId,
+        isPinned: channel.pinToTop),
+      UnsubscribeButton(pageContext: pageContext, channelId: channelId),
+    ],
   ];
 
   final header = BottomSheetHeader(
@@ -658,29 +659,6 @@ class CopyChannelLinkButton extends ActionSheetMenuItemButton {
   }
 }
 
-class UnsubscribeButton extends ActionSheetMenuItemButton {
-  const UnsubscribeButton({
-    super.key,
-    required this.channelId,
-    required super.pageContext,
-  });
-
-  final int channelId;
-
-  @override
-  IconData get icon => ZulipIcons.circle_x;
-
-  @override
-  String label(ZulipLocalizations zulipLocalizations) {
-    return zulipLocalizations.actionSheetOptionUnsubscribe;
-  }
-
-  @override
-  void onPressed() async {
-    await ZulipAction.unsubscribeFromChannel(pageContext, channelId: channelId);
-  }
-}
-
 class PinUnpinButton extends ActionSheetMenuItemButton {
   const PinUnpinButton({
     super.key,
@@ -693,7 +671,7 @@ class PinUnpinButton extends ActionSheetMenuItemButton {
   final bool isPinned;
 
   @override
-  IconData get icon => Icons.push_pin_outlined;
+  IconData get icon => Icons.push_pin_outlined;  // TODO better icon; two distinct icons
 
   @override
   String label(ZulipLocalizations zulipLocalizations) {
@@ -705,7 +683,7 @@ class PinUnpinButton extends ActionSheetMenuItemButton {
   @override
   void onPressed() async {
     try {
-      await updateSubscriptionProperties(
+      await updateSubscriptionSettings(
         PerAccountStoreWidget.of(pageContext).connection,
         streamId: channelId,
         property: 'pin_to_top',
@@ -729,6 +707,29 @@ class PinUnpinButton extends ActionSheetMenuItemButton {
           : zulipLocalizations.errorPinChannelFailedTitle,
         message: errorMessage);
     }
+  }
+}
+
+class UnsubscribeButton extends ActionSheetMenuItemButton {
+  const UnsubscribeButton({
+    super.key,
+    required this.channelId,
+    required super.pageContext,
+  });
+
+  final int channelId;
+
+  @override
+  IconData get icon => ZulipIcons.circle_x;
+
+  @override
+  String label(ZulipLocalizations zulipLocalizations) {
+    return zulipLocalizations.actionSheetOptionUnsubscribe;
+  }
+
+  @override
+  void onPressed() async {
+    await ZulipAction.unsubscribeFromChannel(pageContext, channelId: channelId);
   }
 }
 

@@ -41,13 +41,12 @@ Future<void> unsubscribeFromChannel(ApiConnection connection, {
 }
 
 /// https://zulip.com/api/update-subscription-settings
-Future<void> updateSubscriptionProperties(ApiConnection connection, {
+Future<void> updateSubscriptionSettings(ApiConnection connection, {
   required int streamId,
-  required String property,
+  required String property, // TODO use SubscriptionProperty enum
   required Object value,
 }) {
-  return connection.post('updateSubscriptionProperties', (_) {},
-    'users/me/subscriptions/properties', {
+  return connection.post('updateSubscriptionSettings', (_) {}, 'users/me/subscriptions/properties', {
     'subscription_data': [{'stream_id': streamId, 'property': property, 'value': value}],
   });
 }
