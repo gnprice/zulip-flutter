@@ -1115,6 +1115,10 @@ sealed class Message<T extends Conversation> extends MessageBase<T> {
   final int id;
   bool isMeMessage;
   int? lastEditTimestamp;
+  // TODO(server-10) Old servers don't send this field; for them,
+  //   we derive the value from edit_history via [_readLastMovedTimestamp].
+  @JsonKey(readValue: _readLastMovedTimestamp)
+  int? lastMovedTimestamp;
 
   @JsonKey(fromJson: _reactionsFromJson, toJson: _reactionsToJson)
   Reactions? reactions; // null is equivalent to an empty [Reactions]
@@ -1158,6 +1162,30 @@ sealed class Message<T extends Conversation> extends MessageBase<T> {
     return list.map((raw) => MessageFlag.fromRawString(raw as String)).toList();
   }
 
+  static Object? _readLastMovedTimestamp(Map<dynamic, dynamic> json, String key) {
+    // New servers (FL 365+) provide `last_moved_timestamp` directly.
+    final lastMovedTimestamp = json['last_moved_timestamp'];
+    if (lastMovedTimestamp != null) return lastMovedTimestamp;
+
+    // Old servers: derive from edit_history.
+    final editHistory = json['edit_history'] as List<dynamic>?;
+    if (editHistory == null) return null;
+    for (final entry in editHistory) {
+      if (entry['prev_stream'] != null) {
+        return entry['timestamp'];
+      }
+      final prevTopicStr = entry['prev_topic'] as String?;
+      if (prevTopicStr != null) {
+        final prevTopic = TopicName.fromJson(prevTopicStr);
+        final topic = TopicName.fromJson(entry['topic'] as String);
+        if (!MessageEditState.topicMoveWasResolveOrUnresolve(topic, prevTopic)) {
+          return entry['timestamp'];
+        }
+      }
+    }
+    return null;
+  }
+
   static Poll? _readPoll(Map<Object?, Object?> json, String key) {
     return Submessage.parseSubmessagesJson(
       json['submessages'] as List<Object?>? ?? [],
@@ -1173,6 +1201,7 @@ sealed class Message<T extends Conversation> extends MessageBase<T> {
     required this.id,
     required this.isMeMessage,
     required this.lastEditTimestamp,
+    required this.lastMovedTimestamp,
     required this.reactions,
     required this.recipientId,
     required this.senderEmail,
@@ -1258,6 +1287,7 @@ class StreamMessage extends Message<StreamConversation> {
     required super.id,
     required super.isMeMessage,
     required super.lastEditTimestamp,
+    required super.lastMovedTimestamp,
     required super.reactions,
     required super.recipientId,
     required super.senderEmail,
@@ -1320,6 +1350,7 @@ class DmMessage extends Message<DmConversation> {
     required super.id,
     required super.isMeMessage,
     required super.lastEditTimestamp,
+    required super.lastMovedTimestamp,
     required super.reactions,
     required super.recipientId,
     required super.senderEmail,
@@ -1379,9 +1410,9 @@ enum MessageEditState {
     final editHistory = json['edit_history'] as List<dynamic>?;
     final lastEditTimestamp = json['last_edit_timestamp'] as int?;
     if (editHistory == null) {
-      return (lastEditTimestamp != null)
-        ? MessageEditState.edited
-        : MessageEditState.none;
+      if (lastEditTimestamp != null) return MessageEditState.edited;
+      if (json['last_moved_timestamp'] != null) return MessageEditState.moved;
+      return MessageEditState.none;
     }
 
     // Edit history should never be empty whenever it is present

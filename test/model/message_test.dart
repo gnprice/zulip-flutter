@@ -1509,32 +1509,57 @@ void main() {
   });
 
   group('handleUpdateMessageEvent', () {
-    test('update timestamps on all messages', () async {
+    test('content edit updates lastEditTimestamp', () async {
       const t1 = 1718748879;
-      const t2 = t1 + 60;
-      final message1 = eg.streamMessage(lastEditTimestamp: null);
-      final message2 = eg.streamMessage(lastEditTimestamp: t1);
-      // This event is a bit artificial, but convenient.
-      // TODO use a realistic move-messages event here
-      final updateEvent = Event.fromJson({
-        ...eg.updateMessageEditEvent(message1).toJson(),
-        'message_ids': [message1.id, message2.id],
-        'edit_timestamp': t2,
-      }) as UpdateMessageEvent;
+      final message = eg.streamMessage(lastEditTimestamp: null);
+      final updateEvent = eg.updateMessageEditEvent(message,
+        editTimestamp: t1);
       await prepare();
-      await prepareMessages([message1, message2]);
+      await prepareMessages([message]);
 
-      check(store).messages.values.unorderedMatches(<Condition<Message>>[
-        (it) => it.lastEditTimestamp.isNull,
-        (it) => it.lastEditTimestamp.equals(t1),
-      ]);
+      check(store).messages[message.id].lastEditTimestamp.isNull();
 
       await store.handleEvent(updateEvent);
       checkNotifiedOnce();
-      check(store).messages.values.unorderedMatches(<Condition<Message>>[
-        (it) => it.lastEditTimestamp.equals(t2),
-        (it) => it.lastEditTimestamp.equals(t2),
-      ]);
+      check(store).messages[message.id].lastEditTimestamp.equals(t1);
+    });
+
+    test('move event does not update lastEditTimestamp', () async {
+      final message = eg.streamMessage(lastEditTimestamp: null);
+      await prepare();
+      await prepareMessages([message]);
+
+      await store.handleEvent(eg.updateMessageEventMoveFrom(
+        origMessages: [message],
+        newTopicStr: 'new topic'));
+      checkNotified(count: 2);
+      check(store).messages[message.id].lastEditTimestamp.isNull();
+    });
+
+    test('move event updates lastMovedTimestamp', () async {
+      final message = eg.streamMessage();
+      await prepare();
+      await prepareMessages([message]);
+
+      check(store).messages[message.id].lastMovedTimestamp.isNull();
+
+      await store.handleEvent(eg.updateMessageEventMoveFrom(
+        origMessages: [message],
+        newTopicStr: 'new topic'));
+      checkNotified(count: 2);
+      check(store).messages[message.id].lastMovedTimestamp.equals(1234567890);
+    });
+
+    test('resolve/unresolve does not update lastMovedTimestamp', () async {
+      final message = eg.streamMessage(topic: 'old topic');
+      await prepare();
+      await prepareMessages([message]);
+
+      await store.handleEvent(eg.updateMessageEventMoveFrom(
+        origMessages: [message],
+        newTopicStr: '✔ old topic'));
+      checkNotified(count: 2);
+      check(store).messages[message.id].lastMovedTimestamp.isNull();
     });
 
     test('update a message', () async {

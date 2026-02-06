@@ -279,7 +279,8 @@ void main() {
     group('Edit history is absent', () {
       test('Message with no evidence of an edit history -> none', () {
         check(Message.fromJson(baseJson()..['edit_history'] = null))
-          .editState.equals(MessageEditState.none);
+          ..editState.equals(MessageEditState.none)
+          ..lastMovedTimestamp.isNull();
       });
 
       test('Message without edit history has last edit timestamp -> edited', () {
@@ -287,6 +288,23 @@ void main() {
             ..['edit_history'] = null
             ..['last_edit_timestamp'] = 1678139636))
           .editState.equals(MessageEditState.edited);
+      });
+
+      test('New server: last_moved_timestamp present, no edit_history -> moved', () {
+        check(Message.fromJson(baseJson()
+            ..['edit_history'] = null
+            ..['last_moved_timestamp'] = 1678139636))
+          ..editState.equals(MessageEditState.moved)
+          ..lastMovedTimestamp.equals(1678139636);
+      });
+
+      test('New server: both timestamps present, no edit_history -> edited', () {
+        check(Message.fromJson(baseJson()
+            ..['edit_history'] = null
+            ..['last_edit_timestamp'] = 1678139636
+            ..['last_moved_timestamp'] = 1678139600))
+          ..editState.equals(MessageEditState.edited)
+          ..lastMovedTimestamp.equals(1678139600);
       });
     });
 
@@ -332,6 +350,27 @@ void main() {
       test('Content change only -> edited', () {
         checkEditState(MessageEditState.edited,
           [{'prev_content': 'old_content'}]);
+      });
+
+      test('Old server: derive lastMovedTimestamp from stream move in edit_history', () {
+        check(Message.fromJson(baseJson()
+            ..['edit_history'] = [{'prev_stream': 5, 'stream': 7, 'timestamp': 1678139636}]))
+          ..editState.equals(MessageEditState.moved)
+          ..lastMovedTimestamp.equals(1678139636);
+      });
+
+      test('Old server: derive lastMovedTimestamp from topic move in edit_history', () {
+        check(Message.fromJson(baseJson()
+            ..['edit_history'] = [{'prev_topic': 'old_topic', 'topic': 'new_topic', 'timestamp': 1678139636}]))
+          ..editState.equals(MessageEditState.moved)
+          ..lastMovedTimestamp.equals(1678139636);
+      });
+
+      test('Old server: resolve/unresolve only -> lastMovedTimestamp is null', () {
+        check(Message.fromJson(baseJson()
+            ..['edit_history'] = [{'prev_topic': 'old_topic', 'topic': '✔ old_topic', 'timestamp': 1678139636}]))
+          ..editState.equals(MessageEditState.none)
+          ..lastMovedTimestamp.isNull();
       });
     });
 
