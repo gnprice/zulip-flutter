@@ -857,6 +857,8 @@ enum SubscriptionProperty {
   // TODO(server-future) Remove `in_home_view` comment once it stops being sent.
   unknown;
 
+  String toJson() => _$SubscriptionPropertyEnumMap[this]!;
+
   static SubscriptionProperty fromRawString(String raw) => _byRawString[raw] ?? unknown;
 
   static final _byRawString = _$SubscriptionPropertyEnumMap

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../api/exception.dart';
+import '../api/model/events.dart';
 import '../api/model/model.dart';
 import '../api/route/channels.dart';
 import '../api/route/messages.dart';
@@ -686,7 +687,7 @@ class PinUnpinButton extends ActionSheetMenuItemButton {
       await updateSubscriptionSettings(
         PerAccountStoreWidget.of(pageContext).connection,
         streamId: channelId,
-        property: 'pin_to_top',
+        property: SubscriptionProperty.pinToTop,
         value: !isPinned);
     } catch (e) {
       if (!pageContext.mounted) return;

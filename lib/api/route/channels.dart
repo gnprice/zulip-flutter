@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../core.dart';
+import '../model/events.dart';
 import '../model/model.dart';
 part 'channels.g.dart';
 
@@ -43,11 +44,11 @@ Future<void> unsubscribeFromChannel(ApiConnection connection, {
 /// https://zulip.com/api/update-subscription-settings
 Future<void> updateSubscriptionSettings(ApiConnection connection, {
   required int streamId,
-  required String property, // TODO use SubscriptionProperty enum
+  required SubscriptionProperty property,
   required Object value,
 }) {
   return connection.post('updateSubscriptionSettings', (_) {}, 'users/me/subscriptions/properties', {
-    'subscription_data': [{'stream_id': streamId, 'property': property, 'value': value}],
+    'subscription_data': [{'stream_id': streamId, 'property': property.toJson(), 'value': value}],
   });
 }
 
