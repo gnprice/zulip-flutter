@@ -48,7 +48,7 @@ Future<void> updateSubscriptionSettings(ApiConnection connection, {
   required Object value,
 }) {
   return connection.post('updateSubscriptionSettings', (_) {}, 'users/me/subscriptions/properties', {
-    'subscription_data': [{'stream_id': streamId, 'property': property.toJson(), 'value': value}],
+    'subscription_data': [{'stream_id': streamId, 'property': property, 'value': value}],
   });
 }
 
