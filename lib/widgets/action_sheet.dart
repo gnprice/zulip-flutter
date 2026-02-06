@@ -513,7 +513,9 @@ void showChannelActionSheet(BuildContext context, {
       CopyChannelLinkButton(channelId: channelId, pageContext: pageContext)
     ],
     if (isSubscribed)
-      [UnsubscribeButton(pageContext: pageContext, channelId: channelId)],
+      [PinUnpinButton(pageContext: pageContext, channelId: channelId,
+         isPinned: channel.pinToTop),
+       UnsubscribeButton(pageContext: pageContext, channelId: channelId)],
   ];
 
   final header = BottomSheetHeader(
@@ -676,6 +678,57 @@ class UnsubscribeButton extends ActionSheetMenuItemButton {
   @override
   void onPressed() async {
     await ZulipAction.unsubscribeFromChannel(pageContext, channelId: channelId);
+  }
+}
+
+class PinUnpinButton extends ActionSheetMenuItemButton {
+  const PinUnpinButton({
+    super.key,
+    required this.channelId,
+    required this.isPinned,
+    required super.pageContext,
+  });
+
+  final int channelId;
+  final bool isPinned;
+
+  @override
+  IconData get icon => Icons.push_pin_outlined;
+
+  @override
+  String label(ZulipLocalizations zulipLocalizations) {
+    return isPinned
+      ? zulipLocalizations.actionSheetOptionUnpinChannel
+      : zulipLocalizations.actionSheetOptionPinChannel;
+  }
+
+  @override
+  void onPressed() async {
+    try {
+      await updateSubscriptionProperties(
+        PerAccountStoreWidget.of(pageContext).connection,
+        streamId: channelId,
+        property: 'pin_to_top',
+        value: !isPinned);
+    } catch (e) {
+      if (!pageContext.mounted) return;
+
+      String? errorMessage;
+      switch (e) {
+        case ZulipApiException():
+          errorMessage = e.message;
+          // TODO(#741) specific messages for common errors, like network errors
+          //   (support with reusable code)
+        default:
+      }
+
+      final zulipLocalizations = ZulipLocalizations.of(pageContext);
+      showErrorDialog(context: pageContext,
+        title: isPinned
+          ? zulipLocalizations.errorUnpinChannelFailedTitle
+          : zulipLocalizations.errorPinChannelFailedTitle,
+        message: errorMessage);
+    }
   }
 }
 

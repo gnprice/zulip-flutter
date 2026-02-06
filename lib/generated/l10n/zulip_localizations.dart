@@ -371,6 +371,30 @@ abstract class ZulipLocalizations {
   /// **'Failed to unsubscribe'**
   String get unsubscribeFailedTitle;
 
+  /// Label for the button in the channel action sheet to pin the channel to the top of the list.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin to top'**
+  String get actionSheetOptionPinChannel;
+
+  /// Label for the button in the channel action sheet to unpin the channel from the top of the list.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin from top'**
+  String get actionSheetOptionUnpinChannel;
+
+  /// Error title when pinning a channel to the top fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to pin channel'**
+  String get errorPinChannelFailedTitle;
+
+  /// Error title when unpinning a channel from the top fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to unpin channel'**
+  String get errorUnpinChannelFailedTitle;
+
   /// Label for muting a topic on action sheet.
   ///
   /// In en, this message translates to:
