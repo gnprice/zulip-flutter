@@ -671,7 +671,7 @@ class PinUnpinButton extends ActionSheetMenuItemButton {
   final bool isPinned;
 
   @override
-  IconData get icon => Icons.push_pin_outlined;  // TODO better icon; two distinct icons
+  IconData get icon => isPinned ? ZulipIcons.unpin : ZulipIcons.pin;
 
   @override
   String label(ZulipLocalizations zulipLocalizations) {
