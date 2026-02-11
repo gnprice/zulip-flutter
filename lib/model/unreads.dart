@@ -311,6 +311,8 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
     if (
       message.flags.contains(MessageFlag.mentioned)
       || message.flags.contains(MessageFlag.wildcardMentioned)
+      || message.flags.contains(MessageFlag.streamWildcardMentioned)
+      || message.flags.contains(MessageFlag.topicWildcardMentioned)
     ) {
       mentions.add(message.id);
     }
@@ -325,7 +327,10 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
     // (As of writing, we don't expect such changes to be signaled by
     // an [UpdateMessageFlagsEvent].)
     final bool isMentioned = event.flags.any(
-      (f) => f == MessageFlag.mentioned || f == MessageFlag.wildcardMentioned,
+      (f) => f == MessageFlag.mentioned
+          || f == MessageFlag.wildcardMentioned
+          || f == MessageFlag.streamWildcardMentioned
+          || f == MessageFlag.topicWildcardMentioned,
     );
 
     // We expect the event's 'read' flag to be boring,
@@ -446,6 +451,8 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
 
       case MessageFlag.mentioned:
       case MessageFlag.wildcardMentioned:
+      case MessageFlag.streamWildcardMentioned:
+      case MessageFlag.topicWildcardMentioned:
         // Empirically, we don't seem to get these events when a message is edited
         // to add/remove an @-mention, even though @-mention state is represented
         // as flags. Instead, we just get the [UpdateMessageEvent], and that

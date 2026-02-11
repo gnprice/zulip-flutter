@@ -101,6 +101,8 @@ void main() {
       if (
         message.flags.contains(MessageFlag.mentioned)
         || message.flags.contains(MessageFlag.wildcardMentioned)
+        || message.flags.contains(MessageFlag.streamWildcardMentioned)
+        || message.flags.contains(MessageFlag.topicWildcardMentioned)
       ) {
         expectedMentions.add(message.id);
       }
@@ -572,8 +574,8 @@ void main() {
                   isRead
                   || (
                     // TODO make less verbose
-                    (message.flags.contains(MessageFlag.mentioned) || message.flags.contains(MessageFlag.wildcardMentioned))
-                      == (newFlags.contains(MessageFlag.mentioned) || newFlags.contains(MessageFlag.wildcardMentioned))
+                    (message.flags.contains(MessageFlag.mentioned) || message.flags.contains(MessageFlag.wildcardMentioned) || message.flags.contains(MessageFlag.streamWildcardMentioned) || message.flags.contains(MessageFlag.topicWildcardMentioned))
+                      == (newFlags.contains(MessageFlag.mentioned) || newFlags.contains(MessageFlag.wildcardMentioned) || newFlags.contains(MessageFlag.streamWildcardMentioned) || newFlags.contains(MessageFlag.topicWildcardMentioned))
                   )
                 ) {
                   checkNotNotified();
@@ -939,6 +941,8 @@ void main() {
         MessageFlag.unknown => true,
         MessageFlag.mentioned => false,
         MessageFlag.wildcardMentioned => false,
+        MessageFlag.streamWildcardMentioned => false,
+        MessageFlag.topicWildcardMentioned => false,
         MessageFlag.read => false,
       });
 
@@ -1003,7 +1007,7 @@ void main() {
       });
     }
 
-    for (final mentionFlag in [MessageFlag.mentioned, MessageFlag.wildcardMentioned]) {
+    for (final mentionFlag in [MessageFlag.mentioned, MessageFlag.wildcardMentioned, MessageFlag.streamWildcardMentioned, MessageFlag.topicWildcardMentioned]) {
       // For a read message in this test, the message won't appear in the model.
       // That case is indistinguishable from an unread that's unknown to
       // the model, so we get coverage for that case too.

@@ -1236,7 +1236,10 @@ enum MessageFlag {
   starred,
   collapsed,
   mentioned,
+  // TODO(server-8) deprecated; use [streamWildcardMentioned] and [topicWildcardMentioned]
   wildcardMentioned,
+  streamWildcardMentioned,
+  topicWildcardMentioned,
   hasAlertWord,
   historical,
   unknown;
