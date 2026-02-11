@@ -1255,6 +1255,19 @@ enum MessageFlag {
   // _$…EnumMap is thanks to `alwaysCreate: true` and `fieldRename: FieldRename.snake`
   static final _byRawString = _$MessageFlagEnumMap.map((key, value) => MapEntry(value, key));
 
+  bool get isMention => switch (this) {
+    mentioned              => true,
+    wildcardMentioned      => true,
+    streamWildcardMentioned => true,
+    topicWildcardMentioned => true,
+    read      => false,
+    starred   => false,
+    collapsed => false,
+    hasAlertWord => false,
+    historical => false,
+    unknown    => false,
+  };
+
   String toJson() => _$MessageFlagEnumMap[this]!;
 }
 

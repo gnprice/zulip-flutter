@@ -1177,10 +1177,7 @@ UpdateMessageFlagsRemoveEvent updateMessageFlagsRemoveEvent(
     flag: flag,
     messages: messages.map((m) => m.id).toList(),
     messageDetails: Map.fromEntries(messages.map((message) {
-      final mentioned = message.flags.contains(MessageFlag.mentioned)
-        || message.flags.contains(MessageFlag.wildcardMentioned)
-        || message.flags.contains(MessageFlag.streamWildcardMentioned)
-        || message.flags.contains(MessageFlag.topicWildcardMentioned);
+      final mentioned = message.flags.any((f) => f.isMention);
       return MapEntry(
         message.id,
         switch (message) {

@@ -98,12 +98,7 @@ void main() {
           final messageIds = expectedDms[narrow] ??= QueueList();
           messageIds.add(message.id);
       }
-      if (
-        message.flags.contains(MessageFlag.mentioned)
-        || message.flags.contains(MessageFlag.wildcardMentioned)
-        || message.flags.contains(MessageFlag.streamWildcardMentioned)
-        || message.flags.contains(MessageFlag.topicWildcardMentioned)
-      ) {
+      if (message.flags.any((f) => f.isMention)) {
         expectedMentions.add(message.id);
       }
     }
@@ -574,8 +569,8 @@ void main() {
                   isRead
                   || (
                     // TODO make less verbose
-                    (message.flags.contains(MessageFlag.mentioned) || message.flags.contains(MessageFlag.wildcardMentioned) || message.flags.contains(MessageFlag.streamWildcardMentioned) || message.flags.contains(MessageFlag.topicWildcardMentioned))
-                      == (newFlags.contains(MessageFlag.mentioned) || newFlags.contains(MessageFlag.wildcardMentioned) || newFlags.contains(MessageFlag.streamWildcardMentioned) || newFlags.contains(MessageFlag.topicWildcardMentioned))
+                    message.flags.any((f) => f.isMention)
+                      == newFlags.any((f) => f.isMention)
                   )
                 ) {
                   checkNotNotified();
