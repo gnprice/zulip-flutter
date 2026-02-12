@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:collection/collection.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
@@ -51,6 +55,11 @@ class NotificationService {
   ///  * Upstream docs on FCM registration tokens in general:
   ///    https://firebase.google.com/docs/cloud-messaging/manage-tokens
   ValueNotifier<String?> token = ValueNotifier(null);
+
+  static String computeTokenId(String token) {
+    final hash = sha256.convert(token.codeUnits).bytes;
+    return base64Encode(hash.slice(0, 8));
+  }
 
   Future<void> start() async {
     switch (defaultTargetPlatform) {
