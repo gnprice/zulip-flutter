@@ -313,15 +313,21 @@ class _LoginPageState extends State<LoginPage> {
     });
     try {
       await ZulipBinding.instance.closeInAppWebView();
+      if (!mounted) return;
 
       if (_otp == null) throw Error();
       final payload = WebAuthPayload.parse(url);
       if (payload.realm.origin != widget.serverSettings.realmUrl.origin) throw Error();
       final apiKey = payload.decodeApiKey(_otp!);
+
+      final deviceId = await _registerDeviceId(payload.email, apiKey);
+      if (!mounted) return;
+
       await _tryInsertAccountAndNavigate(
         userId: payload.userId,
         email: payload.email,
         apiKey: apiKey,
+        deviceId: deviceId,
       );
     } catch (e) {
       assert(debugLog(e.toString()));
@@ -389,6 +395,7 @@ class _LoginPageState extends State<LoginPage> {
     required String email,
     required String apiKey,
     required int userId,
+    required int? deviceId,
   }) async {
     final globalStore = GlobalStoreWidget.of(context);
     final realmUrl = widget.serverSettings.realmUrl;
@@ -401,6 +408,7 @@ class _LoginPageState extends State<LoginPage> {
         email: email,
         apiKey: apiKey,
         userId: userId,
+        deviceId: Value(deviceId),
         zulipFeatureLevel: widget.serverSettings.zulipFeatureLevel,
         zulipVersion: widget.serverSettings.zulipVersion,
         zulipMergeBase: Value(widget.serverSettings.zulipMergeBase),
@@ -434,6 +442,20 @@ class _LoginPageState extends State<LoginPage> {
       email: email, apiKey: apiKey);
     try {
       return (await getOwnUser(connection)).userId;
+    } finally {
+      connection.close();
+    }
+  }
+
+  Future<int?> _registerDeviceId(String email, String apiKey) async {
+    if (widget.serverSettings.zulipFeatureLevel < 789) return null; // TODO(server-12)
+    final globalStore = GlobalStoreWidget.of(context);
+    final connection = globalStore.apiConnection(
+      realmUrl: widget.serverSettings.realmUrl,
+      zulipFeatureLevel: widget.serverSettings.zulipFeatureLevel,
+      email: email, apiKey: apiKey);
+    try {
+      return (await registerClientDevice(connection)).deviceId;
     } finally {
       connection.close();
     }
@@ -565,10 +587,14 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
         return;
       }
 
+      final deviceId = await widget.loginPageState._registerDeviceId(
+        result.email, result.apiKey);
+
       await widget.loginPageState._tryInsertAccountAndNavigate(
         email: result.email,
         apiKey: result.apiKey,
         userId: userId,
+        deviceId: deviceId,
       );
     } finally {
       widget.loginPageState.setState(() {
