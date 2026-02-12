@@ -29,6 +29,13 @@ sealed class Event {
           case 'update': return UserSettingsUpdateEvent.fromJson(json);
           default: return UnexpectedEvent.fromJson(json);
         }
+      case 'device':
+        switch (json['op'] as String) {
+          case 'add': return DeviceAddEvent.fromJson(json);
+          case 'update': return DeviceUpdateEvent.fromJson(json);
+          case 'remove': return DeviceRemoveEvent.fromJson(json);
+          default: return UnexpectedEvent.fromJson(json);
+        }
       case 'custom_profile_fields': return CustomProfileFieldsEvent.fromJson(json);
       case 'user_group':
         switch (json['op'] as String) {
@@ -208,6 +215,81 @@ class UserSettingsUpdateEvent extends Event {
 
   @override
   Map<String, dynamic> toJson() => _$UserSettingsUpdateEventToJson(this);
+}
+
+/// DRAFT API: https://chat.zulip.org/#narrow/channel/378-api-design/topic/device.20records/near/2365671
+/// A Zulip event of type `device`: https://zulip.com/api/get-events#device
+sealed class DeviceEvent extends Event {
+  @override
+  @JsonKey(includeToJson: true)
+  String get type => 'device';
+
+  String get op;
+
+  final int deviceId;
+
+  DeviceEvent({required super.id, required this.deviceId});
+}
+
+@JsonSerializable(fieldRename: FieldRename.snake)
+class DeviceAddEvent extends DeviceEvent {
+  @override
+  @JsonKey(includeToJson: true)
+  String get op => 'add';
+
+  DeviceAddEvent({required super.id, required super.deviceId});
+
+  factory DeviceAddEvent.fromJson(Map<String, dynamic> json) =>
+    _$DeviceAddEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$DeviceAddEventToJson(this);
+}
+
+@JsonSerializable(fieldRename: FieldRename.snake)
+@NullableIntJsonConverter()
+@NullableStringJsonConverter()
+class DeviceUpdateEvent extends DeviceEvent {
+  @override
+  @JsonKey(includeToJson: true)
+  String get op => 'update';
+
+  final JsonNullable<int>? pushKeyId;
+  final JsonNullable<String>? pushTokenId;
+  final JsonNullable<int>? pushTokenLastUpdatedTimestamp;
+  final JsonNullable<String>? pendingPushTokenId;
+  final JsonNullable<String>? pushRegistrationErrorCode;
+
+  DeviceUpdateEvent({
+    required super.id,
+    required super.deviceId,
+    required this.pushKeyId,
+    required this.pushTokenId,
+    required this.pushTokenLastUpdatedTimestamp,
+    required this.pendingPushTokenId,
+    required this.pushRegistrationErrorCode,
+  });
+
+  factory DeviceUpdateEvent.fromJson(Map<String, dynamic> json) =>
+    _$DeviceUpdateEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$DeviceUpdateEventToJson(this);
+}
+
+@JsonSerializable(fieldRename: FieldRename.snake)
+class DeviceRemoveEvent extends DeviceEvent {
+  @override
+  @JsonKey(includeToJson: true)
+  String get op => 'remove';
+
+  DeviceRemoveEvent({required super.id, required super.deviceId});
+
+  factory DeviceRemoveEvent.fromJson(Map<String, dynamic> json) =>
+    _$DeviceRemoveEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$DeviceRemoveEventToJson(this);
 }
 
 /// A Zulip event of type `custom_profile_fields`: https://zulip.com/api/get-events#custom_profile_fields

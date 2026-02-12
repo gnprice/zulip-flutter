@@ -407,6 +407,28 @@ enum Emojiset {
   String toJson() => _$EmojisetEnumMap[this]!;
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
+class ClientDevice {
+  int? pushKeyId;
+  String? pushTokenId;
+  int? pushTokenLastUpdatedTimestamp;
+  String? pendingPushTokenId;
+  String? pushRegistrationErrorCode;
+
+  ClientDevice({
+    required this.pushKeyId,
+    required this.pushTokenId,
+    required this.pushTokenLastUpdatedTimestamp,
+    required this.pendingPushTokenId,
+    required this.pushRegistrationErrorCode,
+  });
+
+  factory ClientDevice.fromJson(Map<String, dynamic> json) =>
+    _$ClientDeviceFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ClientDeviceToJson(this);
+}
+
 /// As in [InitialSnapshot.realmUserGroups] or [UserGroupAddEvent].
 @JsonSerializable(fieldRename: FieldRename.snake)
 class UserGroup {
