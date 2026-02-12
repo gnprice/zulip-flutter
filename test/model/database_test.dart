@@ -193,6 +193,7 @@ void main() {
         realmName: Value('Example Zulip organization'),
         realmIcon: Value(Uri.parse('/user_avatars/2/realm/icon.png?version=3')),
         userId: 1,
+        deviceId: Value(null),
         email: 'asdf@example.org',
         apiKey: '1234',
         zulipVersion: '6.0',

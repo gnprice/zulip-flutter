@@ -149,6 +149,17 @@ class Accounts extends Table {
   /// It never changes for a given account.
   Column<int>    get userId => integer()();
 
+  /// The ID of this client device as logged into this account.
+  ///
+  /// Once this is no longer null, it never again changes for
+  /// a given account record.
+  ///
+  /// This is null if the server is old (TODO(server-12)) and lacks
+  /// the concept of device ID,
+  /// as well as when the client has only recently upgraded from a
+  /// version that lacked this column and has not yet populated it.
+  Column<int>    get deviceId => integer().nullable()(); // TODO(#1764) exclude from device backups
+
   Column<String> get email => text()();
   Column<String> get apiKey => text()();
 
@@ -188,7 +199,7 @@ class AppDatabase extends _$AppDatabase {
   //  * Fix resulting analyzer errors; in particular,
   //    write a migration in `_migrationSteps` below.
   //  * Write tests.
-  static const int latestSchemaVersion = 12; // See note.
+  static const int latestSchemaVersion = 13; // See note.
 
   @override
   int get schemaVersion => latestSchemaVersion;
@@ -286,6 +297,9 @@ class AppDatabase extends _$AppDatabase {
     from11To12: (Migrator m, Schema12 schema) async {
       await m.addColumn(schema.accounts, schema.accounts.realmName);
       await m.addColumn(schema.accounts, schema.accounts.realmIcon);
+    },
+    from12To13: (m, schema) async {
+      await m.addColumn(schema.accounts, schema.accounts.deviceId);
     },
   );
 

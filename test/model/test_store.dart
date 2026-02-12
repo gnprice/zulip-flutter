@@ -103,6 +103,7 @@ mixin _DatabaseMixin on GlobalStore {
       realmName: data.realmName.value,
       realmIcon: data.realmIcon.value,
       userId: data.userId.value,
+      deviceId: data.deviceId.value,
       email: data.email.value,
       apiKey: data.apiKey.value,
       zulipFeatureLevel: data.zulipFeatureLevel.value,
