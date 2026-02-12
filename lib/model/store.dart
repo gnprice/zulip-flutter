@@ -39,7 +39,7 @@ import 'user.dart';
 import 'user_group.dart';
 
 export 'package:drift/drift.dart' show Value;
-export 'database.dart' show Account, AccountsCompanion, AccountAlreadyExistsException;
+export 'database.dart' show Account, AccountsCompanion, AccountAlreadyExistsException, PushKey;
 
 /// An underlying data store that can support a [GlobalStore],
 /// possibly storing the data to persist between runs of the app.
@@ -90,10 +90,12 @@ abstract class GlobalStore extends ChangeNotifier {
     required Map<BoolGlobalSetting, bool> boolGlobalSettings,
     required Map<IntGlobalSetting, int> intGlobalSettings,
     required Iterable<Account> accounts,
+    required Iterable<PushKey> pushKeys,
   })
     : settings = GlobalSettingsStore(backend: backend,
         data: globalSettings, boolData: boolGlobalSettings, intData: intGlobalSettings),
-      _accounts = Map.fromEntries(accounts.map((a) => MapEntry(a.id, a)));
+      _accounts = Map.fromEntries(accounts.map((a) => MapEntry(a.id, a))),
+      _pushKeys = Map.fromEntries(pushKeys.map((k) => MapEntry(k.pushKeyId, k)));
 
   /// The store for the user's account-independent settings.
   ///
@@ -430,6 +432,45 @@ abstract class GlobalStore extends ChangeNotifier {
   /// Remove an account from the underlying data store.
   Future<void> doRemoveAccount(int accountId);
 
+  /// A cache of the [PushKeys] table in the underlying data store.
+  final Map<int, PushKey> _pushKeys;
+
+  PushKey? getPushKeyById(int pushKeyId) => _pushKeys[pushKeyId];
+
+  Iterable<PushKey> getPushKeysByAccount(int accountId) =>
+    _pushKeys.values.where((k) => k.accountId == accountId);
+
+  Future<PushKey> insertPushKey(PushKeysCompanion data) async {
+    final pushKey = await doInsertPushKey(data);
+    assert(!_pushKeys.containsKey(pushKey.pushKeyId));
+    _pushKeys[pushKey.pushKeyId] = pushKey;
+    notifyListeners();
+    return pushKey;
+  }
+
+  Future<PushKey> doInsertPushKey(PushKeysCompanion data);
+
+  Future<PushKey> updatePushKey(int pushKeyId, PushKeysCompanion data) async {
+    assert(!data.pushKeyId.present && !data.pushKey.present);
+    assert(_pushKeys.containsKey(pushKeyId));
+    await doUpdatePushKey(pushKeyId, data);
+    final result = _pushKeys.update(pushKeyId, (value) => value.copyWithCompanion(data));
+    notifyListeners();
+    return result;
+  }
+
+  Future<void> doUpdatePushKey(int pushKeyId, PushKeysCompanion data);
+
+  Future<void> removePushKey(int pushKeyId) async {
+    assert(_pushKeys.containsKey(pushKeyId));
+    await doRemovePushKey(pushKeyId);
+    if (!_pushKeys.containsKey(pushKeyId)) return; // Already removed.
+    _pushKeys.remove(pushKeyId);
+    notifyListeners();
+  }
+
+  Future<void> doRemovePushKey(int pushKeyId);
+
   @override
   String toString() => '${objectRuntimeType(this, 'GlobalStore')}#${shortHash(this)}';
 }
@@ -528,6 +569,27 @@ abstract class PerAccountStoreBase {
   ///
   /// For the corresponding [User] object, see [UserStore.selfUser].
   int get selfUserId => core.selfUserId;
+
+  Future<void> updateAccount(AccountsCompanion data) async {
+    await _globalStore.updateAccount(accountId, data);
+  }
+
+  Iterable<PushKey> getPushKeys() => _globalStore.getPushKeysByAccount(accountId);
+
+  Future<PushKey> insertPushKey(PushKeysCompanion data) async {
+    assert(data.accountId.value == accountId);
+    return await _globalStore.insertPushKey(data);
+  }
+
+  Future<PushKey> updatePushKey(int pushKeyId, PushKeysCompanion data) async {
+    assert(_globalStore.getPushKeyById(pushKeyId)!.accountId == accountId);
+    return await _globalStore.updatePushKey(pushKeyId, data);
+  }
+
+  Future<void> removePushKey(int pushKeyId) async {
+    assert(_globalStore.getPushKeyById(pushKeyId)!.accountId == accountId);
+    return await _globalStore.removePushKey(pushKeyId);
+  }
 }
 
 const _tryResolveUrl = tryResolveUrl;
@@ -1074,6 +1136,7 @@ class LiveGlobalStore extends GlobalStore {
     required super.boolGlobalSettings,
     required super.intGlobalSettings,
     required super.accounts,
+    required super.pushKeys,
   }) : _backend = backend,
        super(backend: backend);
 
@@ -1107,12 +1170,15 @@ class LiveGlobalStore extends GlobalStore {
     final t4 = stopwatch.elapsed;
     final accounts = await db.select(db.accounts).get();
     final t5 = stopwatch.elapsed;
+    final pushKeys = await db.select(db.pushKeys).get();
+    final t6 = stopwatch.elapsed;
     if (kProfileMode) {
       String format(Duration d) =>
         "${(d.inMicroseconds / 1000.0).toStringAsFixed(1)}ms";
       profilePrint("db load time ${format(t5)} total: ${format(t1)} init, "
         "${format(t2 - t1)} settings, ${format(t3 - t2)} bool-settings, "
-        "${format(t4 - t3)} int-settings, ${format(t5 - t4)} accounts");
+        "${format(t4 - t3)} int-settings, "
+        "${format(t5 - t4)} accounts, ${format(t6 - t5)} push keys");
     }
 
     return LiveGlobalStore._(
@@ -1120,7 +1186,9 @@ class LiveGlobalStore extends GlobalStore {
       globalSettings: globalSettings,
       boolGlobalSettings: boolGlobalSettings,
       intGlobalSettings: intGlobalSettings,
-      accounts: accounts);
+      accounts: accounts,
+      pushKeys: pushKeys,
+    );
   }
 
   /// The file path to use for the app database.
@@ -1181,6 +1249,30 @@ class LiveGlobalStore extends GlobalStore {
   Future<void> doRemoveAccount(int accountId) async {
     final rowsAffected = await (_db.delete(_db.accounts)
       ..where((a) => a.id.equals(accountId))
+    ).go();
+    assert(rowsAffected == 1);
+  }
+
+  @override
+  Future<PushKey> doInsertPushKey(PushKeysCompanion data) async {
+    await _db.createPushKey(data); // TODO(log): db errors
+    return await (_db.select(_db.pushKeys) // TODO perhaps put this logic in AppDatabase
+      ..where((a) => a.pushKeyId.equals(data.pushKeyId.value))
+    ).getSingle();
+  }
+
+  @override
+  Future<void> doUpdatePushKey(int pushKeyId, PushKeysCompanion data) async {
+    final rowsAffected = await (_db.update(_db.pushKeys)
+      ..where((a) => a.pushKeyId.equals(pushKeyId))
+    ).write(data);
+    assert(rowsAffected == 1);
+  }
+
+  @override
+  Future<void> doRemovePushKey(int pushKeyId) async {
+    final rowsAffected = await (_db.delete(_db.pushKeys)
+      ..where((a) => a.pushKeyId.equals(pushKeyId))
     ).go();
     assert(rowsAffected == 1);
   }

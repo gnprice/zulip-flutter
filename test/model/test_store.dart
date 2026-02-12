@@ -132,6 +132,28 @@ mixin _DatabaseMixin on GlobalStore {
     await Future<void>.delayed(TestGlobalStore.removeAccountDuration);
     // Nothing else to do.
   }
+
+  @override
+  Future<PushKey> doInsertPushKey(PushKeysCompanion data) async {
+    // TODO prevent dupes
+
+    return PushKey(
+      pushKeyId: data.pushKeyId.value,
+      pushKey: data.pushKey.value,
+      accountId: data.accountId.value,
+      createdTimestamp: data.createdTimestamp.value,
+    );
+  }
+
+  @override
+  Future<void> doUpdatePushKey(int pushKeyId, PushKeysCompanion data) async {
+    // Nothing to do.
+  }
+
+  @override
+  Future<void> doRemovePushKey(int pushKeyId) async {
+    // Nothing to do.
+  }
 }
 
 /// A [GlobalStore] containing data provided by callers,
@@ -156,10 +178,12 @@ class TestGlobalStore extends GlobalStore with _ApiConnectionsMixin, _DatabaseMi
     Map<BoolGlobalSetting, bool>? boolGlobalSettings,
     Map<IntGlobalSetting, int>? intGlobalSettings,
     required super.accounts,
+    Iterable<PushKey>? pushKeys,
   }) : super(backend: _TestGlobalStoreBackend(),
          globalSettings: globalSettings ?? GlobalSettingsData(),
          boolGlobalSettings: boolGlobalSettings ?? {},
          intGlobalSettings: intGlobalSettings ?? {},
+         pushKeys: pushKeys ?? [],
        );
 
   final Map<int, InitialSnapshot> _initialSnapshots = {};
@@ -237,10 +261,12 @@ class UpdateMachineTestGlobalStore extends GlobalStore with _ApiConnectionsMixin
     Map<BoolGlobalSetting, bool>? boolGlobalSettings,
     Map<IntGlobalSetting, int>? intGlobalSettings,
     required super.accounts,
+    Iterable<PushKey>? pushKeys,
   }) : super(backend: _TestGlobalStoreBackend(),
          globalSettings: globalSettings ?? GlobalSettingsData(),
          boolGlobalSettings: boolGlobalSettings ?? {},
          intGlobalSettings: intGlobalSettings ?? {},
+         pushKeys: pushKeys ?? [],
        );
 
   // [doLoadPerAccount] depends on the cache to prepare the API responses.
