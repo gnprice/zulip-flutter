@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -164,4 +165,29 @@ class PushDeviceManager extends PerAccountStoreBase {
         assert(false);
     }
   }
+
+  /// Generate a suitable value to pass as `pushKeyId` to [registerPushDevice].
+  static int generatePushKeyId() {
+    final rand = Random.secure();
+    return rand.nextInt(1 << 32);
+  }
+
+  /// Generate a suitable value to pass as `pushKey` to [registerPushDevice].
+  ///
+  /// See docs and ZAP 2:
+  /// https://zulip.com/api/register-push-device#parameter-push_key
+  /// https://github.com/zulip/zulip-architecture/blob/main/zaps/0002-encrypt-push-notifications.md#cryptographic-choices
+  /// TODO doc this on [Account.pushKey] instead
+  static Uint8List generatePushKey() {
+    final rand = Random.secure();
+    return Uint8List.fromList([
+      pushKeyTagSecretbox,
+      ...Iterable.generate(32, (_) => rand.nextInt(1 << 8)),
+    ]);
+  }
+
+  /// The tag byte for a libsodium secretbox-based `pushKey` value.
+  ///
+  /// See API doc: https://zulip.com/api/register-push-device#parameter-push_key
+  static const pushKeyTagSecretbox = 0x31;
 }
