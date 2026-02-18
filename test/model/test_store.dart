@@ -191,6 +191,12 @@ class TestGlobalStore extends GlobalStore with _ApiConnectionsMixin, _DatabaseMi
     }
   }
 
+  void addInitialSnapshot(int accountId, InitialSnapshot initialSnapshot) {
+    assert(accountIds.contains(accountId));
+    assert(!_initialSnapshots.containsKey(accountId));
+    _initialSnapshots[accountId] = initialSnapshot;
+  }
+
   Duration? loadPerAccountDuration;
   Object? loadPerAccountException;
 
