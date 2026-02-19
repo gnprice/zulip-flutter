@@ -7,6 +7,7 @@ import '../api/route/notifications.dart';
 import '../firebase_options.dart';
 import '../log.dart';
 import '../model/binding.dart';
+import '../model/push_device.dart';
 import 'display.dart';
 import 'open.dart';
 
@@ -203,7 +204,8 @@ class NotificationService {
     NotificationDisplayManager.init(); // TODO call this just once per isolate
   }
 
-  static void _onRemoteMessage(FirebaseRemoteMessage message) {
+  static void _onRemoteMessage(FirebaseRemoteMessage message) async {
+    await PushDeviceManager.tmp();
     final data = FcmMessage.fromJson(message.data);
     NotificationDisplayManager.onFcmMessage(data, message.data);
   }

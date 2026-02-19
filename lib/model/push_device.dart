@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:sodium_libs/sodium_libs.dart';
 
 import '../api/model/events.dart';
@@ -168,11 +169,16 @@ class PushDeviceManager extends PerAccountStoreBase {
     }
   }
 
-  static void tmp() async {
+  static Future<void> tmp() async {
     final pushKey = generatePushKey();
     final orig = 'Hello world';
+    print('step 1');
+
+    WidgetsFlutterBinding.ensureInitialized();
+    print('step 1.1');
 
     final sodium = await SodiumInit.init();
+    print('step 2');
     final keyBytes = Uint8List.sublistView(pushKey, 1);
     final key = SecureKey.fromList(sodium, keyBytes);
     final rand = Random.secure();
@@ -180,12 +186,15 @@ class PushDeviceManager extends PerAccountStoreBase {
       rand.nextInt(1 << 8)));
     final ciphertext = sodium.crypto.secretBox.easy(
       key: key, message: utf8.encode(orig), nonce: nonce);
+    print('step 3');
 
     final recoveredBytes = await decryptNotification(pushKey,
       Uint8List.fromList([...nonce, ...ciphertext]));
+    print('step 4');
     final recovered = utf8.decode(recoveredBytes);
     assert(recovered == orig);
     print(recovered);
+    print('step 5');
   }
 
   static Future<Uint8List> decryptNotification(Uint8List pushKey, Uint8List cryptotext) async {
