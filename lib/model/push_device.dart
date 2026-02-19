@@ -174,8 +174,8 @@ class PushDeviceManager extends PerAccountStoreBase {
     final orig = 'Hello world';
     print('step 1');
 
-    WidgetsFlutterBinding.ensureInitialized();
-    print('step 1.1');
+    // WidgetsFlutterBinding.ensureInitialized();
+    // print('step 1.1');
 
     final sodium = await SodiumInit.init();
     print('step 2');
