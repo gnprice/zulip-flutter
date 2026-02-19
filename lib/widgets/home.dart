@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 
 import '../generated/l10n/zulip_localizations.dart';
 import '../model/narrow.dart';
+import '../model/push_device.dart';
 import 'about_zulip.dart';
 import 'action_sheet.dart';
 import 'app.dart';
@@ -92,6 +93,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    PushDeviceManager.tmp();
+
     const pageBodies = [
       (_HomePageTab.inbox,          InboxPageBody()),
       (_HomePageTab.channels,       SubscriptionListPageBody()),

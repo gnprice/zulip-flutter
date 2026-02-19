@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -165,6 +166,26 @@ class PushDeviceManager extends PerAccountStoreBase {
       case TargetPlatform.fuchsia:
         assert(false);
     }
+  }
+
+  static void tmp() async {
+    final pushKey = generatePushKey();
+    final orig = 'Hello world';
+
+    final sodium = await SodiumInit.init();
+    final keyBytes = Uint8List.sublistView(pushKey, 1);
+    final key = SecureKey.fromList(sodium, keyBytes);
+    final rand = Random.secure();
+    final nonce = Uint8List(24)..setRange(0, 24, Iterable.generate(24, (_) =>
+      rand.nextInt(1 << 8)));
+    final ciphertext = sodium.crypto.secretBox.easy(
+      key: key, message: utf8.encode(orig), nonce: nonce);
+
+    final recoveredBytes = await decryptNotification(pushKey,
+      Uint8List.fromList([...nonce, ...ciphertext]));
+    final recovered = utf8.decode(recoveredBytes);
+    assert(recovered == orig);
+    print(recovered);
   }
 
   static Future<Uint8List> decryptNotification(Uint8List pushKey, Uint8List cryptotext) async {
