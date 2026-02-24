@@ -22,7 +22,7 @@ void main() {
       realmUrl: Uri.parse(const String.fromEnvironment('REALM_URL')),
       email: const String.fromEnvironment('OTHER_EMAIL'),
       apiKey: const String.fromEnvironment('OTHER_API_KEY'),
-      zulipFeatureLevel: 468, // TODO get the real value
+      zulipFeatureLevel: eg.recentZulipFeatureLevel, // TODO get real value from server
     );
   }
 
