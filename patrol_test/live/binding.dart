@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:zulip/api/core.dart';
 import 'package:zulip/model/binding.dart';
 import 'package:zulip/model/store.dart';
@@ -20,12 +21,13 @@ PatrolLiveZulipBinding get patrolLiveBinding => PatrolLiveZulipBinding.instance;
 ///
 /// This class is a subclass of [LiveZulipBinding], and provides all the
 /// "live" bindings from that class.
-/// This adds methods convenient for manipulating the state from tests.
+/// This adds methods convenient for manipulating the state from tests,
+/// and calls [WidgetsFlutterBinding.ensureInitialized] at initialization.
 ///
 /// Because this is a subclass of [LiveZulipBinding], calling [ensureInitialized]
 /// will also have the effect of [LiveZulipBinding.ensureInitialized].
 /// In live Patrol tests, call `PatrolLiveZulipBinding.ensureInitialized`
-/// before [mainInit].
+/// before [mainInit] (if calling [mainInit] at all).
 class PatrolLiveZulipBinding extends LiveZulipBinding {
   /// Initialize the binding if necessary, and ensure it is a [PatrolLiveZulipBinding].
   ///
@@ -49,6 +51,7 @@ class PatrolLiveZulipBinding extends LiveZulipBinding {
   void initInstance() {
     super.initInstance();
     _instance = this;
+    WidgetsFlutterBinding.ensureInitialized();
   }
 
   /// Reset all test data to a clean state.
