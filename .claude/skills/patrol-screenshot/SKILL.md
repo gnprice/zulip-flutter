@@ -20,6 +20,9 @@ $ARGUMENTS — a description of what UI to navigate to and screenshot.
 Create or edit a test file in `patrol_test/live/`. Follow this template:
 
 ```dart
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 import 'package:zulip/widgets/app.dart';
@@ -51,12 +54,43 @@ Key points:
   `SemiLiveZulipBinding`.
 - Use `LiveCredentials.account()` to log in with env-var credentials
   (from `.patrol.env`).
+- Always import `package:flutter/material.dart` and `dart:ui` — these
+  provide `TextField`, `Scrollable`, `Offset`, and other types needed
+  for interactions beyond basic taps.
 - Use Patrol selectors like `$('button text')` to tap and navigate.
 - End with `Future.delayed(Duration(seconds: 90))` to keep the app open
   long enough for the screenshot. (The build + launch + navigation takes
   ~40-50 seconds, so you need a generous pause.)
 
-### 2. Run the test in background
+### Interaction patterns
+
+Beyond basic `$.tap($('text'))`, use these for richer interactions:
+
+- **Find by widget type**: `$(MessageContent)`, `$(TextField)`, etc.
+- **Long press**: `$(MessageContent).first.longPress()`
+- **Enter text**: `await $.tester.enterText(find.byType(TextField), 'search query');`
+- **Scroll down**: `await $.tester.drag(find.byType(Scrollable).last, Offset(0, -800));`
+- **Wait after interaction**: `await $.tester.pump();` or
+  `await Future<void>.delayed(Duration(seconds: N));`
+
+The `$.tester` property and `find.*` finders from `flutter_test` are
+available for anything that Patrol's `$()` selectors don't cover
+directly. Import widget types from the app (e.g.,
+`import 'package:zulip/widgets/content.dart';` for `MessageContent`)
+as needed.
+
+### 2. Analyze, then run the test in background
+
+First, run the analyzer on the test file to catch compile errors before
+the slow `patrol test` build:
+
+```
+flutter analyze --no-pub patrol_test/live/the_test.dart
+```
+
+If there are errors, fix them and re-analyze before proceeding.
+
+Then run the test:
 
 ```
 patrol test -d emulator-5554 -t patrol_test/live/the_test.dart
