@@ -39,7 +39,7 @@ void main() {
     // Navigate to the target UI...
 
     // Pause so we can take a screenshot with adb.
-    await Future<void>.delayed(Duration(seconds: 30));
+    await Future<void>.delayed(Duration(seconds: 90));
   });
 }
 ```
@@ -52,8 +52,9 @@ Key points:
 - Use `LiveCredentials.account()` to log in with env-var credentials
   (from `.patrol.env`).
 - Use Patrol selectors like `$('button text')` to tap and navigate.
-- End with `Future.delayed(Duration(seconds: 30))` to keep the app open
-  for the screenshot.
+- End with `Future.delayed(Duration(seconds: 90))` to keep the app open
+  long enough for the screenshot. (The build + launch + navigation takes
+  ~40-50 seconds, so you need a generous pause.)
 
 ### 2. Run the test in background
 
@@ -63,6 +64,10 @@ patrol test -d emulator-5554 -t patrol_test/live/the_test.dart
 
 Run this command in the background so you can take the screenshot while
 the test is paused.
+
+**Important**: Both `patrol` and `adb` commands require
+`dangerouslyDisableSandbox: true` because `patrol` writes to the Flutter
+cache and `adb` needs device access.
 
 ### 3. Wait, then capture the screenshot
 
@@ -74,6 +79,11 @@ adb shell screencap -p > /tmp/claude-1000/screenshot.png
 ```
 
 Read the resulting PNG file to inspect the UI.
+
+**Timing tip**: Monitor the background task output to see when the test
+reaches the `Future.delayed` pause (all navigation steps will show ✅),
+then take the screenshot. Don't rely on a fixed sleep — if you sleep too
+long, the pause expires and you'll screenshot the Android home screen.
 
 ### 4. Clean up
 
