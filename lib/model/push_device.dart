@@ -5,6 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 
+import '../api/exception.dart';
 import '../api/model/events.dart';
 import '../api/model/model.dart';
 import '../api/route/account.dart';
@@ -194,6 +195,8 @@ class PushDeviceManager extends PerAccountStoreBase {
       return _legacyRegisterToken();
     }
 
+    _unregisterLegacyToken().ignore();
+
     assert(account.deviceId != null);
 
     final token = NotificationService.instance.token.value;
@@ -279,6 +282,33 @@ class PushDeviceManager extends PerAccountStoreBase {
     final sodium = await ZulipBinding.instance.sodiumInit();
     return sodium.crypto.box.seal(publicKey: publicKey,
       message: utf8.encode(plaintext));
+  }
+
+  /// Unregister our token from the legacy notification system,
+  /// if it's potentially registered there.
+  Future<void> _unregisterLegacyToken() async {
+    assert(_e2eeAvailable);
+
+    if (!account.possibleLegacyPushToken) return;
+
+    final token = NotificationService.instance.token.value;
+    if (token == null) {
+      // Nothing to unregister.  Keep possibleLegacyPushToken set, though,
+      // in case we learn the token later.
+      return;
+    }
+
+    try {
+      await NotificationService.unregisterToken(connection, token: token);
+    } on ZulipApiException {
+      // We reached the server and got a 4xx response.
+      // For this route, that must mean the token already isn't one the server
+      // has registered for us for sending legacy plaintext notifications.
+      // So we're in the same state as if the request succeeded.
+    }
+
+    await updateAccount(AccountsCompanion(
+      possibleLegacyPushToken: drift.Value(false)));
   }
 
   Future<void> _legacyRegisterToken() async {

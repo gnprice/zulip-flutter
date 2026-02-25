@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
@@ -303,6 +304,61 @@ void main() {
         connection.prepare(json: {});
         async.flushMicrotasks();
         await checkLastRequest(key: key, token: otherToken);
+      }));
+
+      test('unregister for legacy notifications', () => awaitFakeAsync((async) async {
+        testBinding.firebaseMessagingInitialToken = '012abc';
+        await NotificationService.instance.start();
+
+        await prepareStore();
+        await store.updateAccount(AccountsCompanion(
+          possibleLegacyPushToken: drift.Value(true)));
+        check(store.account).possibleLegacyPushToken.isTrue();
+
+        connection.prepare(json: {});
+        connection.prepare(json: {});
+        await model.debugUnpauseRegisterToken();
+        check(connection.takeRequests()).unorderedMatches([
+          (it) => it.isA<http.Request>()
+            ..method.equals('POST')
+            ..url.path.equals('/api/v1/mobile_push/register'),
+          (it) => it.isA<http.Request>()
+            ..method.equals('DELETE')
+            ..url.path.equals('/api/v1/users/me/android_gcm_reg_id'),
+        ]);
+
+        check(store.account).possibleLegacyPushToken.isFalse();
+      }));
+
+      test('unregister for legacy notifications: keep possibleLegacyPushToken on network error', () => awaitFakeAsync((async) async {
+        testBinding.firebaseMessagingInitialToken = '012abc';
+        await NotificationService.instance.start();
+
+        await prepareStore();
+        await store.updateAccount(AccountsCompanion(
+          possibleLegacyPushToken: drift.Value(true)));
+        check(store.account).possibleLegacyPushToken.isTrue();
+
+        // We rely here on the order between the unregister-legacy and register
+        // requests.  The check on takeRequests below confirms we have it right.
+        // If this order were unstable in practice, we'd solve the problem by
+        // extending `connection.prepare` to take an argument saying which
+        // request (by e.g. URL path) the prepared response is intended for.
+        connection.prepare(httpException: SocketException('failed'));
+        connection.prepare(json: {});
+        await model.debugUnpauseRegisterToken();
+        check(connection.takeRequests()).deepEquals(<Condition<Object?>>[
+          (it) => it.isA<http.Request>()
+            ..method.equals('DELETE')
+            ..url.path.equals('/api/v1/users/me/android_gcm_reg_id'),
+          (it) => it.isA<http.Request>()
+            ..method.equals('POST')
+            ..url.path.equals('/api/v1/mobile_push/register'),
+        ]);
+
+        // Because the unregister request didn't reach the server,
+        // the possibleLegacyPushToken flag is kept at true.
+        check(store.account).possibleLegacyPushToken.isTrue();
       }));
     });
 

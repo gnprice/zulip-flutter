@@ -280,7 +280,7 @@ class NotificationService {
       // either client or server is first upgraded to add E2EE support, because
       // the two subsystems register for push notifications independently.
       // Just ignore the legacy notification;  // TODO(log)
-      // we'll deal separately (TODO(#1764)) with getting the server to stop sending them.
+      // we'll deal separately with getting the server to stop sending them.
       return;
     }
 
