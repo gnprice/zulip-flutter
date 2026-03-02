@@ -19,6 +19,11 @@ class PushDeviceManager extends PerAccountStoreBase {
     required super.core,
     required Map<int, ClientDevice> devices,
   }) : _devices = devices {
+    _init();
+  }
+
+  void _init() async {
+    await _maybeRotatePushKeys();
     _registerTokenAndSubscribe();
   }
 
@@ -73,6 +78,7 @@ class PushDeviceManager extends PerAccountStoreBase {
 
         if (event.pushKeyId case final v?) {
           device.pushKeyId = v.value;
+          _maybeRotatePushKeys();
         }
         if (event.pushTokenId case final v?) {
           device.pushTokenId = v.value;
@@ -87,6 +93,11 @@ class PushDeviceManager extends PerAccountStoreBase {
           device.pushRegistrationErrorCode = v.value;
         }
     }
+  }
+
+  Future<void> _maybeRotatePushKeys() async {
+    return await pushKeys.maybeRotatePushKeys(
+      ackedPushKeyId: thisDevice?.pushKeyId);
   }
 
   /// Send this client's notification token to the server, now and if it changes.
@@ -140,6 +151,7 @@ class PushDeviceManager extends PerAccountStoreBase {
   /// when this instance was constructed,
   /// and therefore no effect outside of debug mode.
   Future<void> debugUnpauseRegisterToken() async {
+    await Future<void>.delayed(Duration.zero); // TODO hack to get past _maybeRotateKeys
     _debugRegisterTokenProceed!.complete();
     await _debugRegisterTokenCompleted!.future;
   }
