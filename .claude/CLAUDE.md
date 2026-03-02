@@ -104,3 +104,11 @@ UI designs come from Figma (linked in issues). Match colors, padding, and font s
 
 - After every edit, run the Flutter analyzer to catch issues early.
   Use this command: `flutter analyze --no-pub 2>&1 | head -20`
+
+
+## Git conventions
+
+- **Use `@` instead of `HEAD`** — this repo has a file named `HEAD`, which causes `fatal: ambiguous argument 'HEAD'` errors.
+- **Use `git cherry-pick` for rewriting history** — never use `git rebase -i`, as it requires an interactive editor which triggers permission prompts. Instead, use `git cherry-pick` (with `--no-commit` when modifications are needed) to replay commits.
+- **Use simple quotes for commit messages** — write `git commit -m 'message'`, not heredoc `$(cat <<'EOF'...)`. Command substitution `$(...)` triggers a permission prompt. Only use heredoc syntax when the message itself contains single quotes.
+- **Always `git add` specific files** — never use `git add -A` or `git add .`. The worktree can pick up untracked home-directory files.

@@ -9,15 +9,26 @@
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git cat-file:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git ls-tree:*)",
 
       "Bash(git add:*)",
       "Bash(git stash:*)",
       "Bash(git checkout:*)",
       "Bash(git commit:*)",
       "Bash(git branch:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git reset:*)",
+      "Bash(git tag:*)",
       "Bash(git rebase:*)",
       "Bash(GIT_SEQUENCE_EDITOR=true git rebase:*)",
       "Bash(GIT_SEQUENCE_EDITOR=\":\" git rebase:*)",
+
+      "Bash(wc:*)",
+      "Bash(cat:*)",
 
       "WebFetch(domain:zulip.com)",
 
