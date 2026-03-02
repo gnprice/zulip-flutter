@@ -1321,12 +1321,14 @@ TestGlobalStore globalStore({
   Map<BoolGlobalSetting, bool>? boolGlobalSettings,
   Map<IntGlobalSetting, int>? intGlobalSettings,
   List<Account> accounts = const [],
+  Iterable<PushKey>? pushKeys,
 }) {
   return TestGlobalStore(
     globalSettings: globalSettings,
     boolGlobalSettings: boolGlobalSettings,
     intGlobalSettings: intGlobalSettings,
     accounts: accounts,
+    pushKeys: pushKeys,
   );
 }
 const _globalStore = globalStore;
