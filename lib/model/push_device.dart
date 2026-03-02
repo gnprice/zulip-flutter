@@ -74,6 +74,11 @@ class PushDeviceManager extends HasRealmStore {
         'Device does not support notifications');
     }
 
+    if (!realmPushNotificationsEnabled) {
+      return PushRegistrationStatus(.error,
+        'Server does not support notifications');
+    }
+
     if (zulipFeatureLevel < 468) { // TODO(server-12)
       return PushRegistrationStatus(.ok, 'legacy because old server');
     }
