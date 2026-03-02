@@ -89,6 +89,11 @@ class PushDeviceManager extends HasRealmStore {
 
     final fromServer = thisDevice;
     if (fromServer == null) {
+      if (_pushRegistrationRequestError != null) {
+        return PushRegistrationStatus(.error,
+          'Error: The server said: $_pushRegistrationRequestError');
+      }
+
       return switch (_ageOfPushRegistrationAttempt()) {
         null =>                         PushRegistrationStatus(.pending,
             'Preparing to set up notifications…'),
@@ -106,7 +111,12 @@ class PushDeviceManager extends HasRealmStore {
 
     if (fromServer.pushRegistrationErrorCode != null) {
       return PushRegistrationStatus(.error,
-        'Error from server: ${fromServer.pushRegistrationErrorCode}');
+        'Error reported by server: ${fromServer.pushRegistrationErrorCode}');
+    }
+
+    if (_pushRegistrationRequestError != null) {
+      return PushRegistrationStatus(.error,
+        'Error: The server said: $_pushRegistrationRequestError');
     }
 
     return switch (_ageOfPushRegistrationAttempt()) {
@@ -132,6 +142,8 @@ class PushDeviceManager extends HasRealmStore {
     }
     return ZulipBinding.instance.utcNow().difference(attemptTimestamp);
   }
+
+  Object? _pushRegistrationRequestError;
 
   void handleDeviceEvent(DeviceEvent event) {
     switch (event) {
@@ -333,7 +345,7 @@ class PushDeviceManager extends HasRealmStore {
         deviceId: account.deviceId!, key: keyArgs, token: tokenArgs);
       assert(debugLog('registerPushDevice: success'));
     } catch (e) {
-      // TODO(#1764) handle errors
+      _pushRegistrationRequestError = e; // TODO(#1764) more detail? retry on non-4xx?
     }
   }
 
