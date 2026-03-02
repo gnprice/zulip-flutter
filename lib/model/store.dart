@@ -667,7 +667,7 @@ class PerAccountStore extends PerAccountStoreBase with
       emoji: EmojiStoreImpl(core: core,
         allRealmEmoji: initialSnapshot.realmEmoji),
       userSettings: initialSnapshot.userSettings,
-      pushDevices: PushDeviceManager(core: core,
+      pushDevices: PushDeviceManager(realm: realm,
         devices: initialSnapshot.devices ?? {}),
       savedSnippets: SavedSnippetStoreImpl(core: core,
         savedSnippets: initialSnapshot.savedSnippets ?? []),

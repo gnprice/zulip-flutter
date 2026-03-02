@@ -13,13 +13,14 @@ import '../api/route/notifications.dart';
 import '../log.dart';
 import '../notifications/receive.dart';
 import 'binding.dart';
+import 'realm.dart';
 import 'store.dart';
 
 /// Manages telling the server this device's push token,
 /// and tracking the server's responses on the status of devices and push tokens.
-class PushDeviceManager extends PerAccountStoreBase {
+class PushDeviceManager extends HasRealmStore {
   PushDeviceManager({
-    required super.core,
+    required super.realm,
     required Map<int, ClientDevice> devices,
   }) : _devices = devices {
     _init();
