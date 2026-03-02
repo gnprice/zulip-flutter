@@ -7,6 +7,7 @@
       "Bash(wc:*)",
       "Bash(grep:*)",
       "Bash(find:*)",
+      "Bash(jq:*)",
 
       "Bash(git status:*)",
       "Bash(git log:*)",
