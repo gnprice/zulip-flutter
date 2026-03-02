@@ -119,6 +119,8 @@ class InitialSnapshot {
 
   final bool realmPresenceDisabled;
 
+  final bool realmPushNotificationsEnabled;
+
   final Map<String, RealmDefaultExternalAccount> realmDefaultExternalAccounts;
 
   final int maxFileUploadSizeMib;
@@ -208,6 +210,7 @@ class InitialSnapshot {
     required this.realmEnableReadReceipts,
     required this.realmIconUrl,
     required this.realmPresenceDisabled,
+    required this.realmPushNotificationsEnabled,
     required this.realmDefaultExternalAccounts,
     required this.maxFileUploadSizeMib,
     required this.serverThumbnailFormats,

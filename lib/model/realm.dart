@@ -64,6 +64,7 @@ mixin RealmStore on PerAccountStoreBase, UserGroupStore {
       : Duration(seconds: realmMessageContentEditLimitSeconds!);
   int? get realmMessageContentEditLimitSeconds;
   bool get realmPresenceDisabled;
+  bool get realmPushNotificationsEnabled;
   int get realmWaitingPeriodThreshold;
 
   //|//////////////////////////////
@@ -201,6 +202,8 @@ mixin ProxyRealmStore on RealmStore {
   @override
   bool get realmPresenceDisabled => realmStore.realmPresenceDisabled;
   @override
+  bool get realmPushNotificationsEnabled => realmStore.realmPushNotificationsEnabled;
+  @override
   int get realmWaitingPeriodThreshold => realmStore.realmWaitingPeriodThreshold;
   @override
   RealmWildcardMentionPolicy get realmWildcardMentionPolicy => realmStore.realmWildcardMentionPolicy;
@@ -263,6 +266,7 @@ class RealmStoreImpl extends HasUserGroupStore with RealmStore {
     realmMessageContentEditLimitSeconds = initialSnapshot.realmMessageContentEditLimitSeconds,
     realmEnableReadReceipts = initialSnapshot.realmEnableReadReceipts,
     realmPresenceDisabled = initialSnapshot.realmPresenceDisabled,
+    realmPushNotificationsEnabled = initialSnapshot.realmPushNotificationsEnabled,
     realmWaitingPeriodThreshold = initialSnapshot.realmWaitingPeriodThreshold,
     realmWildcardMentionPolicy = initialSnapshot.realmWildcardMentionPolicy,
     realmDeleteOwnMessagePolicy = initialSnapshot.realmDeleteOwnMessagePolicy,
@@ -426,6 +430,8 @@ class RealmStoreImpl extends HasUserGroupStore with RealmStore {
   final int? realmMessageContentEditLimitSeconds;
   @override
   final bool realmPresenceDisabled;
+  @override
+  final bool realmPushNotificationsEnabled;
   @override
   final int realmWaitingPeriodThreshold;
 

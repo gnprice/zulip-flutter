@@ -123,6 +123,8 @@ InitialSnapshot _$InitialSnapshotFromJson(
   realmEnableReadReceipts: json['realm_enable_read_receipts'] as bool,
   realmIconUrl: Uri.parse(json['realm_icon_url'] as String),
   realmPresenceDisabled: json['realm_presence_disabled'] as bool,
+  realmPushNotificationsEnabled:
+      json['realm_push_notifications_enabled'] as bool,
   realmDefaultExternalAccounts:
       (json['realm_default_external_accounts'] as Map<String, dynamic>).map(
         (k, e) => MapEntry(
@@ -216,6 +218,7 @@ Map<String, dynamic> _$InitialSnapshotToJson(
   'realm_enable_read_receipts': instance.realmEnableReadReceipts,
   'realm_icon_url': instance.realmIconUrl.toString(),
   'realm_presence_disabled': instance.realmPresenceDisabled,
+  'realm_push_notifications_enabled': instance.realmPushNotificationsEnabled,
   'realm_default_external_accounts': instance.realmDefaultExternalAccounts,
   'max_file_upload_size_mib': instance.maxFileUploadSizeMib,
   'server_thumbnail_formats': instance.serverThumbnailFormats,
