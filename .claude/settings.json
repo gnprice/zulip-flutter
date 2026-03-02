@@ -3,6 +3,8 @@
     "allow": [
       "Bash(ls:*)",
       "Bash(head:*)",
+      "Bash(cat:*)",
+      "Bash(wc:*)",
       "Bash(grep:*)",
       "Bash(find:*)",
 
@@ -22,13 +24,9 @@
       "Bash(git branch:*)",
       "Bash(git cherry-pick:*)",
       "Bash(git reset:*)",
-      "Bash(git tag:*)",
       "Bash(git rebase:*)",
       "Bash(GIT_SEQUENCE_EDITOR=true git rebase:*)",
       "Bash(GIT_SEQUENCE_EDITOR=\":\" git rebase:*)",
-
-      "Bash(wc:*)",
-      "Bash(cat:*)",
 
       "WebFetch(domain:zulip.com)",
 
