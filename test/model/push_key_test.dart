@@ -148,8 +148,6 @@ void main() {
   });
 
   group('maybeRotatePushKeys', () {
-    final thirtyDays = Duration(days: 30).inSeconds;
-
     late GlobalStore globalStore;
     late PerAccountStore store;
 
@@ -192,6 +190,8 @@ void main() {
 
     PushKey? getPushKeyById(int id) => globalStore.pushKeys.getPushKeyById(id);
 
+    const secondsPerDay = 86400;
+
     group('generate new key', () {
       test('generates key when no keys exist', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
@@ -203,7 +203,7 @@ void main() {
 
       test('generates key when latest is older than rotation interval', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final oldKey = mkKey(now - thirtyDays);
+        final oldKey = mkKey(now - 30 * secondsPerDay);
         initStore(async, pushKeys: [oldKey]);
 
         // A new key was generated…
@@ -212,13 +212,13 @@ void main() {
         // … distinct from the old key, which is still there.
         check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
           ..equals(oldKey)
-          ..createdTimestamp.equals(now - thirtyDays);
+          ..createdTimestamp.equals(now - 30 * secondsPerDay);
       }));
 
       test('no new key when latest is just under rotation interval', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // Latest key is 30 days minus 1 second old.
-        final key = mkKey(now - thirtyDays + 1);
+        final key = mkKey(now - 30 * secondsPerDay + 1);
         initStore(async, pushKeys: [key]);
 
         check(store.pushKeys.latestPushKey).equals(key);
@@ -275,7 +275,7 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // A key superseded exactly 30 days ago.
         final obsoleteKey = mkKey(now - 10000,
-          supersededTimestamp: now - thirtyDays);
+          supersededTimestamp: now - 30 * secondsPerDay);
         // A current key (so step 1 doesn't generate one).
         final currentKey = mkKey(now - 100);
         initStore(async, pushKeys: [obsoleteKey, currentKey]);
@@ -288,7 +288,7 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // A key superseded just under 30 days ago.
         final recentlySupersededKey = mkKey(now - 10000,
-          supersededTimestamp: now - thirtyDays + 1);
+          supersededTimestamp: now - 30 * secondsPerDay + 1);
         final currentKey = mkKey(now - 100);
         initStore(async, pushKeys: [recentlySupersededKey, currentKey]);
 
