@@ -151,14 +151,7 @@ void main() {
     late GlobalStore globalStore;
     late PerAccountStore store;
 
-    /// Set up a store with the given push keys, triggering
-    /// [PushDeviceManager._init] which calls [PushKeyStore.maybeRotatePushKeys].
-    ///
-    /// The [ackedPushKeyId] becomes [ClientDevice.pushKeyId] on this device
-    /// in the initial snapshot, so that the rotation logic sees it as
-    /// the server's acknowledged push key.
-    ///
-    /// Push keys passed here should be created with `eg.selfAccount`.
+    /// Set up the store, ultimately calling [PushKeyStore.maybeRotatePushKeys].
     void initStore(FakeAsync async, {
       List<PushKey>? pushKeys,
       int? ackedPushKeyId,
