@@ -183,7 +183,6 @@ void main() {
       test('generate key when no keys exist', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         initStore(async);
-
         check(store.pushKeys.latestPushKey).isNotNull()
           .createdTimestamp.equals(now);
       }));
@@ -192,11 +191,9 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 30 * secondsPerDay);
         initStore(async, pushKeys: [oldKey]);
-
-        // A new key was generated…
         check(store.pushKeys.latestPushKey).isNotNull()
           .createdTimestamp.equals(now);
-        // … distinct from the old key, which is still there.
+        // The old key is still there.
         check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
           ..equals(oldKey)
           ..createdTimestamp.equals(now - 30 * secondsPerDay);
@@ -206,7 +203,6 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final key = mkKey(now - 15 * secondsPerDay);
         initStore(async, pushKeys: [key]);
-
         check(store.pushKeys.latestPushKey).equals(key);
       }));
     });
@@ -218,10 +214,7 @@ void main() {
         final newKey = mkKey(now - 2 * secondsPerDay);
         initStore(async, pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
-
-        // The old key is now superseded.
         check(getPushKeyById(oldKey.pushKeyId)!).supersededTimestamp.equals(now);
-        // The new (acked) key is unaffected.
         check(getPushKeyById(newKey.pushKeyId)!).supersededTimestamp.isNull();
       }));
 
@@ -229,16 +222,14 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 31 * secondsPerDay);
         final newKey = mkKey(now - secondsPerDay);
-        // Initially no acked push key.
         initStore(async, pushKeys: [oldKey, newKey]);
-        // No superseding yet.
         check(getPushKeyById(oldKey.pushKeyId)!).supersededTimestamp.isNull();
 
         // A device-update event acks the new key.
         await store.handleEvent(eg.deviceUpdateEvent(store.account.deviceId!,
           pushKeyId: JsonNullable(newKey.pushKeyId)));
         async.flushMicrotasks();
-
+        // The older key is superseded.
         check(getPushKeyById(oldKey.pushKeyId)!).supersededTimestamp.equals(now);
         check(getPushKeyById(newKey.pushKeyId)!).supersededTimestamp.isNull();
       }));
@@ -250,7 +241,6 @@ void main() {
         final newKey = mkKey(now - 2 * secondsPerDay);
         initStore(async, pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
-
         // The already-superseded key keeps its original timestamp.
         check(getPushKeyById(oldKey.pushKeyId)!).supersededTimestamp.equals(now - secondsPerDay);
       }));
@@ -260,7 +250,6 @@ void main() {
         final key1 = mkKey(now - 32 * secondsPerDay);
         final key2 = mkKey(now - 2 * secondsPerDay);
         initStore(async, pushKeys: [key1, key2]);
-
         check(getPushKeyById(key1.pushKeyId)!).supersededTimestamp.isNull();
         check(getPushKeyById(key2.pushKeyId)!).supersededTimestamp.isNull();
       }));
@@ -273,7 +262,6 @@ void main() {
           supersededTimestamp: now - 30 * secondsPerDay);
         final currentKey = mkKey(now - 31 * secondsPerDay);
         initStore(async, pushKeys: [oldKey, currentKey]);
-
         check(getPushKeyById(oldKey.pushKeyId)).isNull();
         check(getPushKeyById(currentKey.pushKeyId)).isNotNull();
       }));
@@ -284,7 +272,6 @@ void main() {
           supersededTimestamp: now - 30 * secondsPerDay + 1);
         final currentKey = mkKey(now - 31 * secondsPerDay);
         initStore(async, pushKeys: [oldKey, currentKey]);
-
         check(getPushKeyById(oldKey.pushKeyId)).isNotNull();
       }));
 
@@ -292,7 +279,6 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final key = mkKey(now - 32 * secondsPerDay);
         initStore(async, pushKeys: [key]);
-
         check(getPushKeyById(key.pushKeyId)!).supersededTimestamp.isNull();
       }));
     });
