@@ -193,7 +193,7 @@ void main() {
     const secondsPerDay = 86400;
 
     group('generate new key', () {
-      test('generates key when no keys exist', () => awaitFakeAsync((async) async {
+      test('generate key when no keys exist', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         initStore(async);
 
@@ -201,7 +201,7 @@ void main() {
           .createdTimestamp.equals(now);
       }));
 
-      test('generates key when latest is older than rotation interval', () => awaitFakeAsync((async) async {
+      test('generate key when latest is older than rotation interval', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 30 * secondsPerDay);
         initStore(async, pushKeys: [oldKey]);
@@ -225,7 +225,7 @@ void main() {
     });
 
     group('mark superseded keys', () {
-      test('marks older keys when server has acked push key', () => awaitFakeAsync((async) async {
+      test('mark older keys when server has acked push key', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 32 * secondsPerDay);
         final newKey = mkKey(now - 2 * secondsPerDay);
@@ -240,7 +240,7 @@ void main() {
           .supersededTimestamp.isNull();
       }));
 
-      test('does not re-mark already-superseded keys', () => awaitFakeAsync((async) async {
+      test('no re-mark already-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 32 * secondsPerDay,
           supersededTimestamp: now - secondsPerDay);
@@ -267,7 +267,7 @@ void main() {
     });
 
     group('delete obsolete keys', () {
-      test('deletes key superseded for retention duration', () => awaitFakeAsync((async) async {
+      test('delete key superseded for retention duration', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 32 * secondsPerDay,
           supersededTimestamp: now - 30 * secondsPerDay);
@@ -278,7 +278,7 @@ void main() {
         check(getPushKeyById(currentKey.pushKeyId)).isNotNull();
       }));
 
-      test('does not delete key more recently superseded', () => awaitFakeAsync((async) async {
+      test('no delete key more recently superseded', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 32 * secondsPerDay,
           supersededTimestamp: now - 30 * secondsPerDay + 1);
@@ -288,7 +288,7 @@ void main() {
         check(getPushKeyById(oldKey.pushKeyId)).isNotNull();
       }));
 
-      test('does not delete non-superseded keys', () => awaitFakeAsync((async) async {
+      test('no delete non-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final key = mkKey(now - 32 * secondsPerDay);
         initStore(async, pushKeys: [key]);
