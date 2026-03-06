@@ -233,11 +233,9 @@ void main() {
           ackedPushKeyId: newKey.pushKeyId);
 
         // The old key is now superseded.
-        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
-          .supersededTimestamp.equals(now);
+        check(getPushKeyById(oldKey.pushKeyId)!).supersededTimestamp.equals(now);
         // The new (acked) key is unaffected.
-        check(getPushKeyById(newKey.pushKeyId)).isNotNull()
-          .supersededTimestamp.isNull();
+        check(getPushKeyById(newKey.pushKeyId)!).supersededTimestamp.isNull();
       }));
 
       test('act on device event', () => awaitFakeAsync((async) async {
@@ -247,18 +245,15 @@ void main() {
         // Initially no acked push key.
         initStore(async, pushKeys: [oldKey, newKey]);
         // No superseding yet.
-        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
-          .supersededTimestamp.isNull();
+        check(getPushKeyById(oldKey.pushKeyId)!).supersededTimestamp.isNull();
 
         // A device-update event acks the new key.
         await store.handleEvent(eg.deviceUpdateEvent(store.account.deviceId!,
           pushKeyId: JsonNullable(newKey.pushKeyId)));
         async.flushMicrotasks();
 
-        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
-          .supersededTimestamp.equals(now);
-        check(getPushKeyById(newKey.pushKeyId)).isNotNull()
-          .supersededTimestamp.isNull();
+        check(getPushKeyById(oldKey.pushKeyId)!).supersededTimestamp.equals(now);
+        check(getPushKeyById(newKey.pushKeyId)!).supersededTimestamp.isNull();
       }));
 
       test('no re-mark already-superseded keys', () => awaitFakeAsync((async) async {
@@ -270,8 +265,7 @@ void main() {
           ackedPushKeyId: newKey.pushKeyId);
 
         // The already-superseded key keeps its original timestamp.
-        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
-          .supersededTimestamp.equals(now - secondsPerDay);
+        check(getPushKeyById(oldKey.pushKeyId)!).supersededTimestamp.equals(now - secondsPerDay);
       }));
 
       test('no superseding when no acked push key', () => awaitFakeAsync((async) async {
@@ -280,10 +274,8 @@ void main() {
         final key2 = mkKey(now - 2 * secondsPerDay);
         initStore(async, pushKeys: [key1, key2]);
 
-        check(getPushKeyById(key1.pushKeyId)).isNotNull()
-          .supersededTimestamp.isNull();
-        check(getPushKeyById(key2.pushKeyId)).isNotNull()
-          .supersededTimestamp.isNull();
+        check(getPushKeyById(key1.pushKeyId)!).supersededTimestamp.isNull();
+        check(getPushKeyById(key2.pushKeyId)!).supersededTimestamp.isNull();
       }));
     });
 
@@ -314,8 +306,7 @@ void main() {
         final key = mkKey(now - 32 * secondsPerDay);
         initStore(async, pushKeys: [key]);
 
-        check(getPushKeyById(key.pushKeyId)).isNotNull()
-          .supersededTimestamp.isNull();
+        check(getPushKeyById(key.pushKeyId)!).supersededTimestamp.isNull();
       }));
     });
   });
