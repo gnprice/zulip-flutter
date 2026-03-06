@@ -1,5 +1,6 @@
 import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/database.dart';
@@ -160,7 +161,7 @@ void main() {
     /// the server's acknowledged push key.
     ///
     /// Push keys passed here should be created with `eg.selfAccount`.
-    void prepareStoreForRotation({
+    void initStore(FakeAsync async, {
       List<PushKey>? pushKeys,
       int? ackedPushKeyId,
     }) {
@@ -178,6 +179,7 @@ void main() {
         initialSnapshot: eg.initialSnapshot(devices: {
           eg.selfAccount.deviceId!: eg.clientDevice(pushKeyId: ackedPushKeyId),
         }));
+      async.flushMicrotasks();
     }
 
     PushKey mkKey(int createdTimestamp, {int? supersededTimestamp}) {
@@ -193,8 +195,7 @@ void main() {
     group('generate new key', () {
       test('generates key when no keys exist', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        prepareStoreForRotation();
-        async.flushMicrotasks();
+        initStore(async);
 
         check(store.pushKeys.latestPushKey).isNotNull()
           .createdTimestamp.equals(now);
@@ -203,8 +204,7 @@ void main() {
       test('generates key when latest is older than rotation interval', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - thirtyDays);
-        prepareStoreForRotation(pushKeys: [oldKey]);
-        async.flushMicrotasks();
+        initStore(async, pushKeys: [oldKey]);
 
         // A new key was generated…
         check(store.pushKeys.latestPushKey).isNotNull()
@@ -219,8 +219,7 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // Latest key is 30 days minus 1 second old.
         final key = mkKey(now - thirtyDays + 1);
-        prepareStoreForRotation(pushKeys: [key]);
-        async.flushMicrotasks();
+        initStore(async, pushKeys: [key]);
 
         check(store.pushKeys.latestPushKey).equals(key);
       }));
@@ -231,10 +230,9 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 200);
         final newKey = mkKey(now - 100);
-        prepareStoreForRotation(
+        initStore(async,
           pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
-        async.flushMicrotasks();
 
         // The old key is now superseded.
         check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
@@ -250,10 +248,9 @@ void main() {
         final oldKey = mkKey(now - 200,
           supersededTimestamp: earlierSupersededTimestamp);
         final newKey = mkKey(now - 100);
-        prepareStoreForRotation(
+        initStore(async,
           pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
-        async.flushMicrotasks();
 
         // The already-superseded key keeps its original timestamp.
         check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
@@ -264,8 +261,7 @@ void main() {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final key1 = mkKey(now - 200);
         final key2 = mkKey(now - 100);
-        prepareStoreForRotation(pushKeys: [key1, key2]);
-        async.flushMicrotasks();
+        initStore(async, pushKeys: [key1, key2]);
 
         check(getPushKeyById(key1.pushKeyId)).isA<PushKey>()
           .supersededTimestamp.isNull();
@@ -282,8 +278,7 @@ void main() {
           supersededTimestamp: now - thirtyDays);
         // A current key (so step 1 doesn't generate one).
         final currentKey = mkKey(now - 100);
-        prepareStoreForRotation(pushKeys: [obsoleteKey, currentKey]);
-        async.flushMicrotasks();
+        initStore(async, pushKeys: [obsoleteKey, currentKey]);
 
         check(getPushKeyById(obsoleteKey.pushKeyId)).isNull();
         check(getPushKeyById(currentKey.pushKeyId)).isA<PushKey>();
@@ -295,9 +290,7 @@ void main() {
         final recentlySupersededKey = mkKey(now - 10000,
           supersededTimestamp: now - thirtyDays + 1);
         final currentKey = mkKey(now - 100);
-        prepareStoreForRotation(
-          pushKeys: [recentlySupersededKey, currentKey]);
-        async.flushMicrotasks();
+        initStore(async, pushKeys: [recentlySupersededKey, currentKey]);
 
         check(getPushKeyById(recentlySupersededKey.pushKeyId))
           .isA<PushKey>();
@@ -306,8 +299,7 @@ void main() {
       test('does not delete non-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final key = mkKey(now - 100);
-        prepareStoreForRotation(pushKeys: [key]);
-        async.flushMicrotasks();
+        initStore(async, pushKeys: [key]);
 
         check(getPushKeyById(key.pushKeyId)).isA<PushKey>()
           .supersededTimestamp.isNull();

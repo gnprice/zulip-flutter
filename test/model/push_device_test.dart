@@ -1,5 +1,6 @@
 import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:test/scaffolding.dart';
@@ -192,7 +193,7 @@ void main() {
   group('push key rotation', () {
     late GlobalStore globalStore;
 
-    void prepareStoreForRotation({
+    void initStore(FakeAsync async, {
       List<PushKey>? pushKeys,
       int? ackedPushKeyId,
     }) {
@@ -224,8 +225,7 @@ void main() {
       final newKey = eg.pushKey(account: eg.selfAccount,
         createdTimestamp: now - 100);
       // Initially no acked push key.
-      prepareStoreForRotation(pushKeys: [oldKey, newKey]);
-      async.flushMicrotasks();
+      initStore(async, pushKeys: [oldKey, newKey]);
       // No superseding yet.
       check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
         .supersededTimestamp.isNull();
