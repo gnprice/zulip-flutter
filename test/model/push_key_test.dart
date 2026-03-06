@@ -4,9 +4,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/database.dart';
-import 'package:zulip/model/push_device.dart';
 import 'package:zulip/model/store.dart';
-import 'package:zulip/notifications/receive.dart';
 
 import '../example_data.dart' as eg;
 import '../fake_async.dart';
@@ -156,10 +154,6 @@ void main() {
       List<PushKey>? pushKeys,
       int? ackedPushKeyId,
     }) {
-      addTearDown(testBinding.reset);
-      addTearDown(NotificationService.debugReset);
-      PushDeviceManager.debugAutoPause = true;
-      addTearDown(() => PushDeviceManager.debugAutoPause = false);
       globalStore = eg.globalStore(
         accounts: [eg.selfAccount],
         pushKeys: pushKeys ?? [],
