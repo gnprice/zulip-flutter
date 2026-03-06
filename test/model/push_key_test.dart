@@ -206,18 +206,19 @@ void main() {
 
       test('generates key when latest is older than rotation interval',
           () => awaitFakeAsync((async) async {
+        final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = eg.pushKey(account: eg.selfAccount,
-          pushKeyId: 100, createdTimestamp: baseTimestamp - thirtyDays);
+          pushKeyId: 100, createdTimestamp: now - thirtyDays);
         prepareStoreForRotation(pushKeys: [oldKey]);
         async.flushMicrotasks();
 
         // A new key was generated, distinct from the old one.
         check(store.pushKeys.latestPushKey).isNotNull()
           ..pushKeyId.not((it) => it.equals(100))
-          ..createdTimestamp.equals(baseTimestamp);
+          ..createdTimestamp.equals(now);
         // The old key is still there.
         check(getPushKeyById(100)).isA<PushKey>();
-      }, initialTime: baseTime));
+      }));
 
       test('no new key when latest is fresh',
           () => awaitFakeAsync((async) async {
