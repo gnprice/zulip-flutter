@@ -227,7 +227,7 @@ void main() {
       // Initially no acked push key.
       initStore(async, pushKeys: [oldKey, newKey]);
       // No superseding yet.
-      check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
+      check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
         .supersededTimestamp.isNull();
 
       // A device-update event acks the new key.
@@ -235,9 +235,9 @@ void main() {
         pushKeyId: JsonNullable(newKey.pushKeyId)));
       async.flushMicrotasks();
 
-      check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
+      check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
         .supersededTimestamp.equals(now);
-      check(getPushKeyById(newKey.pushKeyId)).isA<PushKey>()
+      check(getPushKeyById(newKey.pushKeyId)).isNotNull()
         .supersededTimestamp.isNull();
     }));
   });

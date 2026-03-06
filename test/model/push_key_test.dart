@@ -233,10 +233,10 @@ void main() {
           ackedPushKeyId: newKey.pushKeyId);
 
         // The old key is now superseded.
-        check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
+        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
           .supersededTimestamp.equals(now);
         // The new (acked) key is unaffected.
-        check(getPushKeyById(newKey.pushKeyId)).isA<PushKey>()
+        check(getPushKeyById(newKey.pushKeyId)).isNotNull()
           .supersededTimestamp.isNull();
       }));
 
@@ -250,7 +250,7 @@ void main() {
           ackedPushKeyId: newKey.pushKeyId);
 
         // The already-superseded key keeps its original timestamp.
-        check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
+        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
           .supersededTimestamp.equals(now - secondsPerDay);
       }));
 
@@ -260,9 +260,9 @@ void main() {
         final key2 = mkKey(now - 2 * secondsPerDay);
         initStore(async, pushKeys: [key1, key2]);
 
-        check(getPushKeyById(key1.pushKeyId)).isA<PushKey>()
+        check(getPushKeyById(key1.pushKeyId)).isNotNull()
           .supersededTimestamp.isNull();
-        check(getPushKeyById(key2.pushKeyId)).isA<PushKey>()
+        check(getPushKeyById(key2.pushKeyId)).isNotNull()
           .supersededTimestamp.isNull();
       }));
     });
@@ -276,7 +276,7 @@ void main() {
         initStore(async, pushKeys: [oldKey, currentKey]);
 
         check(getPushKeyById(oldKey.pushKeyId)).isNull();
-        check(getPushKeyById(currentKey.pushKeyId)).isA<PushKey>();
+        check(getPushKeyById(currentKey.pushKeyId)).isNotNull();
       }));
 
       test('does not delete key more recently superseded', () => awaitFakeAsync((async) async {
@@ -286,8 +286,7 @@ void main() {
         final currentKey = mkKey(now - 31 * secondsPerDay);
         initStore(async, pushKeys: [oldKey, currentKey]);
 
-        check(getPushKeyById(oldKey.pushKeyId))
-          .isA<PushKey>();
+        check(getPushKeyById(oldKey.pushKeyId)).isNotNull();
       }));
 
       test('does not delete non-superseded keys', () => awaitFakeAsync((async) async {
@@ -295,7 +294,7 @@ void main() {
         final key = mkKey(now - 32 * secondsPerDay);
         initStore(async, pushKeys: [key]);
 
-        check(getPushKeyById(key.pushKeyId)).isA<PushKey>()
+        check(getPushKeyById(key.pushKeyId)).isNotNull()
           .supersededTimestamp.isNull();
       }));
     });
