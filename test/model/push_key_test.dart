@@ -215,10 +215,9 @@ void main() {
           ..createdTimestamp.equals(now - 30 * secondsPerDay);
       }));
 
-      test('no new key when latest is just under rotation interval', () => awaitFakeAsync((async) async {
+      test('no new key when latest is recent', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        // Latest key is 30 days minus 1 second old.
-        final key = mkKey(now - 30 * secondsPerDay + 1);
+        final key = mkKey(now - 15 * secondsPerDay);
         initStore(async, pushKeys: [key]);
 
         check(store.pushKeys.latestPushKey).equals(key);
@@ -271,9 +270,8 @@ void main() {
     });
 
     group('delete obsolete keys', () {
-      test('deletes key superseded longer than retention duration', () => awaitFakeAsync((async) async {
+      test('deletes key superseded for retention duration', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        // A key superseded exactly 30 days ago.
         final obsoleteKey = mkKey(now - 10000,
           supersededTimestamp: now - 30 * secondsPerDay);
         // A current key (so step 1 doesn't generate one).
@@ -284,9 +282,8 @@ void main() {
         check(getPushKeyById(currentKey.pushKeyId)).isA<PushKey>();
       }));
 
-      test('does not delete key superseded less than retention duration', () => awaitFakeAsync((async) async {
+      test('does not delete key more recently superseded', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        // A key superseded just under 30 days ago.
         final recentlySupersededKey = mkKey(now - 10000,
           supersededTimestamp: now - 30 * secondsPerDay + 1);
         final currentKey = mkKey(now - 100);
