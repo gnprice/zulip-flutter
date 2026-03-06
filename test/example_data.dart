@@ -1049,6 +1049,25 @@ const _unreadMsgs = unreadMsgs;
 // Events.
 //
 
+DeviceUpdateEvent deviceUpdateEvent(
+  int deviceId, {
+  JsonNullable<int>? pushKeyId,
+  JsonNullable<String>? pushTokenId,
+  JsonNullable<String>? pendingPushTokenId,
+  JsonNullable<int>? pushTokenLastUpdatedTimestamp,
+  JsonNullable<String>? pushRegistrationErrorCode,
+}) {
+  return DeviceUpdateEvent(
+    id: 1,
+    deviceId: deviceId,
+    pushKeyId: pushKeyId,
+    pushTokenId: pushTokenId,
+    pendingPushTokenId: pendingPushTokenId,
+    pushTokenLastUpdatedTimestamp: pushTokenLastUpdatedTimestamp,
+    pushRegistrationErrorCode: pushRegistrationErrorCode,
+  );
+}
+
 UserTopicEvent userTopicEvent(
     int streamId, String topic, UserTopicVisibilityPolicy visibilityPolicy) {
   return UserTopicEvent(

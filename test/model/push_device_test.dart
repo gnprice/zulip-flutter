@@ -3,7 +3,6 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:test/scaffolding.dart';
-import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/api/route/account.dart';
 import 'package:zulip/model/push_device.dart';
@@ -232,15 +231,8 @@ void main() {
         .supersededTimestamp.isNull();
 
       // A device-update event acks the new key.
-      await store.handleEvent(DeviceUpdateEvent(
-        id: 1,
-        deviceId: store.account.deviceId!,
-        pushKeyId: JsonNullable(newKey.pushKeyId),
-        pushTokenId: null,
-        pendingPushTokenId: null,
-        pushTokenLastUpdatedTimestamp: null,
-        pushRegistrationErrorCode: null,
-      ));
+      await store.handleEvent(eg.deviceUpdateEvent(store.account.deviceId!,
+        pushKeyId: JsonNullable(newKey.pushKeyId)));
       async.flushMicrotasks();
 
       check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
