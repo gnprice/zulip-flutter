@@ -99,10 +99,8 @@ class PushKeyStore {
   /// This contains a subset of `_globalPushKeys._pushKeys`.
   final Map<int, PushKey> _pushKeys;
 
-  Iterable<PushKey> _getPushKeys() => _pushKeys.values;
-
   /// The most recently generated push key for this account.
-  PushKey? get latestPushKey => maxBy(_getPushKeys(), (k) => k.createdTimestamp);
+  PushKey? get latestPushKey => maxBy(_pushKeys.values, (k) => k.createdTimestamp);
 
   /// Add a push key to the store.
   ///
