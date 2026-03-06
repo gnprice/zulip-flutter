@@ -240,6 +240,27 @@ void main() {
           .supersededTimestamp.isNull();
       }));
 
+      test('act on device event', () => awaitFakeAsync((async) async {
+        final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
+        final oldKey = mkKey(now - 31 * secondsPerDay);
+        final newKey = mkKey(now - secondsPerDay);
+        // Initially no acked push key.
+        initStore(async, pushKeys: [oldKey, newKey]);
+        // No superseding yet.
+        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
+          .supersededTimestamp.isNull();
+
+        // A device-update event acks the new key.
+        await store.handleEvent(eg.deviceUpdateEvent(store.account.deviceId!,
+          pushKeyId: JsonNullable(newKey.pushKeyId)));
+        async.flushMicrotasks();
+
+        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
+          .supersededTimestamp.equals(now);
+        check(getPushKeyById(newKey.pushKeyId)).isNotNull()
+          .supersededTimestamp.isNull();
+      }));
+
       test('no re-mark already-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 32 * secondsPerDay,

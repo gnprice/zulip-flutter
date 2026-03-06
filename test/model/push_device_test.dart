@@ -190,55 +190,5 @@ void main() {
     });
   });
 
-  group('push key rotation', () {
-    late GlobalStore globalStore;
-
-    void initStore(FakeAsync async, {
-      List<PushKey>? pushKeys,
-      int? ackedPushKeyId,
-    }) {
-      addTearDown(testBinding.reset);
-      addTearDown(NotificationService.debugReset);
-      PushDeviceManager.debugAutoPause = true;
-      addTearDown(() => PushDeviceManager.debugAutoPause = false);
-      globalStore = eg.globalStore(
-        accounts: [eg.selfAccount],
-        pushKeys: pushKeys ?? [],
-      );
-      store = eg.store(
-        globalStore: globalStore,
-        account: eg.selfAccount,
-        initialSnapshot: eg.initialSnapshot(devices: {
-          eg.selfAccount.deviceId!: eg.clientDevice(pushKeyId: ackedPushKeyId),
-        }));
-      model = store.pushDevices;
-      connection = store.connection as FakeApiConnection;
-    }
-
-    PushKey? getPushKeyById(int id) => globalStore.pushKeys.getPushKeyById(id);
-
-    test('marks older keys when device event acks a push key',
-        () => awaitFakeAsync((async) async {
-      final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-      final oldKey = eg.pushKey(account: eg.selfAccount,
-        createdTimestamp: now - 31 * 86400);
-      final newKey = eg.pushKey(account: eg.selfAccount,
-        createdTimestamp: now - 86400);
-      // Initially no acked push key.
-      initStore(async, pushKeys: [oldKey, newKey]);
-      // No superseding yet.
-      check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
-        .supersededTimestamp.isNull();
-
-      // A device-update event acks the new key.
-      await store.handleEvent(eg.deviceUpdateEvent(store.account.deviceId!,
-        pushKeyId: JsonNullable(newKey.pushKeyId)));
-      async.flushMicrotasks();
-
-      check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
-        .supersededTimestamp.equals(now);
-      check(getPushKeyById(newKey.pushKeyId)).isNotNull()
-        .supersededTimestamp.isNull();
-    }));
-  });
+  // For tests of _maybeRotatePushKeys and its call sites, see push_key_test.dart.
 }
