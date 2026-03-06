@@ -252,12 +252,9 @@ void main() {
       test('does not re-mark already-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final earlierSupersededTimestamp = now - 500;
-        final oldKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 200)
-          .copyWith(
-            supersededTimestamp: drift.Value(earlierSupersededTimestamp));
-        final newKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 100);
+        final oldKey = mkKey(now - 200,
+          supersededTimestamp: earlierSupersededTimestamp);
+        final newKey = mkKey(now - 100);
         prepareStoreForRotation(
           pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
@@ -270,10 +267,8 @@ void main() {
 
       test('no superseding when no acked push key', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final key1 = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 200);
-        final key2 = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 100);
+        final key1 = mkKey(now - 200);
+        final key2 = mkKey(now - 100);
         prepareStoreForRotation(pushKeys: [key1, key2]);
         async.flushMicrotasks();
 
@@ -288,13 +283,10 @@ void main() {
       test('deletes key superseded longer than retention duration', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // A key superseded exactly 30 days ago.
-        final obsoleteKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 10000)
-          .copyWith(
-            supersededTimestamp: drift.Value(now - thirtyDays));
+        final obsoleteKey = mkKey(now - 10000,
+          supersededTimestamp: now - thirtyDays);
         // A current key (so step 1 doesn't generate one).
-        final currentKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 100);
+        final currentKey = mkKey(now - 100);
         prepareStoreForRotation(pushKeys: [obsoleteKey, currentKey]);
         async.flushMicrotasks();
 
@@ -305,12 +297,9 @@ void main() {
       test('does not delete key superseded less than retention duration', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // A key superseded just under 30 days ago.
-        final recentlySupersededKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 10000)
-          .copyWith(
-            supersededTimestamp: drift.Value(now - thirtyDays + 1));
-        final currentKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 100);
+        final recentlySupersededKey = mkKey(now - 10000,
+          supersededTimestamp: now - thirtyDays + 1);
+        final currentKey = mkKey(now - 100);
         prepareStoreForRotation(
           pushKeys: [recentlySupersededKey, currentKey]);
         async.flushMicrotasks();
@@ -321,8 +310,7 @@ void main() {
 
       test('does not delete non-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final key = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 100);
+        final key = mkKey(now - 100);
         prepareStoreForRotation(pushKeys: [key]);
         async.flushMicrotasks();
 
