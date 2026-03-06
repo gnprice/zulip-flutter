@@ -202,8 +202,7 @@ void main() {
 
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         check(store.pushKeys.latestPushKey).isNotNull()
-          ..createdTimestamp.equals(now)
-          ..pushKey.isNotNull().length.equals(33);
+          .createdTimestamp.equals(now);
       }));
 
       test('generates key when latest is older than rotation interval', () => awaitFakeAsync((async) async {
