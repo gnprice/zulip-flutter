@@ -197,10 +197,10 @@ void main() {
 
     group('generate new key', () {
       test('generates key when no keys exist', () => awaitFakeAsync((async) async {
+        final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         prepareStoreForRotation();
         async.flushMicrotasks();
 
-        final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         check(store.pushKeys.latestPushKey).isNotNull()
           .createdTimestamp.equals(now);
       }));
