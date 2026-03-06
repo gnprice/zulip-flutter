@@ -185,6 +185,14 @@ void main() {
           )}));
     }
 
+    PushKey mkKey(int createdTimestamp, {int? supersededTimestamp}) {
+      return eg.pushKey(
+        account: eg.selfAccount,
+        createdTimestamp: createdTimestamp,
+        supersededTimestamp: supersededTimestamp,
+      );
+    }
+
     PushKey? getPushKeyById(int id) => globalStore.pushKeys.getPushKeyById(id);
 
     group('generate new key', () {
@@ -200,8 +208,7 @@ void main() {
 
       test('generates key when latest is older than rotation interval', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final oldKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - thirtyDays);
+        final oldKey = mkKey(now - thirtyDays);
         prepareStoreForRotation(pushKeys: [oldKey]);
         async.flushMicrotasks();
 
@@ -216,8 +223,7 @@ void main() {
       test('no new key when latest is just under rotation interval', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // Latest key is 30 days minus 1 second old.
-        final key = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - thirtyDays + 1);
+        final key = mkKey(now - thirtyDays + 1);
         prepareStoreForRotation(pushKeys: [key]);
         async.flushMicrotasks();
 
@@ -228,10 +234,8 @@ void main() {
     group('mark superseded keys', () {
       test('marks older keys when server has acked push key', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final oldKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 200);
-        final newKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - 100);
+        final oldKey = mkKey(now - 200);
+        final newKey = mkKey(now - 100);
         prepareStoreForRotation(
           pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);

@@ -435,12 +435,14 @@ PushKey pushKey({
   int? pushKeyId,
   Uint8List? pushKey,
   int? createdTimestamp,
+  int? supersededTimestamp,
 }) {
   return PushKey(
     accountId: account.id,
     pushKeyId: pushKeyId ?? Random().nextInt(1 << 32),
     pushKey: pushKey ?? _pushKeyKey(),
     createdTimestamp: createdTimestamp ?? 1771389742,
+    supersededTimestamp: supersededTimestamp,
   );
 }
 
