@@ -187,7 +187,7 @@ void main() {
           .createdTimestamp.equals(now);
       }));
 
-      test('generate key when latest is older than rotation interval', () => awaitFakeAsync((async) async {
+      test('generate key when latest is old enough', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 30 * secondsPerDay);
         initStore(async, pushKeys: [oldKey]);
@@ -256,7 +256,7 @@ void main() {
     });
 
     group('delete obsolete keys', () {
-      test('delete key superseded for retention duration', () => awaitFakeAsync((async) async {
+      test('delete key superseded for long enough', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = mkKey(now - 32 * secondsPerDay,
           supersededTimestamp: now - 30 * secondsPerDay);
