@@ -227,10 +227,9 @@ void main() {
     group('mark superseded keys', () {
       test('marks older keys when server has acked push key', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final oldKey = mkKey(now - 200);
-        final newKey = mkKey(now - 100);
-        initStore(async,
-          pushKeys: [oldKey, newKey],
+        final oldKey = mkKey(now - 32 * secondsPerDay);
+        final newKey = mkKey(now - 2 * secondsPerDay);
+        initStore(async, pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
 
         // The old key is now superseded.
@@ -243,23 +242,22 @@ void main() {
 
       test('does not re-mark already-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final earlierSupersededTimestamp = now - 500;
-        final oldKey = mkKey(now - 200,
-          supersededTimestamp: earlierSupersededTimestamp);
-        final newKey = mkKey(now - 100);
+        final oldKey = mkKey(now - 32 * secondsPerDay,
+          supersededTimestamp: now - secondsPerDay);
+        final newKey = mkKey(now - 2 * secondsPerDay);
         initStore(async,
           pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
 
         // The already-superseded key keeps its original timestamp.
         check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
-          .supersededTimestamp.equals(earlierSupersededTimestamp);
+          .supersededTimestamp.equals(now - secondsPerDay);
       }));
 
       test('no superseding when no acked push key', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final key1 = mkKey(now - 200);
-        final key2 = mkKey(now - 100);
+        final key1 = mkKey(now - 32 * secondsPerDay);
+        final key2 = mkKey(now - 2 * secondsPerDay);
         initStore(async, pushKeys: [key1, key2]);
 
         check(getPushKeyById(key1.pushKeyId)).isA<PushKey>()
@@ -272,30 +270,29 @@ void main() {
     group('delete obsolete keys', () {
       test('deletes key superseded for retention duration', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final obsoleteKey = mkKey(now - 10000,
+        final oldKey = mkKey(now - 32 * secondsPerDay,
           supersededTimestamp: now - 30 * secondsPerDay);
-        // A current key (so step 1 doesn't generate one).
-        final currentKey = mkKey(now - 100);
-        initStore(async, pushKeys: [obsoleteKey, currentKey]);
+        final currentKey = mkKey(now - 31 * secondsPerDay);
+        initStore(async, pushKeys: [oldKey, currentKey]);
 
-        check(getPushKeyById(obsoleteKey.pushKeyId)).isNull();
+        check(getPushKeyById(oldKey.pushKeyId)).isNull();
         check(getPushKeyById(currentKey.pushKeyId)).isA<PushKey>();
       }));
 
       test('does not delete key more recently superseded', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final recentlySupersededKey = mkKey(now - 10000,
+        final oldKey = mkKey(now - 32 * secondsPerDay,
           supersededTimestamp: now - 30 * secondsPerDay + 1);
-        final currentKey = mkKey(now - 100);
-        initStore(async, pushKeys: [recentlySupersededKey, currentKey]);
+        final currentKey = mkKey(now - 31 * secondsPerDay);
+        initStore(async, pushKeys: [oldKey, currentKey]);
 
-        check(getPushKeyById(recentlySupersededKey.pushKeyId))
+        check(getPushKeyById(oldKey.pushKeyId))
           .isA<PushKey>();
       }));
 
       test('does not delete non-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        final key = mkKey(now - 100);
+        final key = mkKey(now - 32 * secondsPerDay);
         initStore(async, pushKeys: [key]);
 
         check(getPushKeyById(key.pushKeyId)).isA<PushKey>()

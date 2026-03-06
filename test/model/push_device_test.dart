@@ -221,9 +221,9 @@ void main() {
         () => awaitFakeAsync((async) async {
       final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
       final oldKey = eg.pushKey(account: eg.selfAccount,
-        createdTimestamp: now - 200);
+        createdTimestamp: now - 31 * 86400);
       final newKey = eg.pushKey(account: eg.selfAccount,
-        createdTimestamp: now - 100);
+        createdTimestamp: now - 86400);
       // Initially no acked push key.
       initStore(async, pushKeys: [oldKey, newKey]);
       // No superseding yet.
