@@ -191,10 +191,6 @@ void main() {
   });
 
   group('push key rotation', () {
-    final baseTimestamp = 1772513819;
-    final baseTime = DateTime.fromMillisecondsSinceEpoch(
-      baseTimestamp * 1000, isUtc: true);
-
     late GlobalStore globalStore;
 
     void prepareStoreForRotation({
@@ -228,10 +224,11 @@ void main() {
 
     test('marks older keys when device event acks a push key',
         () => awaitFakeAsync((async) async {
+      final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
       final oldKey = eg.pushKey(account: eg.selfAccount,
-        pushKeyId: 10, createdTimestamp: baseTimestamp - 200);
+        createdTimestamp: now - 200);
       final newKey = eg.pushKey(account: eg.selfAccount,
-        pushKeyId: 20, createdTimestamp: baseTimestamp - 100);
+        createdTimestamp: now - 100);
       // Initially no acked push key.
       prepareStoreForRotation(pushKeys: [oldKey, newKey]);
       async.flushMicrotasks();
@@ -252,9 +249,9 @@ void main() {
       async.flushMicrotasks();
 
       check(getPushKeyById(oldKey.pushKeyId)).isA<PushKey>()
-        .supersededTimestamp.equals(baseTimestamp);
+        .supersededTimestamp.equals(now);
       check(getPushKeyById(newKey.pushKeyId)).isA<PushKey>()
         .supersededTimestamp.isNull();
-    }, initialTime: baseTime));
+    }));
   });
 }
