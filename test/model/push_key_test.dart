@@ -245,8 +245,7 @@ void main() {
         final oldKey = mkKey(now - 32 * secondsPerDay,
           supersededTimestamp: now - secondsPerDay);
         final newKey = mkKey(now - 2 * secondsPerDay);
-        initStore(async,
-          pushKeys: [oldKey, newKey],
+        initStore(async, pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
 
         // The already-superseded key keeps its original timestamp.
