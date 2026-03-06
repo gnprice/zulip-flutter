@@ -211,12 +211,13 @@ void main() {
         prepareStoreForRotation(pushKeys: [oldKey]);
         async.flushMicrotasks();
 
-        // A new key was generated, distinct from the old one.
+        // A new key was generated…
         check(store.pushKeys.latestPushKey).isNotNull()
-          ..pushKeyId.not((it) => it.equals(oldKey.pushKeyId))
-          ..createdTimestamp.equals(now);
-        // The old key is still there.
-        check(getPushKeyById(oldKey.pushKeyId)).equals(oldKey);
+          .createdTimestamp.equals(now);
+        // … distinct from the old key, which is still there.
+        check(getPushKeyById(oldKey.pushKeyId)).isNotNull()
+          ..equals(oldKey)
+          ..createdTimestamp.equals(now - thirtyDays);
       }));
 
       test('no new key when latest is just under rotation interval', () => awaitFakeAsync((async) async {
