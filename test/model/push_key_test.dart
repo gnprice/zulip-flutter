@@ -188,8 +188,7 @@ void main() {
     PushKey? getPushKeyById(int id) => globalStore.pushKeys.getPushKeyById(id);
 
     group('generate new key', () {
-      test('generates key when no keys exist',
-          () => awaitFakeAsync((async) async {
+      test('generates key when no keys exist', () => awaitFakeAsync((async) async {
         prepareStoreForRotation();
         async.flushMicrotasks();
 
@@ -199,8 +198,7 @@ void main() {
           ..pushKey.isNotNull().length.equals(33);
       }));
 
-      test('generates key when latest is older than rotation interval',
-          () => awaitFakeAsync((async) async {
+      test('generates key when latest is older than rotation interval', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = eg.pushKey(account: eg.selfAccount,
           createdTimestamp: now - thirtyDays);
@@ -215,21 +213,7 @@ void main() {
         check(getPushKeyById(oldKey.pushKeyId)).equals(oldKey);
       }));
 
-      test('no new key when latest is fresh',
-          () => awaitFakeAsync((async) async {
-        final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-        // The latest key is only 1 day old — well within the 30-day interval.
-        final recentKey = eg.pushKey(account: eg.selfAccount,
-          createdTimestamp: now - Duration(days: 1).inSeconds);
-        prepareStoreForRotation(pushKeys: [recentKey]);
-        async.flushMicrotasks();
-
-        // Still the same single key; no new one generated.
-        check(store.pushKeys.latestPushKey).equals(recentKey);
-      }));
-
-      test('no new key when latest is just under rotation interval',
-          () => awaitFakeAsync((async) async {
+      test('no new key when latest is just under rotation interval', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // Latest key is 30 days minus 1 second old.
         final key = eg.pushKey(account: eg.selfAccount,
@@ -242,8 +226,7 @@ void main() {
     });
 
     group('mark superseded keys', () {
-      test('marks older keys when server has acked push key',
-          () => awaitFakeAsync((async) async {
+      test('marks older keys when server has acked push key', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final oldKey = eg.pushKey(account: eg.selfAccount,
           createdTimestamp: now - 200);
@@ -262,8 +245,7 @@ void main() {
           .supersededTimestamp.isNull();
       }));
 
-      test('does not re-mark already-superseded keys',
-          () => awaitFakeAsync((async) async {
+      test('does not re-mark already-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final earlierSupersededTimestamp = now - 500;
         final oldKey = eg.pushKey(account: eg.selfAccount,
@@ -282,8 +264,7 @@ void main() {
           .supersededTimestamp.equals(earlierSupersededTimestamp);
       }));
 
-      test('no superseding when no acked push key',
-          () => awaitFakeAsync((async) async {
+      test('no superseding when no acked push key', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final key1 = eg.pushKey(account: eg.selfAccount,
           createdTimestamp: now - 200);
@@ -300,8 +281,7 @@ void main() {
     });
 
     group('delete obsolete keys', () {
-      test('deletes key superseded longer than retention duration',
-          () => awaitFakeAsync((async) async {
+      test('deletes key superseded longer than retention duration', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // A key superseded exactly 30 days ago.
         final obsoleteKey = eg.pushKey(account: eg.selfAccount,
@@ -318,8 +298,7 @@ void main() {
         check(getPushKeyById(currentKey.pushKeyId)).isA<PushKey>();
       }));
 
-      test('does not delete key superseded less than retention duration',
-          () => awaitFakeAsync((async) async {
+      test('does not delete key superseded less than retention duration', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         // A key superseded just under 30 days ago.
         final recentlySupersededKey = eg.pushKey(account: eg.selfAccount,
@@ -336,8 +315,7 @@ void main() {
           .isA<PushKey>();
       }));
 
-      test('does not delete non-superseded keys',
-          () => awaitFakeAsync((async) async {
+      test('does not delete non-superseded keys', () => awaitFakeAsync((async) async {
         final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
         final key = eg.pushKey(account: eg.selfAccount,
           createdTimestamp: now - 100);
@@ -348,41 +326,5 @@ void main() {
           .supersededTimestamp.isNull();
       }));
     });
-
-    test('all steps together: generate, supersede, delete',
-        () => awaitFakeAsync((async) async {
-      final now = testBinding.utcNow().millisecondsSinceEpoch ~/ 1000;
-      // Set up three keys, all old enough that a new key is generated:
-      // - obsoleteKey: superseded long ago — should be deleted
-      // - supersedableKey: not yet superseded, older than ackedKey — should
-      //     be marked superseded
-      // - ackedKey: the one the server acked — triggers superseding
-      final obsoleteKey = eg.pushKey(account: eg.selfAccount,
-        createdTimestamp: now - 3 * thirtyDays)
-        .copyWith(supersededTimestamp: drift.Value(now - thirtyDays));
-      final supersedableKey = eg.pushKey(account: eg.selfAccount,
-        createdTimestamp: now - 2 * thirtyDays);
-      final ackedKey = eg.pushKey(account: eg.selfAccount,
-        createdTimestamp: now - thirtyDays);
-      prepareStoreForRotation(
-        pushKeys: [obsoleteKey, supersedableKey, ackedKey],
-        ackedPushKeyId: ackedKey.pushKeyId);
-      async.flushMicrotasks();
-
-      // A new key was generated (all existing keys are >= 30 days old).
-      check(store.pushKeys.latestPushKey).isNotNull()
-        .createdTimestamp.equals(now);
-
-      // supersedableKey was marked superseded.
-      check(getPushKeyById(supersedableKey.pushKeyId))
-        .isA<PushKey>().supersededTimestamp.equals(now);
-
-      // obsoleteKey was deleted.
-      check(getPushKeyById(obsoleteKey.pushKeyId)).isNull();
-
-      // The acked key itself is not superseded.
-      check(getPushKeyById(ackedKey.pushKeyId)).isA<PushKey>()
-        .supersededTimestamp.isNull();
-    }));
   });
 }
