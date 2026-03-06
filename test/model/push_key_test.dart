@@ -175,14 +175,9 @@ void main() {
       store = eg.store(
         globalStore: globalStore,
         account: eg.selfAccount,
-        initialSnapshot: eg.initialSnapshot(
-          devices: {eg.selfAccount.deviceId!: ClientDevice(
-            pushKeyId: ackedPushKeyId,
-            pushTokenId: null,
-            pendingPushTokenId: null,
-            pushTokenLastUpdatedTimestamp: null,
-            pushRegistrationErrorCode: null,
-          )}));
+        initialSnapshot: eg.initialSnapshot(devices: {
+          eg.selfAccount.deviceId!: eg.clientDevice(pushKeyId: ackedPushKeyId),
+        }));
     }
 
     PushKey mkKey(int createdTimestamp, {int? supersededTimestamp}) {
