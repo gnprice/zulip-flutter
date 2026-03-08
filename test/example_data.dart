@@ -1513,8 +1513,14 @@ InitialSnapshot initialSnapshot({
 }
 const _initialSnapshot = initialSnapshot;
 
+/// Create a [PerAccountStore], synchronously, using a test global store.
+///
+/// The store will be attached to a fresh [TestGlobalStore]
+/// created with [globalStore].
+///
+/// For a per-account store attached to a specified global store,
+/// use [TestGlobalStore.add] and retrieve it with [GlobalStore.perAccount].
 PerAccountStore store({
-  GlobalStore? globalStore,
   User? selfUser,
   Account? account,
   InitialSnapshot? initialSnapshot,
@@ -1523,7 +1529,7 @@ PerAccountStore store({
   final effectiveAccount = account
     ?? (selfUser != null ? _account(user: selfUser) : selfAccount);
   return PerAccountStore.fromInitialSnapshot(
-    globalStore: globalStore ?? _globalStore(accounts: [effectiveAccount]),
+    globalStore: _globalStore(accounts: [effectiveAccount]),
     accountId: effectiveAccount.id,
     initialSnapshot: initialSnapshot ?? _initialSnapshot(),
   );
@@ -1531,13 +1537,11 @@ PerAccountStore store({
 const _store = store;
 
 UpdateMachine updateMachine({
-  GlobalStore? globalStore,
   Account? account,
   InitialSnapshot? initialSnapshot,
 }) {
   initialSnapshot ??= _initialSnapshot();
-  final store = _store(globalStore: globalStore,
-    account: account, initialSnapshot: initialSnapshot);
+  final store = _store(account: account, initialSnapshot: initialSnapshot);
   return UpdateMachine.fromInitialSnapshot(
     store: store, initialSnapshot: initialSnapshot);
 }
