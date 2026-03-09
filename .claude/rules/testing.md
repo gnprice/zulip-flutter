@@ -569,5 +569,5 @@ After writing new tests, always check the following points.
 - **Are there unnecessary setup steps?**
   Look at each of the setup steps in the shared "init" or "prepare"
   helper, and in each of the test cases.
-  If there are any you're not certain are needed,
-  try deleting them to see if the tests still pass.
+  Try deleting them one at a time to see if the tests still pass,
+  except where you're certain they're needed.
