@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
+import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/push_device.dart';
 import 'package:zulip/model/push_key.dart';
@@ -102,26 +103,6 @@ void main() {
     PushKeyStore pushKeyModel() =>
       globalStore.pushKeys.perAccount(eg.selfAccount.id);
 
-    ClientDevice mkDevice({int? pushKeyId}) {
-      return ClientDevice(
-        pushKeyId: pushKeyId,
-        pushTokenId: null,
-        pendingPushTokenId: null,
-        pushTokenLastUpdatedTimestamp: null,
-        pushRegistrationErrorCode: null,
-      );
-    }
-
-    PushKey mkKey(int pushKeyId, int createdTimestamp,
-        {int? supersededTimestamp}) {
-      return eg.pushKey(
-        account: eg.selfAccount,
-        pushKeyId: pushKeyId,
-        createdTimestamp: createdTimestamp,
-        supersededTimestamp: supersededTimestamp,
-      );
-    }
-
     PerAccountStore initStore(FakeAsync async, {
       List<PushKey> pushKeys = const [],
       int? ackedPushKeyId,
@@ -135,12 +116,27 @@ void main() {
         globalStore: globalStore,
         account: eg.selfAccount,
         initialSnapshot: eg.initialSnapshot(
-          devices: {eg.selfAccount.deviceId!:
-            mkDevice(pushKeyId: ackedPushKeyId)},
+          devices: {eg.selfAccount.deviceId!: ClientDevice(
+            pushKeyId: ackedPushKeyId,
+            pushTokenId: null,
+            pendingPushTokenId: null,
+            pushTokenLastUpdatedTimestamp: null,
+            pushRegistrationErrorCode: null,
+          )},
         ),
       );
       async.flushMicrotasks();
       return store;
+    }
+
+    PushKey mkKey(int pushKeyId, int createdTimestamp,
+        {int? supersededTimestamp}) {
+      return eg.pushKey(
+        account: eg.selfAccount,
+        pushKeyId: pushKeyId,
+        createdTimestamp: createdTimestamp,
+        supersededTimestamp: supersededTimestamp,
+      );
     }
 
     group('generate new key', () {
@@ -191,9 +187,14 @@ void main() {
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.isNull();
         // A device-update event acks the new key.
-        await store.handleEvent(eg.deviceUpdateEvent(
+        await store.handleEvent(DeviceUpdateEvent(
+          id: 1,
           deviceId: eg.selfAccount.deviceId!,
           pushKeyId: JsonNullable(newKey.pushKeyId),
+          pushTokenId: null,
+          pendingPushTokenId: null,
+          pushTokenLastUpdatedTimestamp: null,
+          pushRegistrationErrorCode: null,
         ));
         async.flushMicrotasks();
         check(getPushKeyById(oldKey.pushKeyId)!)
