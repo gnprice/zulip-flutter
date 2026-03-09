@@ -269,7 +269,7 @@ PushKey mkKey(int createdTimestamp, {int? supersededTimestamp}) {
 ```
 
 Even if a given type of data appears only once,
-consider whether it has more than two or three fields
+determine whether it has more than two or three fields
 containing boring data
 (data where the details aren't relevant to understanding the test).
 If it does, then factor it out to a helper.
@@ -563,7 +563,7 @@ After writing new tests, always check the following points.
 
 - **Can the data in the tests be simplified?**
   Look for any place in the test code that's long with boring data.
-  If you find any, consider factoring it out
+  If you find any, factor it out
   into either a new `eg.foo` builder function or a local helper.
 
 - **Are there unnecessary setup steps?**
