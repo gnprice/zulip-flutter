@@ -560,6 +560,7 @@ test('unsubscribed then subscribed by events', () async {
 ## Things to review after writing tests
 
 After writing new tests, always check the following points.
+Be sure to explicitly state your conclusion about each point.
 
 - **Can the data in the tests be simplified?**
   Look for any place in the test code that's long with boring data.
