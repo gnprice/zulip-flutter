@@ -132,6 +132,18 @@ void main() {
       );
     }
 
+    DeviceUpdateEvent mkDeviceUpdateEvent({JsonNullable<int>? pushKeyId}) {
+      return DeviceUpdateEvent(
+        id: 1,
+        deviceId: eg.selfAccount.deviceId!,
+        pushKeyId: pushKeyId,
+        pushTokenId: null,
+        pendingPushTokenId: null,
+        pushTokenLastUpdatedTimestamp: null,
+        pushRegistrationErrorCode: null,
+      );
+    }
+
     group('generate new key', () {
       test('generate key when no keys exist',
           () => awaitFakeAsync(initialTime: now, (async) async {
@@ -180,15 +192,8 @@ void main() {
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.isNull();
         // A device-update event acks the new key.
-        await store.handleEvent(DeviceUpdateEvent(
-          id: 1,
-          deviceId: eg.selfAccount.deviceId!,
-          pushKeyId: JsonNullable(newKey.pushKeyId),
-          pushTokenId: null,
-          pendingPushTokenId: null,
-          pushTokenLastUpdatedTimestamp: null,
-          pushRegistrationErrorCode: null,
-        ));
+        await store.handleEvent(
+          mkDeviceUpdateEvent(pushKeyId: JsonNullable(newKey.pushKeyId)));
         async.flushMicrotasks();
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.equals(nowTimestamp);
