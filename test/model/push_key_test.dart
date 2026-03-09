@@ -1,9 +1,18 @@
 import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zulip/api/model/events.dart';
+import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/database.dart';
+import 'package:zulip/model/push_device.dart';
+import 'package:zulip/model/push_key.dart';
+import 'package:zulip/model/store.dart';
+import 'package:zulip/notifications/receive.dart';
+
+import 'package:fake_async/fake_async.dart';
 
 import '../example_data.dart' as eg;
+import '../fake_async.dart';
 import 'binding.dart';
 import 'store_checks.dart';
 
@@ -139,5 +148,169 @@ void main() {
     check(globalModel.getPushKeyById(pushKey1.pushKeyId))
       ..equals(pushKey1)
       ..isNotNull().supersededTimestamp.isNull();
+  });
+
+  group('maybeRotatePushKeys', () {
+    const secondsPerDay = 86400;
+    final now = DateTime.utc(2026, 3, 8);
+    final nowTimestamp = now.millisecondsSinceEpoch ~/ 1000;
+
+    late GlobalStore globalStore;
+
+    PushKey? getPushKeyById(int pushKeyId) =>
+      globalStore.pushKeys.getPushKeyById(pushKeyId);
+
+    PushKeyStore pushKeyModel() =>
+      globalStore.pushKeys.perAccount(eg.selfAccount.id);
+
+    /// Set up a per-account store with the given push keys and device state.
+    ///
+    /// On startup, the store calls [PushKeyStore.maybeRotatePushKeys]
+    /// with [ackedPushKeyId] determined by the device's pushKeyId
+    /// in the initial snapshot.
+    PerAccountStore initStore(FakeAsync async, {
+      List<PushKey> pushKeys = const [],
+      int? ackedPushKeyId,
+    }) {
+      addTearDown(testBinding.reset);
+      addTearDown(NotificationService.debugReset);
+      PushDeviceManager.debugAutoPause = true;
+      addTearDown(() => PushDeviceManager.debugAutoPause = false);
+      globalStore = eg.globalStore(
+        accounts: [eg.selfAccount], pushKeys: pushKeys);
+      final store = eg.store(
+        globalStore: globalStore,
+        account: eg.selfAccount,
+        initialSnapshot: eg.initialSnapshot(
+          devices: {eg.selfAccount.deviceId!: ClientDevice(
+            pushKeyId: ackedPushKeyId,
+            pushTokenId: null,
+            pendingPushTokenId: null,
+            pushTokenLastUpdatedTimestamp: null,
+            pushRegistrationErrorCode: null,
+          )},
+        ),
+      );
+      async.flushMicrotasks();
+      return store;
+    }
+
+    PushKey mkKey(int pushKeyId, int createdTimestamp,
+        {int? supersededTimestamp}) {
+      return eg.pushKey(
+        account: eg.selfAccount,
+        pushKeyId: pushKeyId,
+        createdTimestamp: createdTimestamp,
+        supersededTimestamp: supersededTimestamp,
+      );
+    }
+
+    group('generate new key', () {
+      test('generate key when no keys exist',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        initStore(async);
+        check(pushKeyModel().latestPushKey).isNotNull()
+          ..createdTimestamp.equals(nowTimestamp)
+          ..supersededTimestamp.isNull();
+      }));
+
+      test('generate key when latest is old enough',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        final oldKey = mkKey(101, nowTimestamp - 30 * secondsPerDay);
+        initStore(async, pushKeys: [oldKey]);
+        final latest = pushKeyModel().latestPushKey;
+        check(latest).isNotNull()
+          ..createdTimestamp.equals(nowTimestamp)
+          ..pushKeyId.not((it) => it.equals(oldKey.pushKeyId));
+        check(getPushKeyById(oldKey.pushKeyId)).isNotNull();
+      }));
+
+      test('no new key when latest is recent',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        final recentKey = mkKey(101, nowTimestamp - 30 * secondsPerDay + 1);
+        initStore(async, pushKeys: [recentKey]);
+        check(pushKeyModel().latestPushKey).equals(recentKey);
+      }));
+    });
+
+    group('mark superseded', () {
+      test('mark older keys on startup',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        final oldKey = mkKey(101, nowTimestamp - 10 * secondsPerDay);
+        final newKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        initStore(async, pushKeys: [oldKey, newKey],
+          ackedPushKeyId: newKey.pushKeyId);
+        check(getPushKeyById(oldKey.pushKeyId)!)
+          .supersededTimestamp.equals(nowTimestamp);
+        check(getPushKeyById(newKey.pushKeyId)!)
+          .supersededTimestamp.isNull();
+      }));
+
+      test('mark older keys on device update event',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        final oldKey = mkKey(101, nowTimestamp - 10 * secondsPerDay);
+        final newKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        final store = initStore(async, pushKeys: [oldKey, newKey]);
+        check(getPushKeyById(oldKey.pushKeyId)!)
+          .supersededTimestamp.isNull();
+        // A device-update event acks the new key.
+        await store.handleEvent(DeviceUpdateEvent(
+          id: 1,
+          deviceId: eg.selfAccount.deviceId!,
+          pushKeyId: JsonNullable(newKey.pushKeyId),
+          pushTokenId: null,
+          pendingPushTokenId: null,
+          pushTokenLastUpdatedTimestamp: null,
+          pushRegistrationErrorCode: null,
+        ));
+        async.flushMicrotasks();
+        check(getPushKeyById(oldKey.pushKeyId)!)
+          .supersededTimestamp.equals(nowTimestamp);
+        check(getPushKeyById(newKey.pushKeyId)!)
+          .supersededTimestamp.isNull();
+      }));
+
+      test('no re-mark already-superseded keys',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        final supersededTime = nowTimestamp - 5 * secondsPerDay;
+        final oldKey = mkKey(101, nowTimestamp - 20 * secondsPerDay,
+          supersededTimestamp: supersededTime);
+        final newKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        initStore(async, pushKeys: [oldKey, newKey],
+          ackedPushKeyId: newKey.pushKeyId);
+        check(getPushKeyById(oldKey.pushKeyId)!)
+          .supersededTimestamp.equals(supersededTime);
+      }));
+
+      test('no mark when no acked key',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        final oldKey = mkKey(101, nowTimestamp - 10 * secondsPerDay);
+        final newKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        initStore(async, pushKeys: [oldKey, newKey]);
+        check(getPushKeyById(oldKey.pushKeyId)!)
+          .supersededTimestamp.isNull();
+      }));
+    });
+
+    group('delete obsolete', () {
+      test('delete keys superseded long enough ago',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        final obsoleteKey = mkKey(101, nowTimestamp - 90 * secondsPerDay,
+          supersededTimestamp: nowTimestamp - 30 * secondsPerDay);
+        final currentKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        initStore(async, pushKeys: [obsoleteKey, currentKey]);
+        check(getPushKeyById(obsoleteKey.pushKeyId)).isNull();
+        check(getPushKeyById(currentKey.pushKeyId)).isNotNull();
+      }));
+
+      test('no delete recently-superseded keys',
+          () => awaitFakeAsync(initialTime: now, (async) async {
+        final recentlySuperseded = mkKey(101, nowTimestamp - 60 * secondsPerDay,
+          supersededTimestamp: nowTimestamp - 30 * secondsPerDay + 1);
+        final currentKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        initStore(async, pushKeys: [recentlySuperseded, currentKey]);
+        check(getPushKeyById(recentlySuperseded.pushKeyId)).isNotNull();
+      }));
+    });
   });
 }
