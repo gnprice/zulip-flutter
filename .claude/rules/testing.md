@@ -269,9 +269,10 @@ PushKey mkKey(int createdTimestamp, {int? supersededTimestamp}) {
 ```
 
 Even if a given type of data appears only once,
-if the construction contains a lot of boring data
-(data where the details aren't relevant to understanding the test),
-then factor it out to a helper.
+consider whether it has more than two or three fields
+containing boring data
+(data where the details aren't relevant to understanding the test).
+If it does, then factor it out to a helper.
 
 This keeps test bodies focused on just the data that's important.
 
