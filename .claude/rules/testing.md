@@ -548,3 +548,19 @@ add a comment linking to the issue:
 test('unsubscribed then subscribed by events', () async {
   // Regression test for: https://github.com/zulip/zulip-flutter/issues/...
 ```
+
+
+## Things to review after writing tests
+
+After writing new tests, always check the following points.
+
+- **Can the data in the tests be simplified?**
+  Look for any place in the test code that's long with boring data.
+  If you find any, consider factoring it out
+  into either a new `eg.foo` builder function or a local helper.
+
+- **Are there unnecessary setup steps?**
+  Look at each of the setup steps in the shared "init" or "prepare"
+  helper, and in each of the test cases.
+  If there are any you're not certain are needed,
+  try deleting them to see if the tests still pass.
