@@ -1052,6 +1052,26 @@ MutedUsersEvent mutedUsersEvent(List<int> userIds) {
 MessageEvent messageEvent(Message message, {int? localMessageId}) =>
   MessageEvent(id: 0, message: message, localMessageId: localMessageId?.toString());
 
+DeviceUpdateEvent deviceUpdateEvent({
+  int? id,
+  required int deviceId,
+  JsonNullable<int>? pushKeyId,
+  JsonNullable<String>? pushTokenId,
+  JsonNullable<String>? pendingPushTokenId,
+  JsonNullable<int>? pushTokenLastUpdatedTimestamp,
+  JsonNullable<String>? pushRegistrationErrorCode,
+}) {
+  return DeviceUpdateEvent(
+    id: id ?? 0,
+    deviceId: deviceId,
+    pushKeyId: pushKeyId,
+    pushTokenId: pushTokenId,
+    pendingPushTokenId: pendingPushTokenId,
+    pushTokenLastUpdatedTimestamp: pushTokenLastUpdatedTimestamp,
+    pushRegistrationErrorCode: pushRegistrationErrorCode,
+  );
+}
+
 DeleteMessageEvent deleteMessageEvent(List<StreamMessage> messages) {
   assert(messages.isNotEmpty);
   final streamId = messages.first.streamId;
