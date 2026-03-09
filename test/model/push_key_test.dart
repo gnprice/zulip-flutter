@@ -71,7 +71,7 @@ void main() {
     final model1 = globalModel.perAccount(eg.selfAccount.id);
     final model2 = globalModel.perAccount(eg.otherAccount.id);
     check(globalModel.getPushKeyById(1)).isNotNull();
-    check(model1.latestPushKey?.pushKeyId).equals(1);
+    check(model1.latestPushKey!).pushKeyId.equals(1);
 
     await globalStore.removeAccount(eg.selfAccount.id);
 
@@ -87,7 +87,7 @@ void main() {
     // The other account, meanwhile, is unaffected.
     check(globalModel.perAccount(eg.otherAccount.id)).identicalTo(model2);
     check(globalModel.getPushKeyById(2)).isNotNull();
-    check(model2.latestPushKey?.pushKeyId).equals(2);
+    check(model2.latestPushKey!).pushKeyId.equals(2);
   });
 
   group('maybeRotatePushKeys', () {
