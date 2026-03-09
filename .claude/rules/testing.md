@@ -570,5 +570,4 @@ Be sure to explicitly state your conclusion about each point.
 - **Are there unnecessary setup steps?**
   Look at each of the setup steps in the shared "init" or "prepare"
   helper, and in each of the test cases.
-  Try deleting them one at a time to see if the tests still pass,
-  except where you're certain they're needed.
+  Try deleting them one at a time to see if the tests still pass.
