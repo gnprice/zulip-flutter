@@ -142,9 +142,7 @@ void main() {
       ..equals(pushKey2.copyWith(supersededTimestamp: drift.Value(timeLater)))
       ..identicalTo(model.latestPushKey);
     // The other push key is unaffected.
-    check(globalModel.getPushKeyById(pushKey1.pushKeyId))
-      ..equals(pushKey1)
-      ..isNotNull().supersededTimestamp.isNull();
+    check(globalModel.getPushKeyById(pushKey1.pushKeyId)).equals(pushKey1);
   });
 
   group('maybeRotatePushKeys', () {
