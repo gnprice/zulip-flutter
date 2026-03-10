@@ -135,11 +135,9 @@ void main() {
     await model.insertPushKey(pushKey2.toCompanion(false));
     check(model.latestPushKey).equals(pushKey2);
 
-    // Update one push key.
     final timeLater = 1772515410;
     await model.updatePushKey(pushKey2.pushKeyId, PushKeysCompanion(
       supersededTimestamp: drift.Value(timeLater)));
-    // It's indeed updated.
     check(globalModel.getPushKeyById(pushKey2.pushKeyId))
       ..equals(pushKey2.copyWith(supersededTimestamp: drift.Value(timeLater)))
       ..identicalTo(model.latestPushKey);
@@ -163,10 +161,6 @@ void main() {
       globalStore.pushKeys.perAccount(eg.selfAccount.id);
 
     /// Set up a per-account store with the given push keys and device state.
-    ///
-    /// On startup, the store calls [PushKeyStore.maybeRotatePushKeys]
-    /// with [ackedPushKeyId] determined by the device's pushKeyId
-    /// in the initial snapshot.
     PerAccountStore initStore(FakeAsync async, {
       List<PushKey> pushKeys = const [],
       int? ackedPushKeyId,
