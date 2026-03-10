@@ -1,13 +1,15 @@
 import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:fake_async/fake_async.dart';
-import 'package:test/scaffolding.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/database.dart';
 import 'package:zulip/model/push_device.dart';
 import 'package:zulip/model/push_key.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/notifications/receive.dart';
+
+import 'package:fake_async/fake_async.dart';
 
 import '../example_data.dart' as eg;
 import '../fake_async.dart';
@@ -17,7 +19,7 @@ import 'store_checks.dart';
 void main() {
   TestZulipBinding.ensureInitialized();
 
-  test('getPushKeyById', () {
+  test('initial load, getPushKeyById', () {
     final pushKey1 = eg.pushKey(account: eg.selfAccount, pushKeyId: 1);
     final pushKey2 = eg.pushKey(account: eg.selfAccount, pushKeyId: 2);
     final globalStore = eg.globalStore(accounts: [eg.selfAccount],
@@ -29,42 +31,40 @@ void main() {
     check(globalModel.getPushKeyById(3)).isNull();
   });
 
-  group('perAccount', () {
-    test('latestPushKey with keys', () {
-      final time1 = 1772513819;
-      final pushKey1 = eg.pushKey(account: eg.selfAccount,
-        pushKeyId: 234, createdTimestamp: time1);
-      final pushKey2 = eg.pushKey(account: eg.selfAccount,
-        pushKeyId: 123, createdTimestamp: time1 + 300);
-      final globalStore = eg.globalStore(accounts: [eg.selfAccount],
-        pushKeys: [pushKey1, pushKey2]);
-      final globalModel = globalStore.pushKeys;
-      final model = globalModel.perAccount(eg.selfAccount.id);
+  test('perAccount, latestPushKey: keys exist', () {
+    final time1 = 1772513819;
+    final pushKey1 = eg.pushKey(account: eg.selfAccount,
+      pushKeyId: 234, createdTimestamp: time1);
+    final pushKey2 = eg.pushKey(account: eg.selfAccount,
+      pushKeyId: 123, createdTimestamp: time1 + 300);
+    final globalStore = eg.globalStore(accounts: [eg.selfAccount],
+      pushKeys: [pushKey1, pushKey2]);
+    final globalModel = globalStore.pushKeys;
+    final model = globalModel.perAccount(eg.selfAccount.id);
 
-      // Gets the one with latest timestamp, not greatest ID.
-      // (The IDs are random.)
-      assert(pushKey1.pushKeyId > pushKey2.pushKeyId);
-      check(model.latestPushKey).equals(pushKey2);
-    });
-
-    test('latestPushKey with no keys', () {
-      final globalStore = eg.globalStore(accounts: [eg.selfAccount],
-        pushKeys: []);
-      final globalModel = globalStore.pushKeys;
-      final model = globalModel.perAccount(eg.selfAccount.id);
-
-      check(model.latestPushKey).isNull();
-    });
-
-    test('repeated calls get same PushKeyStore', () {
-      final globalStore = eg.globalStore(accounts: [eg.selfAccount]);
-      final globalModel = globalStore.pushKeys;
-      final model = globalModel.perAccount(eg.selfAccount.id);
-      check(globalModel.perAccount(eg.selfAccount.id)).identicalTo(model);
-    });
+    // Gets the one with latest timestamp, not greatest ID.
+    // (The IDs are random.)
+    assert(pushKey1.pushKeyId > pushKey2.pushKeyId);
+    check(model.latestPushKey).equals(pushKey2);
   });
 
-  test('removeAccount', () async {
+  test('perAccount, latestPushKey: no keys', () {
+    final globalStore = eg.globalStore(accounts: [eg.selfAccount],
+      pushKeys: []);
+    final globalModel = globalStore.pushKeys;
+    final model = globalModel.perAccount(eg.selfAccount.id);
+
+    check(model.latestPushKey).isNull();
+  });
+
+  test('perAccount: repeated calls get same PushKeyStore', () {
+    final globalStore = eg.globalStore(accounts: [eg.selfAccount]);
+    final globalModel = globalStore.pushKeys;
+    final model = globalModel.perAccount(eg.selfAccount.id);
+    check(globalModel.perAccount(eg.selfAccount.id)).identicalTo(model);
+  });
+
+  test('removeAccount, via global store', () async {
     final globalStore = eg.globalStore(
       accounts: [eg.selfAccount, eg.otherAccount],
       pushKeys: [
@@ -75,7 +75,7 @@ void main() {
     final model1 = globalModel.perAccount(eg.selfAccount.id);
     final model2 = globalModel.perAccount(eg.otherAccount.id);
     check(globalModel.getPushKeyById(1)).isNotNull();
-    check(model1.latestPushKey!.pushKeyId).equals(1);
+    check(model1.latestPushKey?.pushKeyId).equals(1);
 
     await globalStore.removeAccount(eg.selfAccount.id);
 
@@ -91,7 +91,7 @@ void main() {
     // The other account, meanwhile, is unaffected.
     check(globalModel.perAccount(eg.otherAccount.id)).identicalTo(model2);
     check(globalModel.getPushKeyById(2)).isNotNull();
-    check(model2.latestPushKey!.pushKeyId).equals(2);
+    check(model2.latestPushKey?.pushKeyId).equals(2);
   });
 
   test('insertPushKey, removePushKey', () async {
@@ -136,14 +136,18 @@ void main() {
     await model.insertPushKey(pushKey2.toCompanion(false));
     check(model.latestPushKey).equals(pushKey2);
 
+    // Update one push key.
     final timeLater = 1772515410;
     await model.updatePushKey(pushKey2.pushKeyId, PushKeysCompanion(
       supersededTimestamp: drift.Value(timeLater)));
+    // It's indeed updated.
     check(globalModel.getPushKeyById(pushKey2.pushKeyId))
       ..equals(pushKey2.copyWith(supersededTimestamp: drift.Value(timeLater)))
       ..identicalTo(model.latestPushKey);
     // The other push key is unaffected.
-    check(globalModel.getPushKeyById(pushKey1.pushKeyId)).equals(pushKey1);
+    check(globalModel.getPushKeyById(pushKey1.pushKeyId))
+      ..equals(pushKey1)
+      ..isNotNull().supersededTimestamp.isNull();
   });
 
   group('maybeRotatePushKeys', () {
@@ -160,6 +164,10 @@ void main() {
       globalStore.pushKeys.perAccount(eg.selfAccount.id);
 
     /// Set up a per-account store with the given push keys and device state.
+    ///
+    /// On startup, the store calls [PushKeyStore.maybeRotatePushKeys]
+    /// with [ackedPushKeyId] determined by the device's pushKeyId
+    /// in the initial snapshot.
     PerAccountStore initStore(FakeAsync async, {
       List<PushKey> pushKeys = const [],
       int? ackedPushKeyId,
@@ -174,8 +182,13 @@ void main() {
         globalStore: globalStore,
         account: eg.selfAccount,
         initialSnapshot: eg.initialSnapshot(
-          devices: {eg.selfAccount.deviceId!: eg.clientDevice(
-            pushKeyId: ackedPushKeyId)},
+          devices: {eg.selfAccount.deviceId!: ClientDevice(
+            pushKeyId: ackedPushKeyId,
+            pushTokenId: null,
+            pendingPushTokenId: null,
+            pushTokenLastUpdatedTimestamp: null,
+            pushRegistrationErrorCode: null,
+          )},
         ),
       );
       async.flushMicrotasks();
@@ -195,7 +208,7 @@ void main() {
     group('generate new key', () {
       test('generate key when no keys exist',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        initStore(async, pushKeys: []);
+        initStore(async);
         check(pushKeyModel().latestPushKey).isNotNull()
           ..createdTimestamp.equals(nowTimestamp)
           ..supersededTimestamp.isNull();
@@ -205,7 +218,8 @@ void main() {
           () => awaitFakeAsync(initialTime: now, (async) async {
         final oldKey = mkKey(101, nowTimestamp - 30 * secondsPerDay);
         initStore(async, pushKeys: [oldKey]);
-        check(pushKeyModel().latestPushKey!)
+        final latest = pushKeyModel().latestPushKey;
+        check(latest).isNotNull()
           ..createdTimestamp.equals(nowTimestamp)
           ..pushKeyId.not((it) => it.equals(oldKey.pushKeyId));
         check(getPushKeyById(oldKey.pushKeyId)).isNotNull();
@@ -240,9 +254,15 @@ void main() {
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.isNull();
         // A device-update event acks the new key.
-        await store.handleEvent(eg.deviceUpdateEvent(
-          eg.selfAccount.deviceId!,
-          pushKeyId: JsonNullable(newKey.pushKeyId)));
+        await store.handleEvent(DeviceUpdateEvent(
+          id: 1,
+          deviceId: eg.selfAccount.deviceId!,
+          pushKeyId: JsonNullable(newKey.pushKeyId),
+          pushTokenId: null,
+          pendingPushTokenId: null,
+          pushTokenLastUpdatedTimestamp: null,
+          pushRegistrationErrorCode: null,
+        ));
         async.flushMicrotasks();
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.equals(nowTimestamp);

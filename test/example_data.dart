@@ -446,22 +446,6 @@ PushKey pushKey({
   );
 }
 
-ClientDevice clientDevice({
-  int? pushKeyId,
-  String? pushTokenId,
-  String? pendingPushTokenId,
-  int? pushTokenLastUpdatedTimestamp,
-  String? pushRegistrationErrorCode,
-}) {
-  return ClientDevice(
-    pushKeyId: pushKeyId,
-    pushTokenId: pushTokenId,
-    pendingPushTokenId: pendingPushTokenId,
-    pushTokenLastUpdatedTimestamp: pushTokenLastUpdatedTimestamp,
-    pushRegistrationErrorCode: pushRegistrationErrorCode,
-  );
-}
-
 int _nextSavedSnippetId() => _lastSavedSnippetId++;
 int _lastSavedSnippetId = 1;
 
@@ -1048,24 +1032,6 @@ const _unreadMsgs = unreadMsgs;
 //|//////////////////////////////////////////////////////////////
 // Events.
 //
-
-DeviceUpdateEvent deviceUpdateEvent(int deviceId, {
-  JsonNullable<int>? pushKeyId,
-  JsonNullable<String>? pushTokenId,
-  JsonNullable<String>? pendingPushTokenId,
-  JsonNullable<int>? pushTokenLastUpdatedTimestamp,
-  JsonNullable<String>? pushRegistrationErrorCode,
-}) {
-  return DeviceUpdateEvent(
-    id: 0,
-    deviceId: deviceId,
-    pushKeyId: pushKeyId,
-    pushTokenId: pushTokenId,
-    pendingPushTokenId: pendingPushTokenId,
-    pushTokenLastUpdatedTimestamp: pushTokenLastUpdatedTimestamp,
-    pushRegistrationErrorCode: pushRegistrationErrorCode,
-  );
-}
 
 UserTopicEvent userTopicEvent(
     int streamId, String topic, UserTopicVisibilityPolicy visibilityPolicy) {
