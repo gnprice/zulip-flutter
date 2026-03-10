@@ -144,9 +144,7 @@ void main() {
       ..equals(pushKey2.copyWith(supersededTimestamp: drift.Value(timeLater)))
       ..identicalTo(model.latestPushKey);
     // The other push key is unaffected.
-    check(globalModel.getPushKeyById(pushKey1.pushKeyId))
-      ..equals(pushKey1)
-      ..isNotNull().supersededTimestamp.isNull();
+    check(globalModel.getPushKeyById(pushKey1.pushKeyId)).equals(pushKey1);
   });
 
   group('maybeRotatePushKeys', () {
@@ -194,11 +192,9 @@ void main() {
       return store;
     }
 
-    PushKey mkKey(int pushKeyId, int createdTimestamp,
-        {int? supersededTimestamp}) {
+    PushKey mkKey(int createdTimestamp, {int? supersededTimestamp}) {
       return eg.pushKey(
         account: eg.selfAccount,
-        pushKeyId: pushKeyId,
         createdTimestamp: createdTimestamp,
         supersededTimestamp: supersededTimestamp,
       );
@@ -215,7 +211,7 @@ void main() {
 
       test('generate key when latest is old enough',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        final oldKey = mkKey(101, nowTimestamp - 30 * secondsPerDay);
+        final oldKey = mkKey(nowTimestamp - 30 * secondsPerDay);
         initStore(async, pushKeys: [oldKey]);
         final latest = pushKeyModel().latestPushKey;
         check(latest).isNotNull()
@@ -226,7 +222,7 @@ void main() {
 
       test('no new key when latest is recent',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        final recentKey = mkKey(101, nowTimestamp - 30 * secondsPerDay + 1);
+        final recentKey = mkKey(nowTimestamp - 30 * secondsPerDay + 1);
         initStore(async, pushKeys: [recentKey]);
         check(pushKeyModel().latestPushKey).equals(recentKey);
       }));
@@ -235,8 +231,8 @@ void main() {
     group('mark superseded', () {
       test('mark older keys on startup',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        final oldKey = mkKey(101, nowTimestamp - 10 * secondsPerDay);
-        final newKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        final oldKey = mkKey(nowTimestamp - 10 * secondsPerDay);
+        final newKey = mkKey(nowTimestamp - 1 * secondsPerDay);
         initStore(async, pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
         check(getPushKeyById(oldKey.pushKeyId)!)
@@ -247,8 +243,8 @@ void main() {
 
       test('mark older keys on device update event',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        final oldKey = mkKey(101, nowTimestamp - 10 * secondsPerDay);
-        final newKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        final oldKey = mkKey(nowTimestamp - 10 * secondsPerDay);
+        final newKey = mkKey(nowTimestamp - 1 * secondsPerDay);
         final store = initStore(async, pushKeys: [oldKey, newKey]);
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.isNull();
@@ -272,9 +268,9 @@ void main() {
       test('no re-mark already-superseded keys',
           () => awaitFakeAsync(initialTime: now, (async) async {
         final supersededTime = nowTimestamp - 5 * secondsPerDay;
-        final oldKey = mkKey(101, nowTimestamp - 20 * secondsPerDay,
+        final oldKey = mkKey(nowTimestamp - 20 * secondsPerDay,
           supersededTimestamp: supersededTime);
-        final newKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        final newKey = mkKey(nowTimestamp - 1 * secondsPerDay);
         initStore(async, pushKeys: [oldKey, newKey],
           ackedPushKeyId: newKey.pushKeyId);
         check(getPushKeyById(oldKey.pushKeyId)!)
@@ -283,8 +279,8 @@ void main() {
 
       test('no mark when no acked key',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        final oldKey = mkKey(101, nowTimestamp - 10 * secondsPerDay);
-        final newKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        final oldKey = mkKey(nowTimestamp - 10 * secondsPerDay);
+        final newKey = mkKey(nowTimestamp - 1 * secondsPerDay);
         initStore(async, pushKeys: [oldKey, newKey]);
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.isNull();
@@ -294,9 +290,9 @@ void main() {
     group('delete obsolete', () {
       test('delete keys superseded long enough ago',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        final obsoleteKey = mkKey(101, nowTimestamp - 90 * secondsPerDay,
+        final obsoleteKey = mkKey(nowTimestamp - 90 * secondsPerDay,
           supersededTimestamp: nowTimestamp - 30 * secondsPerDay);
-        final currentKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        final currentKey = mkKey(nowTimestamp - 1 * secondsPerDay);
         initStore(async, pushKeys: [obsoleteKey, currentKey]);
         check(getPushKeyById(obsoleteKey.pushKeyId)).isNull();
         check(getPushKeyById(currentKey.pushKeyId)).isNotNull();
@@ -304,9 +300,9 @@ void main() {
 
       test('no delete recently-superseded keys',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        final recentlySuperseded = mkKey(101, nowTimestamp - 60 * secondsPerDay,
+        final recentlySuperseded = mkKey(nowTimestamp - 60 * secondsPerDay,
           supersededTimestamp: nowTimestamp - 30 * secondsPerDay + 1);
-        final currentKey = mkKey(102, nowTimestamp - 1 * secondsPerDay);
+        final currentKey = mkKey(nowTimestamp - 1 * secondsPerDay);
         initStore(async, pushKeys: [recentlySuperseded, currentKey]);
         check(getPushKeyById(recentlySuperseded.pushKeyId)).isNotNull();
       }));
