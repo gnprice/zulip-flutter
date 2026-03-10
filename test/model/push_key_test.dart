@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:flutter_test/flutter_test.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:test/scaffolding.dart';
 import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/database.dart';
@@ -8,8 +9,6 @@ import 'package:zulip/model/push_device.dart';
 import 'package:zulip/model/push_key.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/notifications/receive.dart';
-
-import 'package:fake_async/fake_async.dart';
 
 import '../example_data.dart' as eg;
 import '../fake_async.dart';
