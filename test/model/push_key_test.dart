@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:flutter_test/flutter_test.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:test/scaffolding.dart';
 import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/database.dart';
@@ -8,8 +9,6 @@ import 'package:zulip/model/push_device.dart';
 import 'package:zulip/model/push_key.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/notifications/receive.dart';
-
-import 'package:fake_async/fake_async.dart';
 
 import '../example_data.dart' as eg;
 import '../fake_async.dart';
@@ -75,7 +74,7 @@ void main() {
     final model1 = globalModel.perAccount(eg.selfAccount.id);
     final model2 = globalModel.perAccount(eg.otherAccount.id);
     check(globalModel.getPushKeyById(1)).isNotNull();
-    check(model1.latestPushKey?.pushKeyId).equals(1);
+    check(model1.latestPushKey).isNotNull().pushKeyId.equals(1);
 
     await globalStore.removeAccount(eg.selfAccount.id);
 
@@ -91,7 +90,7 @@ void main() {
     // The other account, meanwhile, is unaffected.
     check(globalModel.perAccount(eg.otherAccount.id)).identicalTo(model2);
     check(globalModel.getPushKeyById(2)).isNotNull();
-    check(model2.latestPushKey?.pushKeyId).equals(2);
+    check(model2.latestPushKey).isNotNull().pushKeyId.equals(2);
   });
 
   test('insertPushKey, removePushKey', () async {
