@@ -110,7 +110,8 @@ UI designs come from Figma (linked in issues). Match colors, padding, and font s
 
 - After developing any new code or other changes, including tests,
   always do a code review of your changes.
-  When doing a code review, always use high effort (ultrathink).
+  When doing a code review,
+  always work very thoroughly, with high effort (ultrathink).
 
 
 ## Writing clear code
