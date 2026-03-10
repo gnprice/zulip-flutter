@@ -446,22 +446,6 @@ PushKey pushKey({
   );
 }
 
-ClientDevice clientDevice({
-  int? pushKeyId,
-  String? pushTokenId,
-  String? pendingPushTokenId,
-  int? pushTokenLastUpdatedTimestamp,
-  String? pushRegistrationErrorCode,
-}) {
-  return ClientDevice(
-    pushKeyId: pushKeyId,
-    pushTokenId: pushTokenId,
-    pendingPushTokenId: pendingPushTokenId,
-    pushTokenLastUpdatedTimestamp: pushTokenLastUpdatedTimestamp,
-    pushRegistrationErrorCode: pushRegistrationErrorCode,
-  );
-}
-
 int _nextSavedSnippetId() => _lastSavedSnippetId++;
 int _lastSavedSnippetId = 1;
 
