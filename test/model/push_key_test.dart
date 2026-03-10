@@ -2,7 +2,6 @@ import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
-import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/database.dart';
 import 'package:zulip/model/push_device.dart';
@@ -201,7 +200,7 @@ void main() {
     group('generate new key', () {
       test('generate key when no keys exist',
           () => awaitFakeAsync(initialTime: now, (async) async {
-        initStore(async);
+        initStore(async, pushKeys: []);
         check(pushKeyModel().latestPushKey).isNotNull()
           ..createdTimestamp.equals(nowTimestamp)
           ..supersededTimestamp.isNull();
@@ -211,8 +210,7 @@ void main() {
           () => awaitFakeAsync(initialTime: now, (async) async {
         final oldKey = mkKey(101, nowTimestamp - 30 * secondsPerDay);
         initStore(async, pushKeys: [oldKey]);
-        final latest = pushKeyModel().latestPushKey;
-        check(latest).isNotNull()
+        check(pushKeyModel().latestPushKey!)
           ..createdTimestamp.equals(nowTimestamp)
           ..pushKeyId.not((it) => it.equals(oldKey.pushKeyId));
         check(getPushKeyById(oldKey.pushKeyId)).isNotNull();
@@ -247,15 +245,9 @@ void main() {
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.isNull();
         // A device-update event acks the new key.
-        await store.handleEvent(DeviceUpdateEvent(
-          id: 1,
-          deviceId: eg.selfAccount.deviceId!,
-          pushKeyId: JsonNullable(newKey.pushKeyId),
-          pushTokenId: null,
-          pendingPushTokenId: null,
-          pushTokenLastUpdatedTimestamp: null,
-          pushRegistrationErrorCode: null,
-        ));
+        await store.handleEvent(eg.deviceUpdateEvent(
+          eg.selfAccount.deviceId!,
+          pushKeyId: JsonNullable(newKey.pushKeyId)));
         async.flushMicrotasks();
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.equals(nowTimestamp);
