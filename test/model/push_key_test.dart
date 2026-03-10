@@ -2,7 +2,6 @@ import 'package:checks/checks.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
-import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/database.dart';
 import 'package:zulip/model/push_device.dart';
@@ -177,13 +176,8 @@ void main() {
         globalStore: globalStore,
         account: eg.selfAccount,
         initialSnapshot: eg.initialSnapshot(
-          devices: {eg.selfAccount.deviceId!: ClientDevice(
-            pushKeyId: ackedPushKeyId,
-            pushTokenId: null,
-            pendingPushTokenId: null,
-            pushTokenLastUpdatedTimestamp: null,
-            pushRegistrationErrorCode: null,
-          )},
+          devices: {eg.selfAccount.deviceId!: eg.clientDevice(
+            pushKeyId: ackedPushKeyId)},
         ),
       );
       async.flushMicrotasks();
@@ -247,15 +241,9 @@ void main() {
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.isNull();
         // A device-update event acks the new key.
-        await store.handleEvent(DeviceUpdateEvent(
-          id: 1,
+        await store.handleEvent(eg.deviceUpdateEvent(
           deviceId: eg.selfAccount.deviceId!,
-          pushKeyId: JsonNullable(newKey.pushKeyId),
-          pushTokenId: null,
-          pendingPushTokenId: null,
-          pushTokenLastUpdatedTimestamp: null,
-          pushRegistrationErrorCode: null,
-        ));
+          pushKeyId: JsonNullable(newKey.pushKeyId)));
         async.flushMicrotasks();
         check(getPushKeyById(oldKey.pushKeyId)!)
           .supersededTimestamp.equals(nowTimestamp);
