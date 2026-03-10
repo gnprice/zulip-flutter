@@ -18,7 +18,7 @@ import 'store_checks.dart';
 void main() {
   TestZulipBinding.ensureInitialized();
 
-  test('initial load, getPushKeyById', () {
+  test('getPushKeyById', () {
     final pushKey1 = eg.pushKey(account: eg.selfAccount, pushKeyId: 1);
     final pushKey2 = eg.pushKey(account: eg.selfAccount, pushKeyId: 2);
     final globalStore = eg.globalStore(accounts: [eg.selfAccount],
@@ -30,40 +30,42 @@ void main() {
     check(globalModel.getPushKeyById(3)).isNull();
   });
 
-  test('perAccount, latestPushKey: keys exist', () {
-    final time1 = 1772513819;
-    final pushKey1 = eg.pushKey(account: eg.selfAccount,
-      pushKeyId: 234, createdTimestamp: time1);
-    final pushKey2 = eg.pushKey(account: eg.selfAccount,
-      pushKeyId: 123, createdTimestamp: time1 + 300);
-    final globalStore = eg.globalStore(accounts: [eg.selfAccount],
-      pushKeys: [pushKey1, pushKey2]);
-    final globalModel = globalStore.pushKeys;
-    final model = globalModel.perAccount(eg.selfAccount.id);
+  group('perAccount', () {
+    test('latestPushKey with keys', () {
+      final time1 = 1772513819;
+      final pushKey1 = eg.pushKey(account: eg.selfAccount,
+        pushKeyId: 234, createdTimestamp: time1);
+      final pushKey2 = eg.pushKey(account: eg.selfAccount,
+        pushKeyId: 123, createdTimestamp: time1 + 300);
+      final globalStore = eg.globalStore(accounts: [eg.selfAccount],
+        pushKeys: [pushKey1, pushKey2]);
+      final globalModel = globalStore.pushKeys;
+      final model = globalModel.perAccount(eg.selfAccount.id);
 
-    // Gets the one with latest timestamp, not greatest ID.
-    // (The IDs are random.)
-    assert(pushKey1.pushKeyId > pushKey2.pushKeyId);
-    check(model.latestPushKey).equals(pushKey2);
+      // Gets the one with latest timestamp, not greatest ID.
+      // (The IDs are random.)
+      assert(pushKey1.pushKeyId > pushKey2.pushKeyId);
+      check(model.latestPushKey).equals(pushKey2);
+    });
+
+    test('latestPushKey with no keys', () {
+      final globalStore = eg.globalStore(accounts: [eg.selfAccount],
+        pushKeys: []);
+      final globalModel = globalStore.pushKeys;
+      final model = globalModel.perAccount(eg.selfAccount.id);
+
+      check(model.latestPushKey).isNull();
+    });
+
+    test('repeated calls get same PushKeyStore', () {
+      final globalStore = eg.globalStore(accounts: [eg.selfAccount]);
+      final globalModel = globalStore.pushKeys;
+      final model = globalModel.perAccount(eg.selfAccount.id);
+      check(globalModel.perAccount(eg.selfAccount.id)).identicalTo(model);
+    });
   });
 
-  test('perAccount, latestPushKey: no keys', () {
-    final globalStore = eg.globalStore(accounts: [eg.selfAccount],
-      pushKeys: []);
-    final globalModel = globalStore.pushKeys;
-    final model = globalModel.perAccount(eg.selfAccount.id);
-
-    check(model.latestPushKey).isNull();
-  });
-
-  test('perAccount: repeated calls get same PushKeyStore', () {
-    final globalStore = eg.globalStore(accounts: [eg.selfAccount]);
-    final globalModel = globalStore.pushKeys;
-    final model = globalModel.perAccount(eg.selfAccount.id);
-    check(globalModel.perAccount(eg.selfAccount.id)).identicalTo(model);
-  });
-
-  test('removeAccount, via global store', () async {
+  test('removeAccount', () async {
     final globalStore = eg.globalStore(
       accounts: [eg.selfAccount, eg.otherAccount],
       pushKeys: [
@@ -74,7 +76,7 @@ void main() {
     final model1 = globalModel.perAccount(eg.selfAccount.id);
     final model2 = globalModel.perAccount(eg.otherAccount.id);
     check(globalModel.getPushKeyById(1)).isNotNull();
-    check(model1.latestPushKey?.pushKeyId).equals(1);
+    check(model1.latestPushKey!.pushKeyId).equals(1);
 
     await globalStore.removeAccount(eg.selfAccount.id);
 
@@ -90,7 +92,7 @@ void main() {
     // The other account, meanwhile, is unaffected.
     check(globalModel.perAccount(eg.otherAccount.id)).identicalTo(model2);
     check(globalModel.getPushKeyById(2)).isNotNull();
-    check(model2.latestPushKey?.pushKeyId).equals(2);
+    check(model2.latestPushKey!.pushKeyId).equals(2);
   });
 
   test('insertPushKey, removePushKey', () async {
