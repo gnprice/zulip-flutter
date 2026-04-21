@@ -248,7 +248,7 @@ class NotifPayloadRemove extends NotifPayloadWithIdentity {
 ///
 /// See pre-E2EE server implementation for reference:
 ///   https://github.com/zulip/zulip/blob/10.x/zerver/lib/push_notifications.py#L963
-mixin LegacyFcmMessage implements NotifPayload {
+sealed class LegacyFcmMessage {
 
   static LegacyFcmMessage fromJson(Map<String, dynamic> json) {
     switch (json['event']) {
@@ -258,12 +258,11 @@ mixin LegacyFcmMessage implements NotifPayload {
     }
   }
 
-  @override
   Map<String, dynamic> toJson();
 }
 
 /// A [LegacyFcmMessage] of a type (a value of `event`) we didn't know about.
-class UnexpectedLegacyFcmMessage with LegacyFcmMessage implements UnexpectedNotifPayload {
+class UnexpectedLegacyFcmMessage extends LegacyFcmMessage implements UnexpectedNotifPayload {
   @override
   final Map<String, dynamic> json;
 
@@ -274,7 +273,7 @@ class UnexpectedLegacyFcmMessage with LegacyFcmMessage implements UnexpectedNoti
 }
 
 /// Base class for [LegacyFcmMessage]s that identify what Zulip account they're for.
-sealed class LegacyFcmMessageWithIdentity with LegacyFcmMessage implements NotifPayloadWithIdentity {
+sealed class LegacyFcmMessageWithIdentity extends LegacyFcmMessage implements NotifPayloadWithIdentity {
   // final String server; // ignore; never used, gone with E2EE notifs
   // final int realmId; // ignore; never used, gone with E2EE notifs
 
