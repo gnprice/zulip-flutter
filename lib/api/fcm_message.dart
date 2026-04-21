@@ -40,7 +40,7 @@ class UnexpectedLegacyFcmMessage extends LegacyFcmMessage implements UnexpectedN
 }
 
 /// Base class for [LegacyFcmMessage]s that identify what Zulip account they're for.
-sealed class LegacyFcmMessageWithIdentity extends LegacyFcmMessage implements NotifPayloadWithIdentity {
+sealed class LegacyFcmMessageWithIdentity extends LegacyFcmMessage {
   // final String server; // ignore; never used, gone with E2EE notifs
   // final int realmId; // ignore; never used, gone with E2EE notifs
 
