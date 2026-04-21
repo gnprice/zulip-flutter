@@ -274,7 +274,7 @@ class UnexpectedLegacyFcmMessage with LegacyFcmMessage implements UnexpectedNoti
 }
 
 /// Base class for [LegacyFcmMessage]s that identify what Zulip account they're for.
-mixin LegacyFcmMessageWithIdentity on LegacyFcmMessage implements NotifPayloadWithIdentity {
+sealed class LegacyFcmMessageWithIdentity with LegacyFcmMessage implements NotifPayloadWithIdentity {
   // final String server; // ignore; never used, gone with E2EE notifs
   // final int realmId; // ignore; never used, gone with E2EE notifs
 
@@ -289,7 +289,7 @@ mixin LegacyFcmMessageWithIdentity on LegacyFcmMessage implements NotifPayloadWi
 /// This corresponds to a Zulip message for which the user wants to
 /// see a notification.
 @JsonSerializable(fieldRename: FieldRename.snake)
-class MessageLegacyFcmMessage with LegacyFcmMessage, LegacyFcmMessageWithIdentity implements NotifPayloadNewMessage {
+class MessageLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements NotifPayloadNewMessage {
   @override
   @JsonKey(includeToJson: true, name: 'event')
   String get type => 'message';
@@ -443,7 +443,7 @@ class LegacyFcmMessageDmRecipient extends LegacyFcmMessageRecipient implements N
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
-class RemoveLegacyFcmMessage with LegacyFcmMessage, LegacyFcmMessageWithIdentity implements NotifPayloadRemove {
+class RemoveLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements NotifPayloadRemove {
   @override
   @JsonKey(includeToJson: true, name: 'event')
   String get type => 'remove';
