@@ -1,5 +1,6 @@
 import 'package:checks/checks.dart';
 import 'package:test/scaffolding.dart';
+import 'package:zulip/api/fcm_message.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/api/notifications.dart';
 
