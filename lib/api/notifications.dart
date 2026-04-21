@@ -89,16 +89,22 @@ sealed class NotifPayloadWithIdentity extends NotifPayload {
   ///
   /// This is a real, absolute URL which is the base for all URLs a client uses
   /// with this realm.  It corresponds to [GetServerSettingsResult.realmUri].
-  Uri get realmUrl;
+  final Uri realmUrl;
 
   /// The realm's name.
-  String? get realmName;
+  final String? realmName;
 
   /// This user's ID within the server.
   ///
   /// Useful mainly in the case where the user has multiple accounts in the
   /// same realm.
-  int get userId;
+  final int userId;
+
+  NotifPayloadWithIdentity({
+    required this.realmUrl,
+    required this.realmName,
+    required this.userId,
+  });
 }
 
 /// Parsed version of a notification payload of type `message`.
@@ -112,13 +118,6 @@ sealed class NotifPayloadWithIdentity extends NotifPayload {
 class NotifPayloadNewMessage extends NotifPayloadWithIdentity {
   @JsonKey(includeToJson: true)
   String get type => 'message';
-
-  @override
-  final Uri realmUrl;
-  @override
-  final String? realmName;
-  @override
-  final int userId;
 
   final int senderId;
   final Uri senderAvatarUrl;
@@ -138,9 +137,9 @@ class NotifPayloadNewMessage extends NotifPayloadWithIdentity {
   final String content;
 
   NotifPayloadNewMessage({
-    required this.realmUrl,
-    required this.realmName,
-    required this.userId,
+    required super.realmUrl,
+    required super.realmName,
+    required super.userId,
     required this.senderId,
     required this.senderAvatarUrl,
     required this.senderFullName,
@@ -225,19 +224,12 @@ class NotifPayloadRemove extends NotifPayloadWithIdentity {
   @JsonKey(includeToJson: true)
   String get type => 'remove';
 
-  @override
-  final Uri realmUrl;
-  @override
-  final String? realmName;
-  @override
-  final int userId;
-
   final List<int> messageIds;
 
   NotifPayloadRemove({
-    required this.realmUrl,
-    required this.realmName,
-    required this.userId,
+    required super.realmUrl,
+    required super.realmName,
+    required super.userId,
     required this.messageIds,
   });
 
