@@ -8,6 +8,19 @@ part of 'fcm_message.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+EncryptedFcmMessage _$EncryptedFcmMessageFromJson(Map<String, dynamic> json) =>
+    EncryptedFcmMessage(
+      pushKeyId: const _IntConverter().fromJson(json['push_key_id'] as String),
+      encryptedData: base64Decode(json['encrypted_data'] as String),
+    );
+
+Map<String, dynamic> _$EncryptedFcmMessageToJson(
+  EncryptedFcmMessage instance,
+) => <String, dynamic>{
+  'push_key_id': const _IntConverter().toJson(instance.pushKeyId),
+  'encrypted_data': base64Encode(instance.encryptedData),
+};
+
 MessageLegacyFcmMessage _$MessageLegacyFcmMessageFromJson(
   Map<String, dynamic> json,
 ) => MessageLegacyFcmMessage(

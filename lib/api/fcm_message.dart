@@ -1,9 +1,39 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:json_annotation/json_annotation.dart';
 
 import 'model/model.dart';
 import 'notifications.dart';
 
 part 'fcm_message.g.dart';
+
+/// An FCM message whose contents are encrypted end-to-end from the Zulip server.
+///
+/// Firebase Cloud Messaging (FCM) is the service run by Google that we use
+/// for delivering notifications to Android devices.  A decrypted FCM message
+/// may be to tell us we should show a notification, or something else like
+/// to remove one (because the user read the underlying Zulip message).
+///
+/// Once decrypted, the contents will become a [NotifPayload].
+///
+/// API docs:
+///   https://zulip.com/api/mobile-notifications#data-sent-to-fcm
+@JsonSerializable(fieldRename: FieldRename.snake)
+class EncryptedFcmMessage {
+  @_IntConverter()
+  final int pushKeyId;
+
+  @JsonKey(fromJson: base64Decode, toJson: base64Encode)
+  final Uint8List encryptedData;
+
+  EncryptedFcmMessage({required this.pushKeyId, required this.encryptedData});
+
+  factory EncryptedFcmMessage.fromJson(Map<String, dynamic> json) =>
+    _$EncryptedFcmMessageFromJson(json);
+
+  Map<String, dynamic> toJson() => _$EncryptedFcmMessageToJson(this);
+}
 
 //|//////////////////////////////////////////////////////////////
 // Types for parsing legacy plaintext notification payloads.

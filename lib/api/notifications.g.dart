@@ -8,19 +8,6 @@ part of 'notifications.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-EncryptedFcmMessage _$EncryptedFcmMessageFromJson(Map<String, dynamic> json) =>
-    EncryptedFcmMessage(
-      pushKeyId: const _IntConverter().fromJson(json['push_key_id'] as String),
-      encryptedData: base64Decode(json['encrypted_data'] as String),
-    );
-
-Map<String, dynamic> _$EncryptedFcmMessageToJson(
-  EncryptedFcmMessage instance,
-) => <String, dynamic>{
-  'push_key_id': const _IntConverter().toJson(instance.pushKeyId),
-  'encrypted_data': base64Encode(instance.encryptedData),
-};
-
 NotifPayloadNewMessage _$NotifPayloadNewMessageFromJson(
   Map<String, dynamic> json,
 ) => NotifPayloadNewMessage(
@@ -42,10 +29,10 @@ NotifPayloadNewMessage _$NotifPayloadNewMessageFromJson(
 Map<String, dynamic> _$NotifPayloadNewMessageToJson(
   NotifPayloadNewMessage instance,
 ) => <String, dynamic>{
-  'type': instance.type,
   'realm_url': instance.realmUrl.toString(),
   'realm_name': instance.realmName,
   'user_id': instance.userId,
+  'type': instance.type,
   'sender_id': instance.senderId,
   'sender_avatar_url': instance.senderAvatarUrl.toString(),
   'sender_full_name': instance.senderFullName,
@@ -82,9 +69,9 @@ NotifPayloadRemove _$NotifPayloadRemoveFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$NotifPayloadRemoveToJson(NotifPayloadRemove instance) =>
     <String, dynamic>{
-      'type': instance.type,
       'realm_url': instance.realmUrl.toString(),
       'realm_name': instance.realmName,
       'user_id': instance.userId,
+      'type': instance.type,
       'message_ids': instance.messageIds,
     };
