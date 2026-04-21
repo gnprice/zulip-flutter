@@ -46,6 +46,7 @@ class EncryptedFcmMessage {
 /// See pre-E2EE server implementation for reference:
 ///   https://github.com/zulip/zulip/blob/10.x/zerver/lib/push_notifications.py#L963
 sealed class LegacyFcmMessage {
+  LegacyFcmMessage();
 
   static NotifPayload fromJson(Map<String, dynamic> json) {
     switch (json['event']) {
