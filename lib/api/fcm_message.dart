@@ -81,8 +81,8 @@ class MessageLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements No
   final String senderFullName;
 
   @override
-  @JsonKey(includeToJson: false, readValue: _readWhole)
-  final LegacyFcmMessageRecipient recipient;
+  @JsonKey(includeToJson: false, readValue: _readWhole, fromJson: LegacyFcmMessageRecipient.fromJson)
+  final NotifPayloadRecipient recipient;
 
   @override
   @JsonKey(name: 'zulip_message_id')
@@ -125,11 +125,11 @@ class MessageLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements No
     final result = _$MessageLegacyFcmMessageToJson(this);
     final recipient = this.recipient;
     switch (recipient) {
-      case LegacyFcmMessageDmRecipient(allRecipientIds: [_] || [_, _]):
+      case NotifPayloadDmRecipient(allRecipientIds: [_] || [_, _]):
         break;
-      case LegacyFcmMessageDmRecipient(:var allRecipientIds):
+      case NotifPayloadDmRecipient(:var allRecipientIds):
         result['pm_users'] = const _IntListConverter().toJson(allRecipientIds);
-      case LegacyFcmMessageChannelRecipient():
+      case NotifPayloadChannelRecipient():
         result['stream_id'] = const _IntConverter().toJson(recipient.channelId);
         if (recipient.channelName != null) result['stream'] = recipient.channelName;
         result['topic'] = recipient.topic;
@@ -140,10 +140,10 @@ class MessageLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements No
 }
 
 /// Data identifying where a Zulip message was sent, as part of a [LegacyFcmMessage].
-abstract class LegacyFcmMessageRecipient implements NotifPayloadRecipient {
+abstract class LegacyFcmMessageRecipient {
   LegacyFcmMessageRecipient();
 
-  factory LegacyFcmMessageRecipient.fromJson(Map<String, dynamic> json) {
+  static NotifPayloadRecipient fromJson(Map<String, dynamic> json) {
     // There's also a `recipient_type` field, but we don't really need it.
     // The presence or absence of `stream_id` is just as informative.
     return json.containsKey('stream_id')
