@@ -17,7 +17,7 @@ part 'fcm_message.g.dart';
 ///   https://github.com/zulip/zulip/blob/10.x/zerver/lib/push_notifications.py#L963
 sealed class LegacyFcmMessage {
 
-  static LegacyFcmMessage fromJson(Map<String, dynamic> json) {
+  static NotifPayload fromJson(Map<String, dynamic> json) {
     switch (json['event']) {
       case 'message': return MessageLegacyFcmMessage.fromJson(json);
       case 'remove': return RemoveLegacyFcmMessage.fromJson(json);
