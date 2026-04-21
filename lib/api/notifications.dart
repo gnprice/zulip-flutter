@@ -77,22 +77,16 @@ sealed class NotifPayloadWithIdentity extends NotifPayload {
   ///
   /// This is a real, absolute URL which is the base for all URLs a client uses
   /// with this realm.  It corresponds to [GetServerSettingsResult.realmUri].
-  final Uri realmUrl;
+  Uri get realmUrl;
 
   /// The realm's name.
-  final String? realmName;
+  String? get realmName;
 
   /// This user's ID within the server.
   ///
   /// Useful mainly in the case where the user has multiple accounts in the
   /// same realm.
-  final int userId;
-
-  NotifPayloadWithIdentity({
-    required this.realmUrl,
-    required this.realmName,
-    required this.userId,
-  });
+  int get userId;
 }
 
 /// Parsed version of a notification payload of type `message`.
@@ -106,6 +100,13 @@ sealed class NotifPayloadWithIdentity extends NotifPayload {
 class NotifPayloadNewMessage extends NotifPayloadWithIdentity {
   @JsonKey(includeToJson: true)
   String get type => 'message';
+
+  @override
+  final Uri realmUrl;
+  @override
+  final String? realmName;
+  @override
+  final int userId;
 
   final int senderId;
   final Uri senderAvatarUrl;
@@ -125,9 +126,9 @@ class NotifPayloadNewMessage extends NotifPayloadWithIdentity {
   final String content;
 
   NotifPayloadNewMessage({
-    required super.realmUrl,
-    required super.realmName,
-    required super.userId,
+    required this.realmUrl,
+    required this.realmName,
+    required this.userId,
     required this.senderId,
     required this.senderAvatarUrl,
     required this.senderFullName,
@@ -212,12 +213,19 @@ class NotifPayloadRemove extends NotifPayloadWithIdentity {
   @JsonKey(includeToJson: true)
   String get type => 'remove';
 
+  @override
+  final Uri realmUrl;
+  @override
+  final String? realmName;
+  @override
+  final int userId;
+
   final List<int> messageIds;
 
   NotifPayloadRemove({
-    required super.realmUrl,
-    required super.realmName,
-    required super.userId,
+    required this.realmUrl,
+    required this.realmName,
+    required this.userId,
     required this.messageIds,
   });
 
@@ -240,10 +248,9 @@ class NotifPayloadRemove extends NotifPayloadWithIdentity {
 ///
 /// See pre-E2EE server implementation for reference:
 ///   https://github.com/zulip/zulip/blob/10.x/zerver/lib/push_notifications.py#L963
-sealed class LegacyFcmMessage implements NotifPayload {
-  LegacyFcmMessage();
+mixin LegacyFcmMessage implements NotifPayload {
 
-  factory LegacyFcmMessage.fromJson(Map<String, dynamic> json) {
+  static LegacyFcmMessage fromJson(Map<String, dynamic> json) {
     switch (json['event']) {
       case 'message': return MessageLegacyFcmMessage.fromJson(json);
       case 'remove': return RemoveLegacyFcmMessage.fromJson(json);
@@ -256,7 +263,7 @@ sealed class LegacyFcmMessage implements NotifPayload {
 }
 
 /// A [LegacyFcmMessage] of a type (a value of `event`) we didn't know about.
-class UnexpectedLegacyFcmMessage extends LegacyFcmMessage implements UnexpectedNotifPayload {
+class UnexpectedLegacyFcmMessage with LegacyFcmMessage implements UnexpectedNotifPayload {
   @override
   final Map<String, dynamic> json;
 
@@ -267,35 +274,9 @@ class UnexpectedLegacyFcmMessage extends LegacyFcmMessage implements UnexpectedN
 }
 
 /// Base class for [LegacyFcmMessage]s that identify what Zulip account they're for.
-sealed class LegacyFcmMessageWithIdentity extends LegacyFcmMessage implements NotifPayloadWithIdentity {
+mixin LegacyFcmMessageWithIdentity on LegacyFcmMessage implements NotifPayloadWithIdentity {
   // final String server; // ignore; never used, gone with E2EE notifs
   // final int realmId; // ignore; never used, gone with E2EE notifs
-
-  /// The realm's own URL.
-  ///
-  /// This is a real, absolute URL which is the base for all URLs a client uses
-  /// with this realm.  It corresponds to [GetServerSettingsResult.realmUri].
-  @override
-  @JsonKey(readValue: _readRealmUrl) // TODO(server-9)
-  final Uri realmUrl;
-
-  /// The realm's name.
-  @override
-  final String? realmName; // TODO(server-8)
-
-  /// This user's ID within the server.
-  ///
-  /// Useful mainly in the case where the user has multiple accounts in the
-  /// same realm.
-  @override
-  @_IntConverter()
-  final int userId;
-
-  LegacyFcmMessageWithIdentity({
-    required this.realmUrl,
-    required this.realmName,
-    required this.userId,
-  });
 
   // TODO(server-9): FL 257 deprecated 'realm_uri' in favor of 'realm_url'.
   static String _readRealmUrl(Map<dynamic, dynamic> json, String key) {
@@ -308,10 +289,21 @@ sealed class LegacyFcmMessageWithIdentity extends LegacyFcmMessage implements No
 /// This corresponds to a Zulip message for which the user wants to
 /// see a notification.
 @JsonSerializable(fieldRename: FieldRename.snake)
-class MessageLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements NotifPayloadNewMessage {
+class MessageLegacyFcmMessage with LegacyFcmMessage, LegacyFcmMessageWithIdentity implements NotifPayloadNewMessage {
   @override
   @JsonKey(includeToJson: true, name: 'event')
   String get type => 'message';
+
+  @override
+  @JsonKey(readValue: LegacyFcmMessageWithIdentity._readRealmUrl) // TODO(server-9)
+  final Uri realmUrl;
+
+  @override
+  final String? realmName; // TODO(server-8)
+
+  @override
+  @_IntConverter()
+  final int userId;
 
   @override
   @_IntConverter()
@@ -343,9 +335,9 @@ class MessageLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements No
   final String content;
 
   MessageLegacyFcmMessage({
-    required super.realmUrl,
-    required super.realmName,
-    required super.userId,
+    required this.realmUrl,
+    required this.realmName,
+    required this.userId,
     required this.senderId,
     required this.senderAvatarUrl,
     required this.senderFullName,
@@ -451,10 +443,21 @@ class LegacyFcmMessageDmRecipient extends LegacyFcmMessageRecipient implements N
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
-class RemoveLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements NotifPayloadRemove {
+class RemoveLegacyFcmMessage with LegacyFcmMessage, LegacyFcmMessageWithIdentity implements NotifPayloadRemove {
   @override
   @JsonKey(includeToJson: true, name: 'event')
   String get type => 'remove';
+
+  @override
+  @JsonKey(readValue: LegacyFcmMessageWithIdentity._readRealmUrl) // TODO(server-9)
+  final Uri realmUrl;
+
+  @override
+  final String? realmName; // TODO(server-8)
+
+  @override
+  @_IntConverter()
+  final int userId;
 
   // Servers have sent zulip_message_ids, obsoleting the singular zulip_message_id
   // and just sending the first ID there redundantly, since 2019.
@@ -467,9 +470,9 @@ class RemoveLegacyFcmMessage extends LegacyFcmMessageWithIdentity implements Not
   // final String? zulipMessageId; // obsolete; ignore
 
   RemoveLegacyFcmMessage({
-    required super.realmUrl,
-    required super.realmName,
-    required super.userId,
+    required this.realmUrl,
+    required this.realmName,
+    required this.userId,
     required this.messageIds,
   });
 
